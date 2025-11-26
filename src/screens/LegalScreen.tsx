@@ -1,0 +1,200 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootStack';
+import { Spacing, FontSizes, FontWeights } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
+import Card from '../components/Card';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Legal'>;
+
+export default function LegalScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background.default }]} showsVerticalScrollIndicator={false}>
+      <View style={[styles.content, { paddingTop: insets.top + Spacing.lg }]}>
+        <Card style={styles.section}>
+          <Text style={[styles.title, { color: colors.text.primary }]}>Mentions légales</Text>
+          <Text style={[styles.lastUpdated, { color: colors.text.secondary }]}>Dernière mise à jour : Janvier 2024</Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>1. Éditeur de l'application</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            L'application BFS (Baggage Flight System) est éditée par :
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            <Text style={[styles.bold, { color: colors.text.primary }]}>AFRICAN TRANSPORT SYSTEMS</Text>{'\n'}
+            AFRICAN TRANSPORT HANDLING{'\n'}
+            11ème niveau, Immeuble Equity BCDC{'\n'}
+            Numéro 15, Boulevard du 30 juin{'\n'}
+            Commune de GOMBE{'\n'}
+            Kinshasa, République Démocratique du Congo
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Téléphone : +243 819 929 881{'\n'}
+            Email : contact@ats-handling-rdc.com{'\n'}
+            Site web : https://www.ats-handling-rdc.com
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>2. À propos d'ATS</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            AFRICAN TRANSPORT HANDLING fait partie d'un grand Groupe : AFRICAN TRANSPORT SYSTEMS. 
+            Le groupe comprend en son sein plusieurs autres sociétés qui travaillent pour le développement 
+            de l'Afrique en général.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            ATS Handling est spécialisé dans les services d'assistance aéroportuaire, incluant 
+            l'assistance au sol, la manutention des bagages, le traitement des cargos, la sûreté 
+            aéroportuaire, la maintenance, le support informatique, le cleaning, le catering et 
+            la restauration.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>3. Propriété intellectuelle</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            L'ensemble du contenu de l'application BFS (textes, images, vidéos, logos, icônes, etc.) 
+            est la propriété exclusive d'AFRICAN TRANSPORT SYSTEMS ou de ses partenaires, sauf mention 
+            contraire.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Toute reproduction, représentation, modification, publication, adaptation de tout ou partie 
+            des éléments de l'application, quel que soit le moyen ou le procédé utilisé, est interdite, 
+            sauf autorisation écrite préalable d'AFRICAN TRANSPORT SYSTEMS.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Les marques, logos et signes distinctifs présents dans l'application sont la propriété exclusive 
+            d'AFRICAN TRANSPORT SYSTEMS ou de ses partenaires. Toute reproduction non autorisée de ces 
+            éléments constitue une contrefaçon passible de sanctions pénales.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>5. Protection des données personnelles</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi 
+            Informatique et Libertés, vous disposez d'un droit d'accès, de rectification, de 
+            suppression et d'opposition aux données personnelles vous concernant.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Pour exercer ces droits, vous pouvez nous contacter à l'adresse suivante : 
+            contact@ats-handling-rdc.com
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Les données collectées dans le cadre de l'utilisation de l'application sont traitées 
+            conformément à notre politique de confidentialité. Elles sont utilisées uniquement 
+            dans le cadre de la gestion des opérations aéroportuaires et ne sont pas transmises 
+            à des tiers sans votre consentement.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>6. Responsabilité</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            AFRICAN TRANSPORT SYSTEMS s'efforce de fournir sur l'application BFS des informations aussi 
+            précises que possible. Toutefois, il ne pourra être tenu responsable des omissions, des 
+            inexactitudes et des carences dans la mise à jour, qu'elles soient de son fait ou du fait 
+            des tiers partenaires qui lui fournissent ces informations.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Toutes les informations indiquées sur l'application sont données à titre indicatif, et sont 
+            susceptibles d'évoluer. Par ailleurs, les renseignements figurant sur l'application ne sont 
+            pas exhaustifs. Ils sont donnés sous réserve de modifications ayant été apportées depuis leur 
+            mise en ligne.
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            AFRICAN TRANSPORT SYSTEMS ne pourra être tenu responsable des dommages directs ou indirects 
+            causés au matériel de l'utilisateur lors de l'accès à l'application, et résultant soit de 
+            l'utilisation d'un matériel ne répondant pas aux spécifications, soit de l'apparition d'un bug 
+            ou d'une incompatibilité.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>7. Cookies et traceurs</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            L'application BFS peut utiliser des cookies ou des technologies similaires pour améliorer 
+            l'expérience utilisateur et analyser l'utilisation de l'application. Ces cookies sont 
+            utilisés uniquement dans le cadre technique de l'application et ne sont pas utilisés à des 
+            fins publicitaires.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>8. Droit applicable</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Les présentes mentions légales sont régies par le droit de la République Démocratique du Congo. 
+            En cas de litige et à défaut d'accord amiable, le litige sera porté devant les tribunaux 
+            compétents de Kinshasa conformément aux règles de compétence en vigueur.
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>9. Contact</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            Pour toute question concernant les présentes mentions légales, vous pouvez nous contacter :
+          </Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            <Text style={[styles.bold, { color: colors.text.primary }]}>Par email :</Text> contact@ats-handling-rdc.com{'\n'}
+            <Text style={[styles.bold, { color: colors.text.primary }]}>Par téléphone :</Text> +243 819 929 881{'\n'}
+            <Text style={[styles.bold, { color: colors.text.primary }]}>Par courrier :</Text>{'\n'}
+            AFRICAN TRANSPORT SYSTEMS{'\n'}
+            11ème niveau, Immeuble Equity BCDC{'\n'}
+            Numéro 15, Boulevard du 30 juin{'\n'}
+            Commune de GOMBE, Kinshasa{'\n'}
+            République Démocratique du Congo
+          </Text>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>10. Modifications</Text>
+          <Text style={[styles.text, { color: colors.text.secondary }]}>
+            AFRICAN TRANSPORT SYSTEMS se réserve le droit de modifier les présentes mentions légales à tout 
+            moment. L'utilisateur est invité à les consulter de manière régulière.
+          </Text>
+        </Card>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: Spacing.lg,
+  },
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    marginBottom: Spacing.xs,
+  },
+  lastUpdated: {
+    fontSize: FontSizes.sm,
+    fontStyle: 'italic',
+  },
+  sectionTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    marginBottom: Spacing.md,
+  },
+  text: {
+    fontSize: FontSizes.md,
+    lineHeight: 24,
+    marginBottom: Spacing.md,
+  },
+  bold: {
+    fontWeight: FontWeights.bold,
+  },
+});
+

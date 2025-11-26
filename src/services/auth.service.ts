@@ -1,0 +1,188 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { User, UserSession, UserRole } from '../types/user.types';
+import { USE_MOCK_DATA } from '../config';
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+const STORAGE_KEYS = {
+  SESSION: '@bfs:session',
+  USER: '@bfs:user',
+};
+
+class AuthService {
+  private supabase: SupabaseClient | null = null;
+
+  constructor() {
+    // Ne pas initialiser Supabase si on est en mode mock
+    if (USE_MOCK_DATA) {
+      return;
+    }
+
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      // Utiliser console.debug au lieu de console.warn pour éviter les avertissements en développement
+      console.debug('Supabase credentials not configured - using mock data instead');
+    }
+  }
+
+  async register(
+    email: string,
+    password: string,
+    fullName: string,
+    airportCode: string,
+    role: UserRole
+  ): Promise<UserSession> {
+    if (!this.supabase) {
+      throw new Error('Supabase not configured');
+    }
+
+    // Créer le compte dans Supabase Auth
+    const { data: authData, error: authError } = await this.supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      throw new Error(`Erreur d'inscription: ${authError.message}`);
+    }
+
+    if (!authData.user) {
+      throw new Error('Erreur: utilisateur non créé');
+    }
+
+    // Créer le profil dans la table users
+    const { data: userData, error: userError } = await this.supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email,
+        full_name: fullName,
+        airport_code: airportCode,
+        role,
+      })
+      .select()
+      .single();
+
+    if (userError) {
+      // Si l'insertion échoue, supprimer le compte auth créé
+      await this.supabase.auth.admin.deleteUser(authData.user.id);
+      throw new Error(`Erreur de création du profil: ${userError.message}`);
+    }
+
+    const user: User = {
+      id: userData.id,
+      email: userData.email,
+      fullName: userData.full_name,
+      airportCode: userData.airport_code,
+      role: userData.role,
+      createdAt: userData.created_at,
+      updatedAt: userData.updated_at,
+    };
+
+    const session: UserSession = {
+      user,
+      accessToken: authData.session?.access_token || '',
+      refreshToken: authData.session?.refresh_token,
+    };
+
+    // Sauvegarder la session localement
+    await this.saveSession(session);
+
+    return session;
+  }
+
+  async login(email: string, password: string): Promise<UserSession> {
+    if (!this.supabase) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      throw new Error(`Erreur de connexion: ${authError.message}`);
+    }
+
+    if (!authData.user || !authData.session) {
+      throw new Error('Erreur: session non créée');
+    }
+
+    // Récupérer le profil utilisateur
+    const { data: userData, error: userError } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (userError || !userData) {
+      throw new Error(`Erreur de récupération du profil: ${userError?.message}`);
+    }
+
+    const user: User = {
+      id: userData.id,
+      email: userData.email,
+      fullName: userData.full_name,
+      airportCode: userData.airport_code,
+      role: userData.role,
+      createdAt: userData.created_at,
+      updatedAt: userData.updated_at,
+    };
+
+    const session: UserSession = {
+      user,
+      accessToken: authData.session.access_token,
+      refreshToken: authData.session.refresh_token,
+    };
+
+    // Sauvegarder la session localement
+    await this.saveSession(session);
+
+    return session;
+  }
+
+  async logout(): Promise<void> {
+    if (this.supabase) {
+      await this.supabase.auth.signOut();
+    }
+    await AsyncStorage.multiRemove([STORAGE_KEYS.SESSION, STORAGE_KEYS.USER]);
+  }
+
+  async getCurrentSession(): Promise<UserSession | null> {
+    try {
+      const sessionJson = await AsyncStorage.getItem(STORAGE_KEYS.SESSION);
+      if (sessionJson) {
+        return JSON.parse(sessionJson);
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+    }
+    return null;
+  }
+
+  async saveSession(session: UserSession): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(session.user));
+    } catch (error) {
+      console.error('Error saving session:', error);
+      throw error;
+    }
+  }
+
+  async getCurrentUser(): Promise<User | null> {
+    const session = await this.getCurrentSession();
+    return session?.user || null;
+  }
+
+  isAuthenticated(): Promise<boolean> {
+    return this.getCurrentSession().then(session => session !== null);
+  }
+}
+
+export const authService = new AuthService();
+
