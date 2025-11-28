@@ -22,9 +22,9 @@ export default function LegalScreen({ navigation }: Props) {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>1. Éditeur de l'application</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>1. Éditeur de l&apos;application</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L'application BFS (Baggage Flight System) est éditée par :
+            L&apos;application BFS (Baggage Flight System) est éditée par :
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             <Text style={[styles.bold, { color: colors.text.primary }]}>AFRICAN TRANSPORT SYSTEMS</Text>{'\n'}
@@ -42,15 +42,15 @@ export default function LegalScreen({ navigation }: Props) {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>2. À propos d'ATS</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>2. À propos d&apos;ATS</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            AFRICAN TRANSPORT HANDLING fait partie d'un grand Groupe : AFRICAN TRANSPORT SYSTEMS. 
+            AFRICAN TRANSPORT HANDLING fait partie d&apos;un grand Groupe : AFRICAN TRANSPORT SYSTEMS. 
             Le groupe comprend en son sein plusieurs autres sociétés qui travaillent pour le développement 
-            de l'Afrique en général.
+            de l&apos;Afrique en général.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            ATS Handling est spécialisé dans les services d'assistance aéroportuaire, incluant 
-            l'assistance au sol, la manutention des bagages, le traitement des cargos, la sûreté 
+            ATS Handling est spécialisé dans les services d&apos;assistance aéroportuaire, incluant 
+            l&apos;assistance au sol, la manutention des bagages, le traitement des cargos, la sûreté 
             aéroportuaire, la maintenance, le support informatique, le cleaning, le catering et 
             la restauration.
           </Text>
@@ -59,18 +59,18 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>3. Propriété intellectuelle</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L'ensemble du contenu de l'application BFS (textes, images, vidéos, logos, icônes, etc.) 
-            est la propriété exclusive d'AFRICAN TRANSPORT SYSTEMS ou de ses partenaires, sauf mention 
+            L&apos;ensemble du contenu de l&apos;application BFS (textes, images, vidéos, logos, icônes, etc.) 
+            est la propriété exclusive d&apos;AFRICAN TRANSPORT SYSTEMS ou de ses partenaires, sauf mention 
             contraire.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Toute reproduction, représentation, modification, publication, adaptation de tout ou partie 
-            des éléments de l'application, quel que soit le moyen ou le procédé utilisé, est interdite, 
-            sauf autorisation écrite préalable d'AFRICAN TRANSPORT SYSTEMS.
+            des éléments de l&apos;application, quel que soit le moyen ou le procédé utilisé, est interdite, 
+            sauf autorisation écrite préalable d&apos;AFRICAN TRANSPORT SYSTEMS.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            Les marques, logos et signes distinctifs présents dans l'application sont la propriété exclusive 
-            d'AFRICAN TRANSPORT SYSTEMS ou de ses partenaires. Toute reproduction non autorisée de ces 
+            Les marques, logos et signes distinctifs présents dans l&apos;application sont la propriété exclusive 
+            d&apos;AFRICAN TRANSPORT SYSTEMS ou de ses partenaires. Toute reproduction non autorisée de ces 
             éléments constitue une contrefaçon passible de sanctions pénales.
           </Text>
         </Card>
@@ -79,15 +79,15 @@ export default function LegalScreen({ navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>5. Protection des données personnelles</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi 
-            Informatique et Libertés, vous disposez d'un droit d'accès, de rectification, de 
-            suppression et d'opposition aux données personnelles vous concernant.
+            Informatique et Libertés, vous disposez d&apos;un droit d&apos;accès, de rectification, de 
+            suppression et d&apos;opposition aux données personnelles vous concernant.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            Pour exercer ces droits, vous pouvez nous contacter à l'adresse suivante : 
+            Pour exercer ces droits, vous pouvez nous contacter à l&apos;adresse suivante : 
             contact@ats-handling-rdc.com
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            Les données collectées dans le cadre de l'utilisation de l'application sont traitées 
+            Les données collectées dans le cadre de l&apos;utilisation de l&apos;application sont traitées 
             conformément à notre politique de confidentialité. Elles sont utilisées uniquement 
             dans le cadre de la gestion des opérations aéroportuaires et ne sont pas transmises 
             à des tiers sans votre consentement.
@@ -97,31 +97,31 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>6. Responsabilité</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            AFRICAN TRANSPORT SYSTEMS s'efforce de fournir sur l'application BFS des informations aussi 
+            AFRICAN TRANSPORT SYSTEMS s&apos;efforce de fournir sur l&apos;application BFS des informations aussi 
             précises que possible. Toutefois, il ne pourra être tenu responsable des omissions, des 
-            inexactitudes et des carences dans la mise à jour, qu'elles soient de son fait ou du fait 
+            inexactitudes et des carences dans la mise à jour, qu&apos;elles soient de son fait ou du fait 
             des tiers partenaires qui lui fournissent ces informations.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            Toutes les informations indiquées sur l'application sont données à titre indicatif, et sont 
-            susceptibles d'évoluer. Par ailleurs, les renseignements figurant sur l'application ne sont 
+            Toutes les informations indiquées sur l&apos;application sont données à titre indicatif, et sont 
+            susceptibles d&apos;évoluer. Par ailleurs, les renseignements figurant sur l&apos;application ne sont 
             pas exhaustifs. Ils sont donnés sous réserve de modifications ayant été apportées depuis leur 
             mise en ligne.
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             AFRICAN TRANSPORT SYSTEMS ne pourra être tenu responsable des dommages directs ou indirects 
-            causés au matériel de l'utilisateur lors de l'accès à l'application, et résultant soit de 
-            l'utilisation d'un matériel ne répondant pas aux spécifications, soit de l'apparition d'un bug 
-            ou d'une incompatibilité.
+            causés au matériel de l&apos;utilisateur lors de l&apos;accès à l&apos;application, et résultant soit de 
+            l&apos;utilisation d&apos;un matériel ne répondant pas aux spécifications, soit de l&apos;apparition d&apos;un bug 
+            ou d&apos;une incompatibilité.
           </Text>
         </Card>
 
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>7. Cookies et traceurs</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L'application BFS peut utiliser des cookies ou des technologies similaires pour améliorer 
-            l'expérience utilisateur et analyser l'utilisation de l'application. Ces cookies sont 
-            utilisés uniquement dans le cadre technique de l'application et ne sont pas utilisés à des 
+            L&apos;application BFS peut utiliser des cookies ou des technologies similaires pour améliorer 
+            l&apos;expérience utilisateur et analyser l&apos;utilisation de l&apos;application. Ces cookies sont 
+            utilisés uniquement dans le cadre technique de l&apos;application et ne sont pas utilisés à des 
             fins publicitaires.
           </Text>
         </Card>
@@ -130,7 +130,7 @@ export default function LegalScreen({ navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>8. Droit applicable</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Les présentes mentions légales sont régies par le droit de la République Démocratique du Congo. 
-            En cas de litige et à défaut d'accord amiable, le litige sera porté devant les tribunaux 
+            En cas de litige et à défaut d&apos;accord amiable, le litige sera porté devant les tribunaux 
             compétents de Kinshasa conformément aux règles de compétence en vigueur.
           </Text>
         </Card>
@@ -156,7 +156,7 @@ export default function LegalScreen({ navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>10. Modifications</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             AFRICAN TRANSPORT SYSTEMS se réserve le droit de modifier les présentes mentions légales à tout 
-            moment. L'utilisateur est invité à les consulter de manière régulière.
+            moment. L&apos;utilisateur est invité à les consulter de manière régulière.
           </Text>
         </Card>
       </View>

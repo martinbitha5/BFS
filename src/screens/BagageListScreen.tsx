@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStack';
-import { databaseServiceInstance, authServiceInstance } from '../services';
+import { databaseServiceInstance, authServiceInstance, exportService } from '../services';
 import { Baggage } from '../types/baggage.types';
 import { BaggageCard } from '../components';
 import { Colors, Spacing, FontSizes, FontWeights } from '../theme';
+import * as Sharing from 'expo-sharing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BagageList'>;
 
@@ -16,6 +17,7 @@ export default function BagageListScreen({ navigation }: Props) {
   const [baggages, setBaggages] = useState<Baggage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadBaggages();
@@ -47,11 +49,47 @@ export default function BagageListScreen({ navigation }: Props) {
     loadBaggages();
   };
 
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      const user = await authServiceInstance.getCurrentUser();
+      if (!user) {
+        Alert.alert('Erreur', 'Utilisateur non connecté');
+        return;
+      }
+
+      if (baggages.length === 0) {
+        Alert.alert('Aucune donnée', 'Il n\'y a aucun bagage à exporter.');
+        return;
+      }
+
+      // Exporter la liste de bagages au format spécialisé
+      const fileUri = await exportService.exportBaggagesListToExcel(user.airportCode);
+      
+      // Partager le fichier
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: 'Partager la liste de bagages',
+          UTI: 'org.openxmlformats.spreadsheetml.sheet',
+        });
+      } else {
+        Alert.alert('Succès', `Fichier Excel créé : ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Error exporting baggages:', error);
+      Alert.alert('Erreur', error instanceof Error ? error.message : 'Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="bag-outline" size={64} color={Colors.text.secondary} />
       <Text style={styles.emptyTitle}>Aucun bagage</Text>
-      <Text style={styles.emptyText}>Aucun bagage n'a été enregistré pour le moment.</Text>
+      <Text style={styles.emptyText}>Aucun bagage n&apos;a été enregistré pour le moment.</Text>
     </View>
   );
 
@@ -67,9 +105,22 @@ export default function BagageListScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
-        <View>
-          <Text style={styles.title}>Liste des Bagages</Text>
-          <Text style={styles.subtitle}>{baggages.length} bagage{baggages.length > 1 ? 's' : ''} enregistré{baggages.length > 1 ? 's' : ''}</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>Liste des Bagages</Text>
+            <Text style={styles.subtitle}>{baggages.length} bagage{baggages.length > 1 ? 's' : ''} enregistré{baggages.length > 1 ? 's' : ''}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.exportButton, exporting && styles.exportButtonDisabled]}
+            onPress={handleExportExcel}
+            disabled={exporting || baggages.length === 0}
+            activeOpacity={0.7}>
+            <Ionicons 
+              name={exporting ? 'hourglass-outline' : 'download-outline'} 
+              size={24} 
+              color={exporting || baggages.length === 0 ? Colors.text.secondary : Colors.primary.main} 
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -126,6 +177,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.paper,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exportButton: {
+    padding: Spacing.sm,
+    borderRadius: 8,
+    backgroundColor: Colors.background.default,
+  },
+  exportButtonDisabled: {
+    opacity: 0.5,
   },
   title: {
     fontSize: FontSizes.xxl,

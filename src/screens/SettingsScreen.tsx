@@ -118,7 +118,7 @@ export default function SettingsScreen({ navigation }: Props) {
         console.error('Error opening email:', err);
         Alert.alert(
           'Erreur',
-          'Impossible d\'ouvrir l\'application email',
+          'Impossible d&apos;ouvrir l&apos;application email',
           [{ text: 'OK' }]
         );
       });
@@ -130,7 +130,7 @@ export default function SettingsScreen({ navigation }: Props) {
       await logAudit(
         'LOGOUT',
         'system',
-        `Déconnexion de l'agent: ${user?.fullName} (${user?.email})`
+        `Déconnexion de l&apos;agent: ${user?.fullName} (${user?.email})`
       );
     } catch (error) {
       console.error('Error logging logout:', error);
@@ -178,7 +178,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Paramètres de l'application */}
         <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Paramètres de l'application</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Paramètres de l&apos;application</Text>
           
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>

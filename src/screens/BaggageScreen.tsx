@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { parserService } from '../services/parser.service';
-import { databaseServiceInstance, authServiceInstance } from '../services';
-import { Passenger } from '../types/passenger.types';
-import { Baggage } from '../types/baggage.types';
-import { Button, Card, Badge, PassengerCard, BaggageCard, FlightInfo, Toast } from '../components';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge, BaggageCard, Button, Card, PassengerCard, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-import { Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import { playScanSound, playSuccessSound, playErrorSound } from '../utils/sound.util';
-import { getScanResultMessage, getScanErrorMessage } from '../utils/scanMessages.util';
+import { RootStackParamList } from '../navigation/RootStack';
+import { authServiceInstance, databaseServiceInstance } from '../services';
+import { parserService } from '../services/parser.service';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { Baggage } from '../types/baggage.types';
+import { Passenger } from '../types/passenger.types';
+import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
+import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Baggage'>;
 
@@ -35,6 +35,8 @@ export default function BaggageScreen({ navigation }: Props) {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [lastScannedRfidTag, setLastScannedRfidTag] = useState<string | null>(null);
+  const [scannedBaggagesCount, setScannedBaggagesCount] = useState(0); // Compteur pour mode test
+  const [scannedTagInfo, setScannedTagInfo] = useState<any>(null); // Informations extraites du tag RFID
 
   useEffect(() => {
     if (passenger) {
@@ -47,6 +49,10 @@ export default function BaggageScreen({ navigation }: Props) {
     try {
       const passengerBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
       setBaggages(passengerBaggages);
+      // En mode test, initialiser le compteur avec le nombre de bagages existants
+      if (__DEV__) {
+        setScannedBaggagesCount(passengerBaggages.length);
+      }
     } catch (error) {
       console.error('Error loading baggages:', error);
     }
@@ -79,23 +85,59 @@ export default function BaggageScreen({ navigation }: Props) {
 
       const passengerData = parserService.parse(data);
       
-      // Vérifier que le vol concerne l'aéroport de l'agent
-      if (
-        passengerData.departure !== user.airportCode &&
-        passengerData.arrival !== user.airportCode
-      ) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'baggage', 'wrong_airport');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        setProcessing(false);
-        setScanned(false);
-        setShowScanner(true);
-        return;
+      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
+      if (!__DEV__) {
+        // Vérifier que le vol concerne l'aéroport de l'agent
+        if (
+          passengerData.departure !== user.airportCode &&
+          passengerData.arrival !== user.airportCode
+        ) {
+          await playErrorSound();
+          const errorMsg = getScanErrorMessage(user.role as any, 'baggage', 'wrong_airport');
+          setToastMessage(errorMsg.message);
+          setToastType(errorMsg.type);
+          setShowToast(true);
+          setProcessing(false);
+          setScanned(false);
+          setShowScanner(true);
+          return;
+        }
+      } else {
+        console.log('[BAGGAGE] 🧪 MODE TEST - Vérification aéroport désactivée');
       }
 
-      const found = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      let found = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      
+      // EN MODE TEST: Créer un passager fictif si non trouvé
+      if (!found && __DEV__) {
+        console.log('[BAGGAGE] 🧪 MODE TEST - Passager non trouvé, création automatique');
+        const passengerId = await databaseServiceInstance.createPassenger({
+          pnr: passengerData.pnr,
+          fullName: passengerData.fullName,
+          firstName: passengerData.firstName,
+          lastName: passengerData.lastName,
+          flightNumber: passengerData.flightNumber || 'TEST123',
+          flightTime: passengerData.flightTime || new Date().toISOString(),
+          airline: passengerData.airline || 'Test Airline',
+          airlineCode: passengerData.companyCode || 'TT',
+          departure: passengerData.departure || 'TEST',
+          arrival: passengerData.arrival || user.airportCode,
+          route: passengerData.route || 'TEST-' + user.airportCode,
+          companyCode: passengerData.companyCode || 'TT',
+          ticketNumber: passengerData.ticketNumber,
+          seatNumber: passengerData.seatNumber,
+          cabinClass: 'Y',
+          baggageCount: passengerData.baggageInfo?.count || 1,
+          baggageBaseNumber: passengerData.baggageInfo?.baseNumber,
+          rawData: data,
+          format: passengerData.format || 'generic',
+          checkedInAt: new Date().toISOString(),
+          checkedInBy: user.id,
+          synced: false,
+        });
+        found = await databaseServiceInstance.getPassengerById(passengerId);
+        console.log('[BAGGAGE] ✅ Passager créé automatiquement pour test');
+      }
       
       if (!found) {
         await playErrorSound();
@@ -114,6 +156,7 @@ export default function BaggageScreen({ navigation }: Props) {
       setShowScanner(true); // S'assurer que le scanner reste visible pour scanner les bagages
       setScanned(false); // Réinitialiser pour permettre le scan immédiat
       setProcessing(false); // Réinitialiser pour permettre le scan immédiat
+      setScannedBaggagesCount(0); // Réinitialiser le compteur
       
       console.log('[BAGGAGE SCAN] Mode changé vers RFID, scanner prêt');
       
@@ -164,56 +207,63 @@ export default function BaggageScreen({ navigation }: Props) {
       return;
     }
 
-    // En mode debug sans passager, tester le parsing et afficher les résultats
+    // En mode debug sans passager, afficher les informations extraites du tag
     if (!passenger && __DEV__) {
-      console.log('[BAGGAGE SCAN] 🔧 MODE DEBUG - Scan sans passager');
-      console.log('[BAGGAGE SCAN] Données brutes scannées:', data);
-      console.log('[BAGGAGE SCAN] Type de code-barres:', scanMode);
+      console.log('');
+      console.log('🧪════════════════════════════════════════════════════🧪');
+      console.log('   MODE TEST - SCAN BAGAGE SANS PASSAGER');
+      console.log('🧪════════════════════════════════════════════════════🧪');
+      console.log('📦 DONNÉES BRUTES SCANNÉES:');
+      console.log(data);
+      console.log('─────────────────────────────────────────────────────');
       
       await playScanSound();
       
       setScanned(true);
       setProcessing(true);
       
-      // Tester le parsing même sans passager
       try {
         const cleanedData = data.trim();
         const baggageTagData = parserService.parseBaggageTag(cleanedData);
         let rfidTag = baggageTagData.rfidTag.trim();
         
-        // Si le parsing n'a pas extrait de tag RFID valide, utiliser les données brutes
         if (!rfidTag || rfidTag === 'UNKNOWN' || rfidTag.length === 0) {
-          console.log('[BAGGAGE SCAN] Tag RFID non extrait par le parser, utilisation des données brutes');
           rfidTag = cleanedData;
         }
         
-        console.log('[BAGGAGE SCAN] ✅ Parsing réussi:', {
-          rfidTag,
-          passengerName: baggageTagData.passengerName,
-          flightNumber: baggageTagData.flightNumber,
-          pnr: baggageTagData.pnr,
-          rawData: baggageTagData.rawData
-        });
+        console.log('');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('🎫 INFORMATIONS EXTRAITES DU TAG BAGAGE');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('📝 Nom complet      :', baggageTagData.passengerName || '❌ NON EXTRAIT');
+        console.log('✈️  Origine         :', baggageTagData.origin || '❌ NON EXTRAIT');
+        console.log('🏁 Destination      :', baggageTagData.destination || '❌ NON EXTRAIT');
+        console.log('🧳 Nombre bagages   :', baggageTagData.baggageCount || '❌ NON EXTRAIT');
+        console.log('🔢 Bagage n°        :', baggageTagData.baggageSequence ? `${baggageTagData.baggageSequence}/${baggageTagData.baggageCount}` : '❌ NON EXTRAIT');
+        console.log('🛫 Vol              :', baggageTagData.flightNumber || '❌ NON EXTRAIT');
+        console.log('📅 Date vol         :', baggageTagData.flightDate || '❌ NON EXTRAIT');
+        console.log('🎟️  PNR             :', baggageTagData.pnr || '❌ NON EXTRAIT');
+        console.log('🏷️  Tag RFID        :', rfidTag);
+        console.log('═══════════════════════════════════════════════════');
+        console.log('');
         
-        // Stocker le tag RFID scanné pour l'afficher dans l'écran de succès
+        // Stocker les informations extraites
+        setScannedTagInfo(baggageTagData);
         setLastScannedRfidTag(rfidTag);
+        setScannedBaggagesCount(1);
         
         // Masquer le scanner et afficher l'écran de succès
         setProcessing(false);
         setShowScanner(false);
         
-        console.log('[BAGGAGE SCAN] 🎯🎯🎯 MODE DEBUG - ÉTATS MIS À JOUR:', { 
-          showScanner: false, 
-          processing: false, 
-          scanned: true,
-          lastScannedRfidTag: rfidTag 
-        });
-        console.log('[BAGGAGE SCAN] ✅ Écran de succès devrait maintenant être visible (mode debug)');
-        
         await playSuccessSound();
-      } catch (parseError) {
-        console.error('[BAGGAGE SCAN] ❌ Erreur parsing:', parseError);
-        setToastMessage(`🔧 DEBUG: Erreur parsing - ${parseError instanceof Error ? parseError.message : 'Inconnue'}`);
+        setToastMessage(`✅ Tag RFID scanné: ${rfidTag}`);
+        setToastType('success');
+        setShowToast(true);
+      } catch (error) {
+        console.error('[BAGGAGE] ❌ Erreur:', error);
+        await playErrorSound();
+        setToastMessage(`Erreur: ${error instanceof Error ? error.message : 'Inconnue'}`);
         setToastType('error');
         setShowToast(true);
         setProcessing(false);
@@ -297,17 +347,22 @@ export default function BaggageScreen({ navigation }: Props) {
 
       console.log('Tag RFID extrait:', rfidTag);
 
-      // Vérifier si le bagage existe déjà
-      const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
-      if (existing) {
-        await playErrorSound();
-        setToastMessage(`⚠️ Bagage déjà scanné: ${rfidTag}`);
-        setToastType('error');
-        setShowToast(true);
-        setProcessing(false);
-        setScanned(false);
-        setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
-        return;
+      // EN MODE TEST: Ne pas vérifier si le bagage existe déjà
+      if (!__DEV__) {
+        // Vérifier si le bagage existe déjà
+        const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+        if (existing) {
+          await playErrorSound();
+          setToastMessage(`⚠️ Bagage déjà scanné: ${rfidTag}`);
+          setToastType('error');
+          setShowToast(true);
+          setProcessing(false);
+          setScanned(false);
+          setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
+          return;
+        }
+      } else {
+        console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Vérification "déjà scanné" désactivée');
       }
 
       // Afficher les informations extraites
@@ -328,46 +383,55 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
       // Enregistrer automatiquement le bagage
       console.log('[BAGGAGE SCAN] 🔄 Début de l\'enregistrement automatique...');
       try {
-        // Vérifier si c'est un tag attendu (format Air Congo)
-        const expectedTags = passenger.baggageBaseNumber
-          ? generateExpectedTags(passenger.baggageBaseNumber, passenger.baggageCount)
-          : [];
+        let updatedBaggages: Baggage[] = [];
+        let baggageId: string | undefined;
+        
+        // EN MODE TEST: Ne pas enregistrer dans la base de données
+        if (!__DEV__) {
+          // Vérifier si c'est un tag attendu (format Air Congo)
+          const expectedTags = passenger.baggageBaseNumber
+            ? generateExpectedTags(passenger.baggageBaseNumber, passenger.baggageCount)
+            : [];
 
-        const isExpected = expectedTags.includes(rfidTag);
+          const isExpected = expectedTags.includes(rfidTag);
 
-        // Créer le bagage
-        const baggageId = await databaseServiceInstance.createBaggage({
-          passengerId: passenger.id,
-          rfidTag,
-          expectedTag: isExpected ? rfidTag : undefined,
-          status: 'checked',
-          checkedAt: new Date().toISOString(),
-          checkedBy: user.id,
-          synced: false,
-        });
+          // Créer le bagage
+          baggageId = await databaseServiceInstance.createBaggage({
+            passengerId: passenger.id,
+            rfidTag,
+            expectedTag: isExpected ? rfidTag : undefined,
+            status: 'checked',
+            checkedAt: new Date().toISOString(),
+            checkedBy: user.id,
+            synced: false,
+          });
 
-        // Enregistrer l'action d'audit
-        const { logAudit } = await import('../utils/audit.util');
-        await logAudit(
-          'REGISTER_BAGGAGE',
-          'baggage',
-          `Enregistrement bagage RFID: ${rfidTag} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
-          baggageId
-        );
+          // Enregistrer l'action d'audit
+          const { logAudit } = await import('../utils/audit.util');
+          await logAudit(
+            'REGISTER_BAGGAGE',
+            'baggage',
+            `Enregistrement bagage RFID: ${rfidTag} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
+            baggageId
+          );
 
-        // Ajouter à la file de synchronisation
-        await databaseServiceInstance.addToSyncQueue({
-          tableName: 'baggages',
-          recordId: rfidTag,
-          operation: 'insert',
-          data: JSON.stringify({ passengerId: passenger.id, rfidTag }),
-          retryCount: 0,
-          userId: user.id,
-        });
+          // Ajouter à la file de synchronisation
+          await databaseServiceInstance.addToSyncQueue({
+            tableName: 'baggages',
+            recordId: rfidTag,
+            operation: 'insert',
+            data: JSON.stringify({ passengerId: passenger.id, rfidTag }),
+            retryCount: 0,
+            userId: user.id,
+          });
 
-        // Recharger les bagages
-        const updatedBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
-        setBaggages(updatedBaggages);
+          // Recharger les bagages
+          updatedBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
+        } else {
+          console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Bagage non enregistré dans la base de données');
+          // En mode test, simuler les bagages existants pour l'affichage
+          updatedBaggages = baggages;
+        }
 
         // Jouer le son de succès
         await playSuccessSound();
@@ -376,14 +440,19 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         const successMsg = getScanResultMessage(user.role as any, 'baggage', true, {
           passengerName: passenger.fullName,
           baggageCount: passenger.baggageCount,
-          scannedCount: updatedBaggages.length,
+          scannedCount: __DEV__ ? baggages.length + 1 : updatedBaggages.length,
         });
         
         // Mettre à jour le toast avec le message de succès
-        console.log('[BAGGAGE SCAN] ✅✅✅ Enregistrement réussi dans la base de données ✅✅✅');
-        console.log('[BAGGAGE SCAN] Bagage ID:', baggageId);
-        console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
-        console.log('[BAGGAGE SCAN] Nombre de bagages scannés:', updatedBaggages.length);
+        if (__DEV__) {
+          console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Scan simulé (non enregistré)');
+          console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
+        } else {
+          console.log('[BAGGAGE SCAN] ✅✅✅ Enregistrement réussi dans la base de données ✅✅✅');
+          console.log('[BAGGAGE SCAN] Bagage ID:', baggageId);
+          console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
+          console.log('[BAGGAGE SCAN] Nombre de bagages scannés:', updatedBaggages.length);
+        }
         
         setToastMessage(`✅ ${successMsg.message}\nTag RFID: ${rfidTag}`);
         setToastType('success');
@@ -391,6 +460,11 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         
         // Stocker le tag RFID scanné pour l'afficher dans l'écran de succès
         setLastScannedRfidTag(rfidTag);
+        
+        // En mode test, incrémenter le compteur de bagages scannés
+        if (__DEV__ && passenger) {
+          setScannedBaggagesCount(prev => prev + 1);
+        }
         
         console.log('[BAGGAGE SCAN] ✅✅✅ Enregistrement réussi - Préparation de l\'écran de succès');
         console.log('[BAGGAGE SCAN] Tag RFID stocké:', rfidTag);
@@ -463,6 +537,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
     setScanMode('boarding_pass');
     setShowScanner(true);
     setLastScannedRfidTag(null);
+    setScannedBaggagesCount(0);
   };
 
   if (!permission) {
@@ -492,24 +567,6 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         onHide={() => setShowToast(false)}
       />
       
-      <Card style={[styles.headerCard, { marginTop: insets.top + Spacing.lg }]}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.title, { color: colors.text.primary }]}>Gestion des Bagages</Text>
-            <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-              {scanMode === 'boarding_pass' ? 'Scannez le boarding pass' : 'Scannez le tag RFID'}
-            </Text>
-          </View>
-          {passenger && (
-            <Button
-              title="Nouveau"
-              onPress={resetPassenger}
-              variant="outline"
-              size="sm"
-            />
-          )}
-        </View>
-      </Card>
 
       {processing ? (
         <View style={styles.processingContainer}>
@@ -517,19 +574,135 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
           <Text style={[styles.processingText, { color: colors.text.secondary }]}>Traitement en cours...</Text>
         </View>
       ) : !showScanner && lastScannedRfidTag ? (
-        <View style={styles.successContainer}>
+        <ScrollView 
+          style={styles.successContainer}
+          contentContainerStyle={styles.successContentContainer}
+          showsVerticalScrollIndicator={true}>
           <Card style={styles.successCard}>
             <View style={styles.successHeader}>
               <Ionicons name="checkmark-circle" size={48} color={colors.success.main} />
               <Text style={[styles.successTitle, { color: colors.text.primary }]}>Bagage enregistré</Text>
             </View>
             <View style={styles.successInfo}>
-              <View style={styles.resultContainer}>
-                <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Tag RFID scanné:</Text>
-                <Text style={[styles.resultValue, { color: colors.text.primary }]}>{lastScannedRfidTag}</Text>
+              {/* Section: Informations Passager ou Tag */}
+              {(passenger || scannedTagInfo) ? (
+                <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light }]}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="person" size={20} color={colors.primary.main} />
+                    <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations {passenger ? 'Passager' : 'Extraites du Tag'}</Text>
+                  </View>
+                  
+                  {/* Nom complet - mise en avant */}
+                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nom complet:</Text>
+                    <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.bold, fontSize: FontSizes.md }]}>
+                      {passenger ? passenger.fullName : (scannedTagInfo?.passengerName || 'INCONNU')}
+                    </Text>
+                  </View>
+
+                  {/* Origine - mise en avant */}
+                  {(passenger?.departure || scannedTagInfo?.origin) && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Origine:</Text>
+                      <Badge label={passenger ? passenger.departure : scannedTagInfo.origin} variant="info" />
+                    </View>
+                  )}
+
+                  {/* Destination - mise en avant */}
+                  {(passenger?.arrival || scannedTagInfo?.destination) && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Destination:</Text>
+                      <Badge label={passenger ? passenger.arrival : scannedTagInfo.destination} variant="success" />
+                    </View>
+                  )}
+
+                  {/* Nombre de bagages - mise en avant */}
+                  {(passenger?.baggageCount || scannedTagInfo?.baggageCount) && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nombre de bagages:</Text>
+                      <Badge 
+                        label={passenger 
+                          ? `${passenger.baggageCount} bagage${passenger.baggageCount > 1 ? 's' : ''}`
+                          : `${scannedTagInfo?.baggageCount} bagage${(scannedTagInfo?.baggageCount || 0) > 1 ? 's' : ''}`
+                        }
+                        variant="warning"
+                      />
+                    </View>
+                  )}
+                  
+                  {/* Séquence du bagage (uniquement depuis le tag) */}
+                  {!passenger && scannedTagInfo?.baggageSequence && scannedTagInfo?.baggageCount && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Bagage n°:</Text>
+                      <Badge 
+                        label={`${scannedTagInfo.baggageSequence} / ${scannedTagInfo.baggageCount}`}
+                        variant="info"
+                      />
+                    </View>
+                  )}
+
+                  {(passenger?.flightNumber || scannedTagInfo?.flightNumber) && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Vol:</Text>
+                      <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
+                        {passenger ? passenger.flightNumber : scannedTagInfo?.flightNumber}
+                      </Text>
+                    </View>
+                  )}
+
+                  {(passenger?.pnr || scannedTagInfo?.pnr) && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>PNR:</Text>
+                      <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                        {passenger ? passenger.pnr : scannedTagInfo?.pnr}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Section: Progression Bagages (seulement si passager) */}
+                  {passenger && (
+                    <>
+                      <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
+                        <Ionicons name="checkmark-done" size={20} color={colors.primary.main} />
+                        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Progression</Text>
+                      </View>
+
+                      <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                        <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Scannés:</Text>
+                        <Badge 
+                          label={`${__DEV__ ? scannedBaggagesCount : baggages.length} / ${passenger.baggageCount}`}
+                          variant={(__DEV__ ? scannedBaggagesCount : baggages.length) >= passenger.baggageCount ? "success" : "info"}
+                        />
+                      </View>
+                      <View style={styles.resultRow}>
+                        <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Restants:</Text>
+                        <Badge 
+                          label={`${Math.max(0, passenger.baggageCount - (__DEV__ ? scannedBaggagesCount : baggages.length))}`}
+                          variant={Math.max(0, passenger.baggageCount - (__DEV__ ? scannedBaggagesCount : baggages.length)) === 0 ? "success" : "warning"}
+                        />
+                      </View>
+                    </>
+                  )}
+                </View>
+              ) : null}
+              
+              {/* Section: Numéro d'étiquette */}
+              <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light, marginTop: Spacing.md }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="barcode" size={20} color={colors.primary.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Numéro d'Étiquette Bagage</Text>
+                </View>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 1, textAlign: 'center', flex: 1, fontSize: FontSizes.lg, fontWeight: FontWeights.bold }]}>
+                    {lastScannedRfidTag}
+                  </Text>
+                </View>
               </View>
+              
               <Text style={[styles.successText, { color: colors.text.secondary }]}>
-                Le bagage a été enregistré avec succès.
+                {passenger && (__DEV__ ? scannedBaggagesCount : baggages.length) >= passenger.baggageCount
+                  ? '✓ Tous les bagages ont été scannés avec succès.'
+                  : '✓ Le bagage a été enregistré avec succès.'}
               </Text>
             </View>
             <TouchableOpacity
@@ -538,9 +711,14 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
                 console.log('[BAGGAGE SCAN] 🖱️ Bouton "Scanner à nouveau" cliqué');
                 // Réinitialiser tous les états pour permettre un nouveau scan
                 setLastScannedRfidTag(null);
+                setScannedTagInfo(null);
                 setScanned(false);
                 setProcessing(false);
                 setShowScanner(true);
+                // Recharger les bagages pour mettre à jour le compteur
+                if (passenger) {
+                  loadBaggages();
+                }
                 console.log('[BAGGAGE SCAN] ✅ Scanner réactivé - Prêt pour un nouveau scan');
               }}
               activeOpacity={0.8}>
@@ -550,8 +728,8 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
               </Text>
             </TouchableOpacity>
           </Card>
-        </View>
-      ) : showScanner && !lastScannedRfidTag ? (
+        </ScrollView>
+      ) : showScanner ? (
         <CameraView
           style={styles.camera}
           facing="back"
@@ -618,7 +796,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
           onCameraReady={() => {
             const barcodeTypes = scanMode === 'boarding_pass' 
               ? (__DEV__ 
-                  ? ['pdf417', 'qr', 'interleaved2of5', 'itf14', 'code128', 'code39', 'ean13', 'ean8']
+                  ? ['pdf417', 'qr', 'itf14', 'interleaved2of5', 'code128', 'code39', 'ean13', 'ean8']
                   : ['pdf417', 'qr'])
               : ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec'];
             
@@ -857,6 +1035,9 @@ const styles = StyleSheet.create({
   },
   successContainer: {
     flex: 1,
+  },
+  successContentContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
@@ -888,20 +1069,30 @@ const styles = StyleSheet.create({
   },
   resultContainer: {
     marginBottom: Spacing.lg,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
   },
   resultLabel: {
-    fontSize: FontSizes.sm,
-    marginBottom: Spacing.xs,
+    fontSize: FontSizes.md,
     fontWeight: FontWeights.medium,
+    flex: 1,
   },
   resultValue: {
-    fontSize: FontSizes.xl,
-    fontWeight: FontWeights.bold,
-    letterSpacing: 1,
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: Spacing.md,
+    letterSpacing: 0.5,
   },
   scanAgainButton: {
     flexDirection: 'row',
@@ -916,5 +1107,21 @@ const styles = StyleSheet.create({
   scanAgainButtonText: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+  },
+  routeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
 });

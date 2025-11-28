@@ -94,6 +94,7 @@ export default function FAQScreen({ navigation }: Props) {
     setExpandedItems(newExpanded);
   };
 
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background.default }]} showsVerticalScrollIndicator={false}>
       <View style={[styles.header, { backgroundColor: colors.primary.main, paddingTop: insets.top + Spacing.lg }]}>
@@ -119,6 +120,7 @@ export default function FAQScreen({ navigation }: Props) {
                   <View style={[styles.questionNumber, { backgroundColor: colors.primary.light + '20' }]}>
                     <Text style={[styles.questionNumberText, { color: colors.primary.main }]}>{index + 1}</Text>
                   </View>
+                  {/* eslint-disable-next-line react/no-unescaped-entities */}
                   <Text style={[styles.questionText, { color: colors.text.primary }]}>{item.question}</Text>
                 </View>
                 <Ionicons
@@ -131,6 +133,7 @@ export default function FAQScreen({ navigation }: Props) {
               {isExpanded && (
                 <View style={styles.answerContainer}>
                   <View style={[styles.answerLine, { backgroundColor: colors.primary.light }]} />
+                  {/* eslint-disable-next-line react/no-unescaped-entities */}
                   <Text style={[styles.answerText, { color: colors.text.secondary }]}>{item.answer}</Text>
                 </View>
               )}
@@ -141,9 +144,9 @@ export default function FAQScreen({ navigation }: Props) {
         <Card style={[styles.helpCard, { backgroundColor: colors.primary.light + '10' }]}>
           <View style={styles.helpContent}>
             <Ionicons name="mail-outline" size={32} color={colors.primary.main} />
-            <Text style={[styles.helpTitle, { color: colors.text.primary }]}>Besoin d'aide supplémentaire ?</Text>
+            <Text style={[styles.helpTitle, { color: colors.text.primary }]}>Besoin d&apos;aide supplémentaire ?</Text>
             <Text style={[styles.helpText, { color: colors.text.secondary }]}>
-              Si vous ne trouvez pas la réponse à votre question, n'hésitez pas à contacter notre équipe de support ATS.
+              Si vous ne trouvez pas la réponse à votre question, n&apos;hésitez pas à contacter notre équipe de support ATS.
             </Text>
             <View style={styles.contactInfo}>
               <Text style={[styles.contactText, { color: colors.text.secondary }]}>

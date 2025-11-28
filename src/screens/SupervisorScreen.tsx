@@ -693,7 +693,7 @@ export default function SupervisorScreen({ navigation }: Props) {
           </View>
           <Text style={[styles.mainStatLabel, { color: colors.text.primary }]}>Total Passagers</Text>
           <View style={styles.mainStatSub}>
-            <Text style={[styles.mainStatSubText, { color: colors.text.secondary }]}>Aujourd'hui: {memoizedStatistics.todayPassengers}</Text>
+            <Text style={[styles.mainStatSubText, { color: colors.text.secondary }]}>Aujourd&apos;hui: {memoizedStatistics.todayPassengers}</Text>
           </View>
         </Card>
 
@@ -704,7 +704,7 @@ export default function SupervisorScreen({ navigation }: Props) {
           </View>
           <Text style={[styles.mainStatLabel, { color: colors.text.primary }]}>Total Bagages</Text>
           <View style={styles.mainStatSub}>
-            <Text style={[styles.mainStatSubText, { color: colors.text.secondary }]}>Aujourd'hui: {memoizedStatistics.todayBaggages}</Text>
+            <Text style={[styles.mainStatSubText, { color: colors.text.secondary }]}>Aujourd&apos;hui: {memoizedStatistics.todayBaggages}</Text>
           </View>
         </Card>
       </View>
@@ -717,7 +717,7 @@ export default function SupervisorScreen({ navigation }: Props) {
             <Ionicons name="checkmark-circle" size={24} color={colors.success.main} />
             <Text style={[styles.detailStatValue, { color: colors.text.primary }]}>{memoizedStatistics.boardedPassengers}</Text>
             <Text style={[styles.detailStatLabel, { color: colors.text.secondary }]}>Embarqués</Text>
-            <Text style={[styles.detailStatSub, { color: colors.text.secondary }]}>Aujourd'hui: {memoizedStatistics.todayBoarded}</Text>
+            <Text style={[styles.detailStatSub, { color: colors.text.secondary }]}>Aujourd&apos;hui: {memoizedStatistics.todayBoarded}</Text>
           </View>
           <View style={styles.detailStat}>
             <Ionicons name="close-circle" size={24} color={colors.warning.main} />
@@ -728,7 +728,7 @@ export default function SupervisorScreen({ navigation }: Props) {
             <Ionicons name="location" size={24} color={colors.success.main} />
             <Text style={[styles.detailStatValue, { color: colors.text.primary }]}>{memoizedStatistics.arrivedBaggages}</Text>
             <Text style={[styles.detailStatLabel, { color: colors.text.secondary }]}>Bagages arrivés</Text>
-            <Text style={[styles.detailStatSub, { color: colors.text.secondary }]}>Aujourd'hui: {memoizedStatistics.todayArrived}</Text>
+            <Text style={[styles.detailStatSub, { color: colors.text.secondary }]}>Aujourd&apos;hui: {memoizedStatistics.todayArrived}</Text>
           </View>
           <View style={styles.detailStat}>
             <Ionicons name="airplane" size={24} color={colors.info.main} />
@@ -831,7 +831,7 @@ export default function SupervisorScreen({ navigation }: Props) {
               { color: colors.text.secondary },
               viewMode === 'overview' && [styles.tabTextActive, { color: colors.primary.main }],
             ]}>
-            Vue d'ensemble
+            Vue d&apos;ensemble
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1106,8 +1106,8 @@ export default function SupervisorScreen({ navigation }: Props) {
         <View style={styles.listContainer}>
           <View style={styles.listHeader}>
             <View style={styles.listHeaderTextContainer}>
-              <Text style={[styles.listTitle, { color: colors.text.primary }]}>Logs d'audit ({auditLogs.length})</Text>
-              <Text style={[styles.listSubtitle, { color: colors.text.secondary }]}>Tous les agents de l'aéroport</Text>
+              <Text style={[styles.listTitle, { color: colors.text.primary }]}>Logs d&apos;audit ({auditLogs.length})</Text>
+              <Text style={[styles.listSubtitle, { color: colors.text.secondary }]}>Tous les agents de l&apos;aéroport</Text>
             </View>
             <TouchableOpacity onPress={loadAllData} activeOpacity={0.7}>
               <Ionicons name="refresh" size={24} color={colors.primary.main} />
@@ -1122,7 +1122,7 @@ export default function SupervisorScreen({ navigation }: Props) {
           ) : auditLogs.length === 0 ? (
             <View style={styles.centerContainer}>
               <Ionicons name="document-text-outline" size={64} color={colors.text.secondary} />
-              <Text style={[styles.emptyText, { color: colors.text.primary }]}>Aucun log d'audit</Text>
+              <Text style={[styles.emptyText, { color: colors.text.primary }]}>Aucun log d&apos;audit</Text>
             </View>
           ) : (
             <FlatList

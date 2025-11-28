@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Passenger } from '../types/passenger.types';
 import { Colors, Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 import Card from './Card';
 import Badge from './Badge';
 
@@ -12,6 +13,7 @@ interface PassengerCardProps {
 }
 
 export default function PassengerCard({ passenger, onPress, showDetails = true }: PassengerCardProps) {
+  const { colors } = useTheme();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -27,8 +29,8 @@ export default function PassengerCard({ passenger, onPress, showDetails = true }
     <Card style={styles.card} elevated={!!onPress}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary.main }]}>
+            <Text style={[styles.avatarText, { color: colors.primary.contrast }]}>
               {passenger.fullName
                 .split(' ')
                 .map((n) => n[0])
@@ -38,8 +40,8 @@ export default function PassengerCard({ passenger, onPress, showDetails = true }
             </Text>
           </View>
           <View style={styles.nameContainer}>
-            <Text style={styles.name}>{passenger.fullName}</Text>
-            <Text style={styles.pnr}>PNR: {passenger.pnr}</Text>
+            <Text style={[styles.name, { color: colors.text.primary }]}>{passenger.fullName}</Text>
+            <Text style={[styles.pnr, { color: colors.text.secondary }]}>PNR: {passenger.pnr}</Text>
           </View>
         </View>
         {passenger.baggageCount > 0 && (
@@ -51,32 +53,32 @@ export default function PassengerCard({ passenger, onPress, showDetails = true }
         <View style={styles.details}>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Vol</Text>
-              <Text style={styles.detailValue}>{passenger.flightNumber}</Text>
+              <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>Vol</Text>
+              <Text style={[styles.detailValue, { color: colors.text.primary }]}>{passenger.flightNumber}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Route</Text>
-              <Text style={styles.detailValue}>{passenger.route}</Text>
+              <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>Route</Text>
+              <Text style={[styles.detailValue, { color: colors.text.primary }]}>{passenger.route}</Text>
             </View>
           </View>
 
           {passenger.flightTime && (
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Heure</Text>
-                <Text style={styles.detailValue}>{passenger.flightTime}</Text>
+                <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>Heure</Text>
+                <Text style={[styles.detailValue, { color: colors.text.primary }]}>{passenger.flightTime}</Text>
               </View>
               {passenger.seatNumber && (
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Siège</Text>
-                  <Text style={styles.detailValue}>{passenger.seatNumber}</Text>
+                  <Text style={[styles.detailLabel, { color: colors.text.secondary }]}>Siège</Text>
+                  <Text style={[styles.detailValue, { color: colors.text.primary }]}>{passenger.seatNumber}</Text>
                 </View>
               )}
             </View>
           )}
 
-          <View style={styles.footer}>
-            <Text style={styles.dateText}>
+          <View style={[styles.footer, { borderTopColor: colors.border.light }]}>
+            <Text style={[styles.dateText, { color: colors.text.secondary }]}>
               Enregistré le {formatDate(passenger.checkedInAt)}
             </Text>
           </View>
@@ -115,7 +117,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: BorderRadius.round,
-    backgroundColor: Colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -123,7 +124,6 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.bold,
-    color: Colors.primary.contrast,
   },
   nameContainer: {
     flex: 1,
@@ -131,13 +131,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: FontSizes.lg,
     fontWeight: FontWeights.bold,
-    color: Colors.text.primary,
     marginBottom: Spacing.xs,
     letterSpacing: -0.2,
   },
   pnr: {
     fontSize: FontSizes.sm,
-    color: Colors.text.secondary,
     fontWeight: FontWeights.medium,
     letterSpacing: 0.2,
   },
@@ -154,13 +152,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: FontSizes.xs,
-    color: Colors.text.secondary,
     marginBottom: Spacing.xs / 2,
     fontWeight: FontWeights.medium,
   },
   detailValue: {
     fontSize: FontSizes.md,
-    color: Colors.text.primary,
     fontWeight: FontWeights.semibold,
     letterSpacing: 0.1,
   },
@@ -168,11 +164,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
   },
   dateText: {
     fontSize: FontSizes.xs,
-    color: Colors.text.secondary,
   },
 });
 

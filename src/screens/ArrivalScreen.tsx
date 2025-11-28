@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge, Button, Card, Toast } from '../components';
+import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { databaseServiceInstance, authServiceInstance } from '../services';
+import { authServiceInstance, databaseServiceInstance } from '../services';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
 import { Passenger } from '../types/passenger.types';
-import { Button, Card, Badge, PassengerCard, BaggageCard, Toast } from '../components';
-import { useTheme } from '../contexts/ThemeContext';
-import { Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import { playScanSound, playSuccessSound, playErrorSound } from '../utils/sound.util';
-import { getScanResultMessage, getScanErrorMessage } from '../utils/scanMessages.util';
+import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
+import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Arrival'>;
 
@@ -36,7 +36,7 @@ export default function ArrivalScreen({ navigation }: Props) {
       return;
     }
 
-    console.log('Tag RFID scanné:', data);
+    console.log('Tag RFID ou code-barres scanné:', data);
     
     // Jouer le son de scan automatique
     await playScanSound();
@@ -54,7 +54,60 @@ export default function ArrivalScreen({ navigation }: Props) {
       }
 
       const rfidTag = data.trim();
-      const found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+      let found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+      
+      // EN MODE TEST: Créer un bagage fictif si il n'existe pas
+      if (!found && __DEV__) {
+        console.log('[ARRIVAL] 🧪 MODE TEST - Bagage non trouvé, création automatique pour test');
+        
+        // Chercher un passager existant ou créer un passager fictif
+        const passengers = await databaseServiceInstance.getPassengersByAirport(user.airportCode);
+        let testPassenger = passengers.length > 0 ? passengers[0] : null;
+        
+        if (!testPassenger) {
+          console.log('[ARRIVAL] 🧪 MODE TEST - Création d\'un passager fictif pour test');
+          const passengerId = await databaseServiceInstance.createPassenger({
+            pnr: 'TEST' + Date.now(),
+            fullName: 'PASSAGER TEST',
+            firstName: 'TEST',
+            lastName: 'PASSAGER',
+            flightNumber: 'TEST123',
+            flightTime: new Date().toISOString(),
+            airline: 'Test Airline',
+            airlineCode: 'TT',
+            departure: 'TEST',
+            arrival: user.airportCode,
+            route: 'TEST-' + user.airportCode,
+            companyCode: 'TT',
+            ticketNumber: 'TEST123456',
+            seatNumber: '1A',
+            cabinClass: 'Y',
+            baggageCount: 1,
+            baggageBaseNumber: rfidTag.substring(0, 4),
+            rawData: rfidTag,
+            format: 'interleaved2of5',
+            checkedInAt: new Date().toISOString(),
+            checkedInBy: user.id,
+            synced: false,
+          });
+          testPassenger = await databaseServiceInstance.getPassengerById(passengerId);
+        }
+        
+        if (testPassenger) {
+          // Créer un bagage fictif pour le test
+          const baggageId = await databaseServiceInstance.createBaggage({
+            passengerId: testPassenger.id,
+            rfidTag: rfidTag,
+            expectedTag: rfidTag,
+            status: 'checked',
+            checkedAt: new Date().toISOString(),
+            checkedBy: user.id,
+            synced: false,
+          });
+          found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+          console.log('[ARRIVAL] ✅ Bagage créé automatiquement pour test:', rfidTag);
+        }
+      }
       
       if (!found) {
         await playErrorSound();
@@ -77,15 +130,25 @@ export default function ArrivalScreen({ navigation }: Props) {
         return;
       }
 
-      // Vérifier que le bagage concerne l'aéroport de l'agent (arrivée)
-      if (passengerData.arrival !== user.airportCode) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        resetScanner();
-        return;
+      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
+      // Permet de tester avec n'importe quel bagage sans blocage
+      if (!__DEV__) {
+        // Vérifier que le bagage concerne l'aéroport de l'agent (arrivée)
+        if (passengerData.arrival !== user.airportCode) {
+          await playErrorSound();
+          const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
+          setToastMessage(errorMsg.message);
+          setToastType(errorMsg.type);
+          setShowToast(true);
+          resetScanner();
+          return;
+        }
+      } else {
+        console.log('[ARRIVAL] 🧪 MODE TEST - Vérification aéroport désactivée:', {
+          arrivalFromPassenger: passengerData.arrival,
+          userAirport: user.airportCode,
+        });
+        console.log('[ARRIVAL] ✅ Pas de vérification d\'aéroport - continuation du processus d\'arrivée');
       }
 
       setBaggage(found);
@@ -226,28 +289,111 @@ export default function ArrivalScreen({ navigation }: Props) {
         onHide={() => setShowToast(false)}
       />
       
-      <Card style={[styles.headerCard, { marginTop: insets.top + Spacing.lg }]}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.title, { color: colors.text.primary }]}>Arrivée des Bagages</Text>
-            <Text style={[styles.subtitle, { color: colors.text.secondary }]}>Scannez le tag RFID</Text>
-          </View>
-          {baggage && (
-            <Button
-              title="Nouveau"
-              onPress={resetAll}
-              variant="outline"
-              size="sm"
-            />
-          )}
-        </View>
-      </Card>
 
       {processing && !baggage ? (
         <View style={styles.processingContainer}>
           <ActivityIndicator size="large" color={colors.primary.main} />
           <Text style={[styles.processingText, { color: colors.text.secondary }]}>Recherche en cours...</Text>
         </View>
+      ) : !showScanner && baggage && passenger ? (
+        <ScrollView 
+          style={styles.successContainer}
+          contentContainerStyle={styles.successContentContainer}
+          showsVerticalScrollIndicator={true}>
+          <Card style={styles.successCard}>
+            <View style={styles.successHeader}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.success.main} />
+              <Text style={[styles.successTitle, { color: colors.text.primary }]}>Bagage trouvé</Text>
+            </View>
+            <View style={styles.successInfo}>
+              {/* Section: Informations Bagage */}
+              <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light, marginBottom: Spacing.md }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="bag" size={20} color={colors.primary.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Bagage</Text>
+                </View>
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Tag RFID:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                    {baggage.rfidTag}
+                  </Text>
+                </View>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
+                  <Badge 
+                    label={baggage.status === 'arrived' ? "✓ Arrivé" : "En transit"} 
+                    variant={baggage.status === 'arrived' ? "success" : "info"} 
+                  />
+                </View>
+              </View>
+
+              {/* Section: Informations Passager */}
+              <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light, marginBottom: Spacing.md }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="person" size={20} color={colors.primary.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Passager</Text>
+                </View>
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nom complet:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.bold }]}>
+                    {passenger.fullName}
+                  </Text>
+                </View>
+                {passenger.pnr && (
+                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>PNR:</Text>
+                    <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                      {passenger.pnr}
+                    </Text>
+                  </View>
+                )}
+                {passenger.flightNumber && (
+                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Vol:</Text>
+                    <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
+                      {passenger.flightNumber}
+                    </Text>
+                  </View>
+                )}
+                {passenger.departure && passenger.arrival && (
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Route:</Text>
+                    <View style={styles.routeContainer}>
+                      <Badge label={passenger.departure} variant="info" />
+                      <Ionicons name="arrow-forward" size={16} color={colors.text.secondary} style={{ marginHorizontal: Spacing.xs }} />
+                      <Badge label={passenger.arrival} variant="info" />
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {baggage.status === 'arrived' && (
+                <Card style={styles.arrivedCard}>
+                  <Badge label="✓ Arrivé" variant="success" />
+                  <Text style={[styles.arrivedText, { color: colors.text.secondary }]}>Ce bagage a déjà été marqué comme arrivé</Text>
+                </Card>
+              )}
+            </View>
+            {baggage.status !== 'arrived' && (
+              <Button
+                title="Confirmer l&apos;arrivée du bagage"
+                onPress={confirmArrival}
+                loading={processing}
+                style={styles.confirmButton}
+                variant="success"
+              />
+            )}
+            <TouchableOpacity
+              style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
+              onPress={resetAll}
+              activeOpacity={0.8}>
+              <Ionicons name="barcode-outline" size={24} color={colors.primary.contrast} />
+              <Text style={[styles.scanAgainButtonText, { color: colors.primary.contrast }]}>
+                Nouveau scan
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        </ScrollView>
       ) : showScanner ? (
         <CameraView
           style={styles.camera}
@@ -255,14 +401,14 @@ export default function ArrivalScreen({ navigation }: Props) {
           enableTorch={torchEnabled}
           onBarcodeScanned={handleRfidScanned}
           barcodeScannerSettings={{
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128'],
+            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec'],
             interval: 1000,
           }}
           onCameraReady={() => {
-            console.log('Caméra prête pour le scan RFID');
+            console.log('[ARRIVAL] Caméra prête pour le scan - Tous formats supportés');
           }}
           onMountError={(error) => {
-            console.error('Erreur de montage de la caméra:', error);
+            console.error('[ARRIVAL] Erreur de montage de la caméra:', error);
           }}>
           <View style={styles.overlay}>
             <View style={styles.scanArea}>
@@ -273,7 +419,7 @@ export default function ArrivalScreen({ navigation }: Props) {
             </View>
             <Card style={styles.instructionCard}>
               <Text style={styles.instruction}>
-                Scannez le tag RFID du bagage arrivé
+                Scannez le tag RFID ou code-barres du bagage arrivé
               </Text>
             </Card>
             <TouchableOpacity
@@ -289,35 +435,6 @@ export default function ArrivalScreen({ navigation }: Props) {
           </View>
         </CameraView>
       ) : null}
-
-      {baggage && passenger && (
-        <ScrollView style={styles.infoContainer}>
-          <BaggageCard
-            baggage={baggage}
-            showPassengerInfo={true}
-            passengerName={passenger.fullName}
-          />
-          
-          <PassengerCard passenger={passenger} showDetails={true} />
-
-          {baggage.status !== 'arrived' && (
-            <Button
-              title="Confirmer l'arrivée du bagage"
-              onPress={confirmArrival}
-              loading={processing}
-              style={styles.confirmButton}
-              variant="success"
-            />
-          )}
-
-          {baggage.status === 'arrived' && (
-            <Card style={styles.arrivedCard}>
-              <Badge label="✓ Arrivé" variant="success" />
-              <Text style={styles.arrivedText}>Ce bagage a déjà été marqué comme arrivé</Text>
-            </Card>
-          )}
-        </ScrollView>
-      )}
     </View>
   );
 }
@@ -419,22 +536,61 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     textAlign: 'center',
   },
-  infoContainer: {
-    maxHeight: '50%',
-    padding: Spacing.md,
+  successContainer: {
+    flex: 1,
+  },
+  successContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 400,
+    padding: Spacing.xl,
+  },
+  successHeader: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  successTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    marginTop: Spacing.md,
+  },
+  successInfo: {
+    marginBottom: Spacing.xl,
+    width: '100%',
   },
   confirmButton: {
     marginTop: Spacing.md,
+    marginBottom: Spacing.md,
   },
   arrivedCard: {
     marginTop: Spacing.md,
     alignItems: 'center',
+    padding: Spacing.md,
   },
   arrivedText: {
     fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold,
     textAlign: 'center',
     marginTop: Spacing.sm,
+  },
+  scanAgainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md + 4,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  scanAgainButtonText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
   },
   torchButton: {
     position: 'absolute',
@@ -453,5 +609,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  resultContainer: {
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  resultLabel: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.medium,
+    flex: 1,
+  },
+  resultValue: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: Spacing.md,
+    letterSpacing: 0.5,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+  },
+  routeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
 });

@@ -5,6 +5,7 @@ export interface PassengerData {
   lastName: string; // Nom de famille
   flightNumber: string; // Numéro de vol
   flightTime?: string; // Heure du vol (HH:MM)
+  flightDate?: string; // Date du vol (format JJMMM, ex: "22NOV")
   route: string; // Format: "FIH-JNB"
   departure: string; // Code aéroport départ (ex: "FIH")
   arrival: string; // Code aéroport arrivée (ex: "JNB")

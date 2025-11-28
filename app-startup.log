@@ -1,0 +1,11 @@
+
+> bfs@1.0.0 start
+> expo start
+
+Starting project at /home/goblaire/Bureau/BFS
+› Port 8081 is running this app in another window
+  /home/goblaire/Bureau/BFS (pid 317115)
+Input is required, but 'npx expo' is in non-interactive mode.
+Required input:
+> Use port 8082 instead?
+› Skipping dev server

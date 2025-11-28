@@ -172,6 +172,12 @@ export const getScanErrorMessage = (
               message: 'Ce passager n\'est pas encore enregistré. Effectuez d\'abord le check-in.',
               type: 'error',
             };
+          case 'wrong_airport':
+            return {
+              title: '✕ Erreur',
+              message: 'Ce vol ne concerne pas votre aéroport',
+              type: 'error',
+            };
           case 'already_processed':
             return {
               title: '⚠ Déjà embarqué',

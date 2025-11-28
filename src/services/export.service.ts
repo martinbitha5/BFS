@@ -281,6 +281,144 @@ class ExportService {
     return fileUri;
   }
 
+  /**
+   * Exporte les bagages en format Excel avec onglets séparés pour ARRIVÉS et DÉPART
+   * Format spécialisé pour les listes de bagages comme dans l'image
+   * @param airportCode Code de l'aéroport
+   * @param route Route optionnelle pour filtrer (ex: "FIH-FKI")
+   */
+  async exportBaggagesListToExcel(
+    airportCode: string,
+    route?: string
+  ): Promise<string> {
+    // Récupérer tous les bagages et passagers de l'aéroport
+    const allBaggages = await databaseServiceInstance.getBaggagesByAirport(airportCode);
+    const allPassengers = await databaseServiceInstance.getPassengersByAirport(airportCode);
+    const passengersMap = new Map(allPassengers.map(p => [p.id, p]));
+
+    // Filtrer par route si spécifiée
+    let filteredBaggages = allBaggages;
+    if (route) {
+      const [departure, arrival] = route.split('-');
+      filteredBaggages = allBaggages.filter(baggage => {
+        const passenger = passengersMap.get(baggage.passengerId);
+        if (!passenger) return false;
+        return passenger.departure === departure && passenger.arrival === arrival;
+      });
+    }
+
+    // Séparer les bagages en ARRIVÉS et DÉPART
+    // Basé sur la route du passager : 
+    // - ARRIVÉS : bagages dont le passager a cet aéroport comme destination
+    // - DÉPART : bagages dont le passager a cet aéroport comme départ
+    const arrivedBaggages: Array<Baggage & { passenger: Passenger }> = [];
+    const departureBaggages: Array<Baggage & { passenger: Passenger }> = [];
+
+    filteredBaggages.forEach(baggage => {
+      const passenger = passengersMap.get(baggage.passengerId);
+      if (!passenger) return;
+
+      // Bagages ARRIVÉS : l'aéroport est la destination du passager
+      if (passenger.arrival === airportCode) {
+        arrivedBaggages.push({ ...baggage, passenger });
+      }
+      
+      // Bagages DÉPART : l'aéroport est le départ du passager
+      if (passenger.departure === airportCode) {
+        departureBaggages.push({ ...baggage, passenger });
+      }
+    });
+
+    // Créer un nouveau workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Fonction helper pour créer le code de vol formaté
+    const formatFlightCode = (passenger: Passenger): string => {
+      if (!passenger.flightNumber || !passenger.departure || !passenger.arrival) return '';
+      
+      // Extraire le numéro de vol (ex: "ET 0078" -> "0078", "ET0078" -> "0078", "0078" -> "0078")
+      const flightNumMatch = passenger.flightNumber.match(/(\d{3,4})/);
+      const flightNum = flightNumMatch ? flightNumMatch[1] : '';
+      
+      // Créer le code comme "FIHKNLET 0078" ou "FIHFKIET 0078"
+      // Format: DÉPART + ARRIVÉE + ET + numéro
+      const routeCode = `${passenger.departure}${passenger.arrival}ET`;
+      return flightNum ? `${routeCode} ${flightNum}` : routeCode;
+    };
+
+    // Fonction helper pour extraire le numéro de base du tag RFID
+    const extractBaseTag = (rfidTag: string): string => {
+      // Si le tag contient des chiffres, prendre les 10 premiers chiffres
+      const numbers = rfidTag.match(/\d+/g);
+      if (numbers && numbers.length > 0) {
+        const fullNumber = numbers.join('');
+        // Prendre les 10 premiers chiffres comme numéro de base
+        return fullNumber.substring(0, 10);
+      }
+      return rfidTag;
+    };
+
+    // Fonction helper pour créer une feuille Excel de bagages
+    const createBaggageSheet = (baggages: Array<Baggage & { passenger: Passenger }>, sheetName: string) => {
+      if (baggages.length === 0) return null;
+
+      // En-têtes de colonnes
+      const headers = ['Tag Base', 'Nom Passager', 'Code Vol', 'PNR', 'Siège', 'Tag RFID', 'Ticket'];
+      
+      // Créer les lignes de données
+      const dataRows = baggages.map((baggage) => {
+        const baseTag = extractBaseTag(baggage.rfidTag);
+        const flightCode = formatFlightCode(baggage.passenger);
+        return [
+          baseTag,
+          baggage.passenger.fullName,
+          flightCode,
+          baggage.passenger.pnr || '',
+          baggage.passenger.seatNumber || '',
+          baggage.rfidTag,
+          baggage.passenger.ticketNumber || '',
+        ];
+      });
+
+      // Créer la feuille avec en-têtes et données
+      const sheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+      
+      return { sheet, name: sheetName.substring(0, 31) }; // Excel limite à 31 caractères
+    };
+
+    // Feuille 1: BAGS ARRIVÉS
+    const arrivedSheetName = route 
+      ? `BAGS ARRIVÉS ${route.split('-').reverse().join('-')}` // Inverser pour "FKI-FIH"
+      : `BAGS ARRIVÉS ${airportCode}`;
+    const arrivedSheetResult = createBaggageSheet(arrivedBaggages, arrivedSheetName);
+    if (arrivedSheetResult) {
+      XLSX.utils.book_append_sheet(workbook, arrivedSheetResult.sheet, arrivedSheetResult.name);
+    }
+
+    // Feuille 2: BAGS DÉPART
+    const departureSheetName = route 
+      ? `BAGS DÉPART ${route}`
+      : `BAGS DÉPART ${airportCode}`;
+    const departureSheetResult = createBaggageSheet(departureBaggages, departureSheetName);
+    if (departureSheetResult) {
+      XLSX.utils.book_append_sheet(workbook, departureSheetResult.sheet, departureSheetResult.name);
+    }
+
+    // Convertir en buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+
+    // Sauvegarder le fichier
+    const routeSuffix = route ? `_${route.replace('-', '')}` : '';
+    const fileName = `liste_bagages_${airportCode}${routeSuffix}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileUri = FileSystem.documentDirectory + fileName;
+
+    await FileSystem.writeAsStringAsync(fileUri, excelBuffer, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return fileUri;
+  }
+
 }
 
 export const exportService = new ExportService();

@@ -26,5 +26,7 @@ export interface BaggageTagData {
   pnr?: string; // PNR (ex: "HHJWNG")
   origin?: string; // Code aéroport origine (ex: "GMA")
   destination?: string; // Code aéroport destination (ex: "FIH")
+  baggageCount?: number; // Nombre total de bagages (ex: 5 dans "2/5")
+  baggageSequence?: number; // Numéro de séquence du bagage (ex: 2 dans "2/5")
   rawData: string; // Données brutes scannées
 }

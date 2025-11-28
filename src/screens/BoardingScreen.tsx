@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { parserService } from '../services/parser.service';
-import { databaseServiceInstance, authServiceInstance } from '../services';
-import { Passenger } from '../types/passenger.types';
-import { Button, Card, Badge, PassengerCard, FlightInfo, Toast } from '../components';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-import { Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import { playScanSound, playSuccessSound, playErrorSound } from '../utils/sound.util';
-import { getScanResultMessage, getScanErrorMessage } from '../utils/scanMessages.util';
+import { RootStackParamList } from '../navigation/RootStack';
+import { authServiceInstance, databaseServiceInstance } from '../services';
+import { parserService } from '../services/parser.service';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { BoardingStatus } from '../types/boarding.types';
+import { Passenger } from '../types/passenger.types';
+import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
+import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Boarding'>;
 
@@ -22,7 +23,9 @@ export default function BoardingScreen({ navigation }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [showScanner, setShowScanner] = useState(true);
   const [lastPassenger, setLastPassenger] = useState<Passenger | null>(null);
+  const [boardingStatus, setBoardingStatus] = useState<BoardingStatus | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
@@ -47,15 +50,77 @@ export default function BoardingScreen({ navigation }: Props) {
       if (!user) {
         await playErrorSound();
         Alert.alert('Erreur', 'Utilisateur non connecté');
-        resetScanner();
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
         return;
       }
 
       // Parser le boarding pass
       const passengerData = parserService.parse(data);
 
+      // Logs de débogage pour voir ce qui est parsé
+      console.log('[BOARDING] Données brutes scannées:', data);
+      console.log('[BOARDING] Données parsées:', {
+        pnr: passengerData.pnr,
+        fullName: passengerData.fullName,
+        flightNumber: passengerData.flightNumber,
+        route: passengerData.route,
+        departure: passengerData.departure,
+        arrival: passengerData.arrival,
+        userAirportCode: user.airportCode,
+      });
+
       // Vérifier que le passager est enregistré
-      const passenger = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      // EN MODE TEST: Si le passager n'existe pas, on le crée automatiquement pour permettre les tests
+      let passenger = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      
+      if (!passenger) {
+        console.log('[BOARDING] 🧪 MODE TEST - Passager non trouvé, création automatique pour test');
+        
+        // Créer le passager automatiquement en mode test
+        try {
+          const passengerId = await databaseServiceInstance.createPassenger({
+            pnr: passengerData.pnr,
+            fullName: passengerData.fullName,
+            firstName: passengerData.firstName,
+            lastName: passengerData.lastName,
+            flightNumber: passengerData.flightNumber || 'UNKNOWN',
+            flightTime: passengerData.flightTime,
+            airline: passengerData.airline || 'Unknown',
+            airlineCode: passengerData.companyCode || '',
+            departure: passengerData.departure || 'UNK',
+            arrival: passengerData.arrival || 'UNK',
+            route: passengerData.route || 'UNK-UNK',
+            companyCode: passengerData.companyCode || '',
+            ticketNumber: passengerData.ticketNumber,
+            seatNumber: passengerData.seatNumber,
+            cabinClass: passengerData.seatNumber?.match(/[YC]/)?.[0] || 'Y',
+            baggageCount: passengerData.baggageInfo?.count || 0,
+            baggageBaseNumber: passengerData.baggageInfo?.baseNumber,
+            rawData: data,
+            format: passengerData.format,
+            checkedInAt: new Date().toISOString(),
+            checkedInBy: user.id,
+            synced: false,
+          });
+          
+          passenger = await databaseServiceInstance.getPassengerById(passengerId);
+          console.log('[BOARDING] ✅ Passager créé automatiquement:', passenger?.pnr);
+        } catch (error) {
+          console.error('[BOARDING] Erreur lors de la création automatique:', error);
+          await playErrorSound();
+          const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'not_checked_in');
+          setToastMessage(errorMsg.message);
+          setToastType(errorMsg.type);
+          setShowToast(true);
+          setProcessing(false);
+          setScanned(false);
+          setShowScanner(true);
+          return;
+        }
+      }
+      
       if (!passenger) {
         await playErrorSound();
         const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'not_checked_in');
@@ -66,47 +131,83 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // Vérifier si déjà embarqué
-      const boardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
-      if (boardingStatus?.boarded) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'already_processed');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        resetScanner();
-        return;
+      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
+      // Permet de tester avec n'importe quel boarding pass sans blocage
+      console.log('[BOARDING] 🧪 MODE TEST - Vérification aéroport désactivée:', {
+        departureFromParsed: passengerData.departure,
+        departureFromPassenger: passenger.departure,
+        userAirport: user.airportCode,
+        arrival: passengerData.arrival,
+      });
+      console.log('[BOARDING] ✅ Pas de vérification d\'aéroport - continuation du processus d\'embarquement');
+
+      // Récupérer ou créer le statut d'embarquement
+      let currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
+      
+      // EN MODE TEST: Ne pas vérifier ni enregistrer dans la base de données
+      if (!__DEV__) {
+        // Vérifier si déjà embarqué
+        if (currentBoardingStatus?.boarded) {
+          await playErrorSound();
+          const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'already_processed');
+          setToastMessage(errorMsg.message);
+          setToastType(errorMsg.type);
+          setShowToast(true);
+          setProcessing(false);
+          setScanned(false);
+          setShowScanner(true);
+          return;
+        }
+
+        // Marquer comme embarqué
+        await databaseServiceInstance.createOrUpdateBoardingStatus({
+          passengerId: passenger.id,
+          boarded: true,
+          boardedAt: new Date().toISOString(),
+          boardedBy: user.id,
+          synced: false,
+        });
+
+        // Récupérer le statut mis à jour
+        currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
+
+        // Enregistrer l'action d'audit
+        const { logAudit } = await import('../utils/audit.util');
+        await logAudit(
+          'BOARD_PASSENGER',
+          'boarding',
+          `Embarquement passager: ${passenger.fullName} (PNR: ${passenger.pnr}) - Vol: ${passenger.flightNumber}`,
+          passenger.id
+        );
+
+        // Ajouter à la file de synchronisation
+        await databaseServiceInstance.addToSyncQueue({
+          tableName: 'boarding_status',
+          recordId: passenger.id,
+          operation: 'update',
+          data: JSON.stringify({ passengerId: passenger.id, boarded: true }),
+          retryCount: 0,
+          userId: user.id,
+        });
+      } else {
+        console.log('[BOARDING] 🧪 MODE TEST - Scan non enregistré dans la base de données');
+        // En mode test, créer un statut fictif pour l'affichage
+        if (!currentBoardingStatus) {
+          currentBoardingStatus = {
+            id: 'test-' + passenger.id,
+            passengerId: passenger.id,
+            boarded: true,
+            boardedAt: new Date().toISOString(),
+            boardedBy: user.id,
+            synced: false,
+            createdAt: new Date().toISOString(),
+          };
+        }
       }
 
-      // Marquer comme embarqué
-      await databaseServiceInstance.createOrUpdateBoardingStatus({
-        passengerId: passenger.id,
-        boarded: true,
-        boardedAt: new Date().toISOString(),
-        boardedBy: user.id,
-        synced: false,
-      });
-
-      // Enregistrer l'action d'audit
-      const { logAudit } = await import('../utils/audit.util');
-      await logAudit(
-        'BOARD_PASSENGER',
-        'boarding',
-        `Embarquement passager: ${passenger.fullName} (PNR: ${passenger.pnr}) - Vol: ${passenger.flightNumber}`,
-        passenger.id
-      );
-
-      // Ajouter à la file de synchronisation
-      await databaseServiceInstance.addToSyncQueue({
-        tableName: 'boarding_status',
-        recordId: passenger.id,
-        operation: 'update',
-        data: JSON.stringify({ passengerId: passenger.id, boarded: true }),
-        retryCount: 0,
-        userId: user.id,
-      });
-
+      // Stocker le passager (nom complet depuis checkin) et le statut
       setLastPassenger(passenger);
+      setBoardingStatus(currentBoardingStatus);
       
       // Jouer le son de succès
       await playSuccessSound();
@@ -121,7 +222,10 @@ export default function BoardingScreen({ navigation }: Props) {
       setToastMessage(successMsg.message);
       setToastType(successMsg.type);
       setShowToast(true);
-      resetScanner();
+      
+      // Masquer le scanner et afficher le résultat en plein écran
+      setProcessing(false);
+      setShowScanner(false);
     } catch (error) {
       console.error('Error processing boarding:', error);
       await playErrorSound();
@@ -130,16 +234,21 @@ export default function BoardingScreen({ navigation }: Props) {
       setToastMessage(error instanceof Error ? error.message : errorMsg.message);
       setToastType('error');
       setShowToast(true);
-      resetScanner();
+      setProcessing(false);
+      setScanned(false);
+      setShowScanner(true);
     } finally {
       setProcessing(false);
     }
   };
 
   const resetScanner = () => {
-    setTimeout(() => {
-      setScanned(false);
-    }, 2000);
+    // Réinitialiser tous les états pour permettre un nouveau scan
+    setScanned(false);
+    setProcessing(false);
+    setShowScanner(true);
+    setLastPassenger(null);
+    setBoardingStatus(null);
   };
 
   if (!permission) {
@@ -168,26 +277,114 @@ export default function BoardingScreen({ navigation }: Props) {
         onHide={() => setShowToast(false)}
       />
       
-      <Card style={[styles.headerCard, { marginTop: insets.top + Spacing.lg }]}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.title, { color: colors.text.primary }]}>Embarquement</Text>
-            <Text style={[styles.subtitle, { color: colors.text.secondary }]}>Scannez le boarding pass</Text>
-          </View>
-        </View>
-      </Card>
 
       {processing ? (
         <View style={styles.processingContainer}>
           <ActivityIndicator size="large" color={colors.primary.main} />
           <Text style={[styles.processingText, { color: colors.text.secondary }]}>Validation en cours...</Text>
         </View>
-      ) : (
+      ) : !showScanner && lastPassenger ? (
+        <ScrollView 
+          style={styles.successContainer}
+          contentContainerStyle={styles.successContentContainer}
+          showsVerticalScrollIndicator={true}>
+          <Card style={styles.successCard}>
+            <View style={styles.successHeader}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.success.main} />
+              <Text style={[styles.successTitle, { color: colors.text.primary }]}>Passager embarqué</Text>
+            </View>
+            <View style={styles.successInfo}>
+              <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light }]}>
+                {/* Section: Informations Passager */}
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="person" size={20} color={colors.primary.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Passager</Text>
+                </View>
+                
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nom complet:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.bold }]}>
+                    {lastPassenger.fullName}
+                  </Text>
+                </View>
+
+                {lastPassenger.pnr && (
+                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>PNR:</Text>
+                    <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                      {lastPassenger.pnr}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Section: Informations Vol */}
+                {(lastPassenger.flightNumber || lastPassenger.departure || lastPassenger.arrival) && (
+                  <>
+                    <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
+                      <Ionicons name="airplane" size={20} color={colors.primary.main} />
+                      <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Vol</Text>
+                    </View>
+
+                    {lastPassenger.flightNumber && (
+                      <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                        <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Numéro de vol:</Text>
+                        <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
+                          {lastPassenger.flightNumber}
+                        </Text>
+                      </View>
+                    )}
+
+                    {lastPassenger.departure && lastPassenger.arrival && (
+                      <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                        <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Route:</Text>
+                        <View style={styles.routeContainer}>
+                          <Badge label={lastPassenger.departure} variant="info" />
+                          <Ionicons name="arrow-forward" size={16} color={colors.text.secondary} style={{ marginHorizontal: Spacing.xs }} />
+                          <Badge label={lastPassenger.arrival} variant="info" />
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* Section: Statut Embarquement */}
+                <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Statut Embarquement</Text>
+                </View>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
+                  <Badge 
+                    label={boardingStatus?.boarded ? "✓ Embarqué" : "En attente"} 
+                    variant={boardingStatus?.boarded ? "success" : "warning"} 
+                  />
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
+              onPress={resetScanner}
+              activeOpacity={0.8}>
+              <Ionicons name="barcode-outline" size={24} color={colors.primary.contrast} />
+              <Text style={[styles.scanAgainButtonText, { color: colors.primary.contrast }]}>
+                Nouveau scan
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        </ScrollView>
+      ) : showScanner ? (
         <CameraView
           style={styles.camera}
           facing="back"
           enableTorch={torchEnabled}
-          onBarcodeScanned={handleBarCodeScanned}
+          onBarcodeScanned={(event) => {
+            // Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
+            if (scanned || processing || !showScanner || lastPassenger) {
+              console.log('[BOARDING] Scan ignoré - déjà en traitement ou résultat affiché');
+              return;
+            }
+            handleBarCodeScanned(event);
+          }}
           barcodeScannerSettings={{
             barcodeTypes: ['pdf417', 'qr'],
             interval: 1000,
@@ -207,7 +404,7 @@ export default function BoardingScreen({ navigation }: Props) {
             </View>
             <Card style={styles.instructionCard}>
               <Text style={styles.instruction}>
-                Scannez le boarding pass pour valider l'embarquement
+                Scannez le boarding pass pour valider l&apos;embarquement
               </Text>
             </Card>
             <TouchableOpacity
@@ -222,18 +419,7 @@ export default function BoardingScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </CameraView>
-      )}
-
-      {lastPassenger && !processing && (
-        <ScrollView style={styles.resultContainer}>
-          <Card style={styles.resultCard}>
-            <View style={styles.successHeader}>
-              <Badge label="✓ Embarqué" variant="success" />
-            </View>
-            <PassengerCard passenger={lastPassenger} showDetails={true} />
-          </Card>
-        </ScrollView>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -335,14 +521,84 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     textAlign: 'center',
   },
-  resultContainer: {
-    maxHeight: '40%',
+  successContainer: {
+    flex: 1,
   },
-  resultCard: {
-    margin: Spacing.md,
+  successContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 400,
+    padding: Spacing.xl,
   },
   successHeader: {
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  successTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    marginTop: Spacing.md,
+  },
+  successInfo: {
+    marginBottom: Spacing.xl,
+  },
+  resultContainer: {
+    marginTop: Spacing.lg,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  resultLabel: {
+    fontSize: FontSizes.md,
+  },
+  resultValue: {
+    fontSize: FontSizes.lg,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: Spacing.md,
+    letterSpacing: 0.5,
+  },
+  scanAgainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md + 4,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  scanAgainButtonText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+  },
+  routeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   torchButton: {
     position: 'absolute',
