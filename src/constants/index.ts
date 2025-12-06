@@ -4,4 +4,5 @@
 
 export * from './airlines';
 export * from './airport-codes';
+export * from './airports';
 

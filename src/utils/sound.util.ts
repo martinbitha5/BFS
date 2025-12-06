@@ -31,8 +31,8 @@ export const playScanSound = async (): Promise<void> => {
     // et générer un son système si possible
     
     // Solution temporaire: utiliser haptics pour le feedback
-    const { impactAsync, ImpactFeedbackStyle } = await import('expo-haptics');
-    await impactAsync(ImpactFeedbackStyle.Medium);
+    const Haptics = await import('expo-haptics');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // Pour un vrai son, vous pouvez ajouter un fichier .mp3 ou .wav dans assets/sounds/scan.mp3
     // et utiliser:
@@ -50,8 +50,8 @@ export const playScanSound = async (): Promise<void> => {
  */
 export const playSuccessSound = async (): Promise<void> => {
   try {
-    const { impactAsync, ImpactFeedbackStyle } = await import('expo-haptics');
-    await impactAsync(ImpactFeedbackStyle.Heavy);
+    const Haptics = await import('expo-haptics');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   } catch (error) {
     console.error('Error playing success sound:', error);
   }
@@ -62,8 +62,8 @@ export const playSuccessSound = async (): Promise<void> => {
  */
 export const playErrorSound = async (): Promise<void> => {
   try {
-    const { notificationAsync, NotificationFeedbackType } = await import('expo-haptics');
-    await notificationAsync(NotificationFeedbackType.Error);
+    const Haptics = await import('expo-haptics');
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   } catch (error) {
     console.error('Error playing error sound:', error);
   }

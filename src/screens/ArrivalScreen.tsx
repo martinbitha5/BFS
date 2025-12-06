@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
+import { authServiceInstance, birsService, databaseServiceInstance } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
+import { InternationalBaggage } from '../types/birs.types';
 import { Passenger } from '../types/passenger.types';
 import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
@@ -22,6 +23,7 @@ export default function ArrivalScreen({ navigation }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [baggage, setBaggage] = useState<Baggage | null>(null);
   const [passenger, setPassenger] = useState<Passenger | null>(null);
+  const [internationalBaggage, setInternationalBaggage] = useState<InternationalBaggage | null>(null);
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showScanner, setShowScanner] = useState(true);
@@ -29,20 +31,34 @@ export default function ArrivalScreen({ navigation }: Props) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const [lastScannedTag, setLastScannedTag] = useState<string | null>(null);
+  const [lastScanTime, setLastScanTime] = useState<number>(0);
 
   const handleRfidScanned = async ({ data }: { data: string }) => {
-    if (scanned || processing) {
-      console.log('Scan ignoré - déjà en cours de traitement');
+    const now = Date.now();
+    const DEBOUNCE_TIME = 3000; // 3 secondes de debounce
+    
+    // Vérifier si c'est un scan en double dans un court laps de temps
+    if (lastScannedTag === data && now - lastScanTime < DEBOUNCE_TIME) {
+      console.log('[ARRIVAL] ⏸️ Scan ignoré - debounce actif (même tag dans les', DEBOUNCE_TIME, 'ms)');
+      return; // Ignorer silencieusement
+    }
+    
+    if (scanned || processing || !showScanner) {
+      console.log('[ARRIVAL] ⚠️ Scan ignoré - déjà en cours de traitement', { scanned, processing, showScanner });
       return;
     }
+    
+    // Enregistrer le scan immédiatement pour bloquer les scans suivants
+    setLastScannedTag(data);
+    setLastScanTime(now);
+    setScanned(true);
+    setProcessing(true);
 
-    console.log('Tag RFID ou code-barres scanné:', data);
+    console.log('[ARRIVAL] 🔔 Tag RFID ou code-barres scanné:', data);
     
     // Jouer le son de scan automatique
     await playScanSound();
-    
-    setScanned(true);
-    setProcessing(true);
 
     try {
       const user = await authServiceInstance.getCurrentUser();
@@ -56,56 +72,63 @@ export default function ArrivalScreen({ navigation }: Props) {
       const rfidTag = data.trim();
       let found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
       
-      // EN MODE TEST: Créer un bagage fictif si il n'existe pas
-      if (!found && __DEV__) {
-        console.log('[ARRIVAL] 🧪 MODE TEST - Bagage non trouvé, création automatique pour test');
+      // SYSTÈME BIRS: Si le bagage n'est pas trouvé, le considérer comme international
+      if (!found) {
+        console.log('[ARRIVAL] 🌍 Bagage non trouvé dans le système - Considéré comme INTERNATIONAL');
+        console.log('[ARRIVAL] 📊 Début du traitement bagage international pour tag:', rfidTag);
         
-        // Chercher un passager existant ou créer un passager fictif
-        const passengers = await databaseServiceInstance.getPassengersByAirport(user.airportCode);
-        let testPassenger = passengers.length > 0 ? passengers[0] : null;
+        // Parser le tag pour extraire les informations disponibles
+        const { parserService } = await import('../services');
+        const baggageTagData = parserService.parseBaggageTag(rfidTag);
         
-        if (!testPassenger) {
-          console.log('[ARRIVAL] 🧪 MODE TEST - Création d\'un passager fictif pour test');
-          const passengerId = await databaseServiceInstance.createPassenger({
-            pnr: 'TEST' + Date.now(),
-            fullName: 'PASSAGER TEST',
-            firstName: 'TEST',
-            lastName: 'PASSAGER',
-            flightNumber: 'TEST123',
-            flightTime: new Date().toISOString(),
-            airline: 'Test Airline',
-            airlineCode: 'TT',
-            departure: 'TEST',
-            arrival: user.airportCode,
-            route: 'TEST-' + user.airportCode,
-            companyCode: 'TT',
-            ticketNumber: 'TEST123456',
-            seatNumber: '1A',
-            cabinClass: 'Y',
-            baggageCount: 1,
-            baggageBaseNumber: rfidTag.substring(0, 4),
-            rawData: rfidTag,
-            format: 'interleaved2of5',
-            checkedInAt: new Date().toISOString(),
-            checkedInBy: user.id,
-            synced: false,
+        console.log('[ARRIVAL] 📝 Données extraites du tag:', {
+          passengerName: baggageTagData.passengerName,
+          pnr: baggageTagData.pnr,
+          flightNumber: baggageTagData.flightNumber,
+          origin: baggageTagData.origin
+        });
+        
+        // Créer un bagage international
+        try {
+          console.log('[ARRIVAL] 🔄 Appel de birsService.createInternationalBaggage...');
+          
+          const internationalBaggage = await birsService.createInternationalBaggage(
+            rfidTag,
+            user.id,
+            user.airportCode,
+            baggageTagData.passengerName !== 'UNKNOWN' ? baggageTagData.passengerName : undefined,
+            baggageTagData.pnr,
+            baggageTagData.flightNumber,
+            baggageTagData.origin
+          );
+          
+          console.log('[ARRIVAL] ✅ Bagage international créé avec succès:', {
+            id: internationalBaggage.id,
+            tag: rfidTag,
+            status: internationalBaggage.status,
+            airportCode: internationalBaggage.airportCode
           });
-          testPassenger = await databaseServiceInstance.getPassengerById(passengerId);
-        }
-        
-        if (testPassenger) {
-          // Créer un bagage fictif pour le test
-          const baggageId = await databaseServiceInstance.createBaggage({
-            passengerId: testPassenger.id,
-            rfidTag: rfidTag,
-            expectedTag: rfidTag,
-            status: 'checked',
-            checkedAt: new Date().toISOString(),
-            checkedBy: user.id,
-            synced: false,
-          });
-          found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
-          console.log('[ARRIVAL] ✅ Bagage créé automatiquement pour test:', rfidTag);
+          
+          // Afficher les détails du bagage international (comme pour un bagage normal)
+          setInternationalBaggage(internationalBaggage);
+          setShowScanner(false);
+          await playSuccessSound();
+          
+          setToastMessage('✅ Bagage international enregistré avec succès');
+          setToastType('success');
+          setShowToast(true);
+          return;
+        } catch (error) {
+          console.error('[ARRIVAL] ❌ Erreur création bagage international:', error);
+          console.error('[ARRIVAL] 📋 Stack trace:', error instanceof Error ? error.stack : 'N/A');
+          
+          // Afficher un message d'erreur à l'utilisateur
+          await playErrorSound();
+          setToastMessage(error instanceof Error ? error.message : 'Impossible de créer le bagage international. Veuillez réessayer.');
+          setToastType('error');
+          setShowToast(true);
+          resetScanner();
+          return;
         }
       }
       
@@ -251,6 +274,7 @@ export default function ArrivalScreen({ navigation }: Props) {
   };
 
   const resetScanner = () => {
+    setProcessing(false);
     setTimeout(() => {
       setScanned(false);
     }, 2000);
@@ -259,8 +283,12 @@ export default function ArrivalScreen({ navigation }: Props) {
   const resetAll = () => {
     setBaggage(null);
     setPassenger(null);
+    setInternationalBaggage(null);
     setShowScanner(true);
     setScanned(false);
+    setProcessing(false);
+    setLastScannedTag(null);
+    setLastScanTime(0);
   };
 
   if (!permission) {
@@ -383,6 +411,122 @@ export default function ArrivalScreen({ navigation }: Props) {
                 variant="success"
               />
             )}
+            <TouchableOpacity
+              style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
+              onPress={resetAll}
+              activeOpacity={0.8}>
+              <Ionicons name="barcode-outline" size={24} color={colors.primary.contrast} />
+              <Text style={[styles.scanAgainButtonText, { color: colors.primary.contrast }]}>
+                Nouveau scan
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        </ScrollView>
+      ) : !showScanner && internationalBaggage ? (
+        <ScrollView 
+          style={styles.successContainer}
+          contentContainerStyle={styles.successContentContainer}
+          showsVerticalScrollIndicator={true}>
+          <Card style={styles.successCard}>
+            <View style={styles.successHeader}>
+              <Ionicons name="globe" size={48} color={colors.info.main} />
+              <Text style={[styles.successTitle, { color: colors.text.primary }]}>Bagage International</Text>
+            </View>
+            <View style={styles.successInfo}>
+              {/* Section: Informations Bagage International */}
+              <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light, marginBottom: Spacing.md }]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="bag" size={20} color={colors.info.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Bagage International Détecté</Text>
+                </View>
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Tag RFID:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                    {internationalBaggage.rfidTag}
+                  </Text>
+                </View>
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
+                  <Badge 
+                    label={
+                      internationalBaggage.status === 'scanned' ? '🌍 Scanné' :
+                      internationalBaggage.status === 'reconciled' ? '✅ Réconcilié' :
+                      internationalBaggage.status === 'unmatched' ? '⚠️ Non-matché' :
+                      '⏳ En attente'
+                    }
+                    variant={
+                      internationalBaggage.status === 'reconciled' ? 'success' :
+                      internationalBaggage.status === 'unmatched' ? 'warning' :
+                      'info'
+                    }
+                  />
+                </View>
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Scanné le:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary }]}>
+                    {new Date(internationalBaggage.scannedAt).toLocaleString('fr-FR')}
+                  </Text>
+                </View>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Aéroport:</Text>
+                  <Badge label={internationalBaggage.airportCode} variant="info" />
+                </View>
+              </View>
+
+              {/* Section: Informations Passager (si disponibles) */}
+              {(internationalBaggage.passengerName || internationalBaggage.pnr || internationalBaggage.flightNumber) && (
+                <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light, marginBottom: Spacing.md }]}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="person-outline" size={20} color={colors.info.main} />
+                    <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Disponibles</Text>
+                  </View>
+                  {internationalBaggage.passengerName && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Passager:</Text>
+                      <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.bold }]}>
+                        {internationalBaggage.passengerName}
+                      </Text>
+                    </View>
+                  )}
+                  {internationalBaggage.pnr && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>PNR:</Text>
+                      <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
+                        {internationalBaggage.pnr}
+                      </Text>
+                    </View>
+                  )}
+                  {internationalBaggage.flightNumber && (
+                    <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Vol:</Text>
+                      <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
+                        {internationalBaggage.flightNumber}
+                      </Text>
+                    </View>
+                  )}
+                  {internationalBaggage.origin && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Origine:</Text>
+                      <Badge label={internationalBaggage.origin} variant="info" />
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Information BIRS */}
+              <Card style={StyleSheet.flatten([styles.arrivedCard, { backgroundColor: colors.background.paper, borderWidth: 2, borderColor: colors.info.main }])}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+                  <Ionicons name="information-circle" size={24} color={colors.info.main} style={{ marginRight: Spacing.sm }} />
+                  <Text style={[styles.arrivedText, { color: colors.text.primary, fontWeight: FontWeights.bold, fontSize: FontSizes.md }]}>
+                    En attente de réconciliation BIRS
+                  </Text>
+                </View>
+                <Text style={[styles.arrivedText, { color: colors.text.secondary, fontSize: FontSizes.sm, lineHeight: 20 }]}>
+                  Ce bagage sera automatiquement réconcilié lorsque le superviseur uploadera le rapport BIRS de la compagnie aérienne.
+                </Text>
+              </Card>
+            </View>
+
             <TouchableOpacity
               style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
               onPress={resetAll}

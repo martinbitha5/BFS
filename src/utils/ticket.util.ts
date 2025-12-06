@@ -230,16 +230,16 @@ export function formatFlightDate(flightTime?: string, flightDate?: string, rawDa
 
 /**
  * Formate une chaîne de date au format DDMMMM ou DDMMMM YYYY
- * Exemple: "22NOV" → "22 novembre" ou "22NOV2024" → "22 novembre 2024"
- * Accepte aussi "1JAN", "01JAN", etc.
+ * Exemple: "22NOV" → "22 Nov" ou "1DEC" → "01 Dec"
+ * Format court anglais avec jour sur 2 chiffres
  */
 function formatDateString(dateStr: string): string | undefined {
   if (!dateStr) return undefined;
 
   const months: { [key: string]: string } = {
-    JAN: 'janvier', FEB: 'février', MAR: 'mars', APR: 'avril',
-    MAY: 'mai', JUN: 'juin', JUL: 'juillet', AUG: 'août',
-    SEP: 'septembre', OCT: 'octobre', NOV: 'novembre', DEC: 'décembre'
+    JAN: 'Jan', FEB: 'Feb', MAR: 'Mar', APR: 'Apr',
+    MAY: 'May', JUN: 'Jun', JUL: 'Jul', AUG: 'Aug',
+    SEP: 'Sep', OCT: 'Oct', NOV: 'Nov', DEC: 'Dec'
   };
 
   // Match format: "1NOV", "01NOV", "22NOV" ou "22NOV2024"
@@ -248,7 +248,7 @@ function formatDateString(dateStr: string): string | undefined {
     return dateStr; // Retourner tel quel si le format ne correspond pas
   }
 
-  const day = parseInt(match[1], 10); // Convertir en nombre pour enlever les zéros
+  const day = match[1].padStart(2, '0'); // Toujours 2 chiffres (01, 02, etc.)
   const monthCode = match[2];
   const year = match[3];
 

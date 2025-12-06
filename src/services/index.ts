@@ -18,9 +18,11 @@ export const authServiceInstance = USE_MOCK_DATA ? authServiceMock : authService
 export const databaseServiceInstance = USE_MOCK_DATA ? databaseServiceMock : databaseService;
 
 // Services qui n'ont pas besoin de mock (parser, etc.)
-export { parserService } from './parser.service';
-export { mockService } from './mock.service';
-export { exportService } from './export.service';
 export { auditService } from './audit.service';
+export { birsService } from './birs.service';
+export { exportService } from './export.service';
+export { mockService } from './mock.service';
+export { parserService } from './parser.service';
+export { rushService } from './rush.service';
 export { settingsService } from './settings.service';
 

@@ -4,7 +4,7 @@ export interface AuditLog {
   userEmail: string;
   airportCode: string;
   action: string;
-  entityType: 'passenger' | 'baggage' | 'boarding' | 'export' | 'system';
+  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system';
   entityId?: string;
   details: string;
   ipAddress?: string;
@@ -15,6 +15,7 @@ export interface AuditLog {
 export type AuditAction =
   | 'CHECKIN_PASSENGER'
   | 'REGISTER_BAGGAGE'
+  | 'REGISTER_INTERNATIONAL_BAGGAGE'
   | 'BOARD_PASSENGER'
   | 'CONFIRM_ARRIVAL'
   | 'EXPORT_DATA'
@@ -25,5 +26,7 @@ export type AuditAction =
   | 'SYNC_DATA'
   | 'LOGIN'
   | 'LOGOUT'
+  | 'MARK_RUSH'
+  | 'CANCEL_RUSH'
   | 'ERROR';
 

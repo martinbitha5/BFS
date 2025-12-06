@@ -7,7 +7,7 @@ import { AuditAction } from '../types/audit.types';
  */
 export const logAudit = async (
   action: AuditAction,
-  entityType: 'passenger' | 'baggage' | 'boarding' | 'export' | 'system',
+  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system',
   details: string,
   entityId?: string
 ): Promise<void> => {

@@ -1,4 +1,7 @@
-export type BaggageStatus = 'checked' | 'arrived';
+export type BaggageStatus = 
+  | 'checked'   // Enregistré au check-in
+  | 'arrived'   // Arrivé à destination
+  | 'rush';     // Soute pleine - À réacheminer sur le prochain vol
 
 export interface Baggage {
   id: string;

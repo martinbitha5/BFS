@@ -276,11 +276,11 @@ class MockService {
 
   async updateBaggageStatus(
     baggageId: string,
-    status: 'checked' | 'arrived',
+    status: 'checked' | 'arrived' | 'rush',
     userId: string
   ): Promise<void> {
     await this.delay(400);
-    
+
     const baggage = MOCK_BAGGAGES.find((b) => b.id === baggageId);
     if (baggage) {
       baggage.status = status;
@@ -291,6 +291,8 @@ class MockService {
       } else if (status === 'checked') {
         baggage.checkedAt = new Date().toISOString();
         baggage.checkedBy = userId;
+      } else if (status === 'rush') {
+        // Rush: soute pleine, pas besoin de mettre à jour d'autres champs
       }
     }
   }

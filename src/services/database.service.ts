@@ -15,11 +15,22 @@ class DatabaseService {
       await this.db.execAsync(SQLITE_SCHEMA);
       // Initialiser le service d'audit
       await auditService.initialize(this.db);
-      console.log('Database initialized successfully');
+      // Initialiser le service BIRS (import dynamique pour éviter les cycles)
+      const { birsDatabaseService } = await import('./birs-database.service');
+      birsDatabaseService.initialize(this.db);
+      console.log('Database initialized successfully (with BIRS support)');
     } catch (error) {
       console.error('Error initializing database:', error);
       throw error;
     }
+  }
+
+  /**
+   * Obtenir la référence à la base de données
+   * Utile pour les services qui en ont besoin (BIRS, etc.)
+   */
+  getDatabase(): SQLite.SQLiteDatabase | null {
+    return this.db;
   }
 
   async close(): Promise<void> {
@@ -225,7 +236,7 @@ class DatabaseService {
     }));
   }
 
-  async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived', userId: string): Promise<void> {
+  async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived' | 'rush', userId: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     
     const now = new Date().toISOString();
@@ -254,6 +265,18 @@ class DatabaseService {
           status,
           now,
           userId,
+          now,
+          baggageId,
+        ]
+      );
+    } else if (status === 'rush') {
+      // Marquer comme rush (soute pleine - à réacheminer)
+      await this.db.runAsync(
+        `UPDATE baggages SET
+          status = ?, updated_at = ?
+        WHERE id = ?`,
+        [
+          status,
           now,
           baggageId,
         ]

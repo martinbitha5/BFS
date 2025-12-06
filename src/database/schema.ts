@@ -90,5 +90,82 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_airport_code ON audit_log(airport_code);
+
+CREATE TABLE IF NOT EXISTS international_baggages (
+  id TEXT PRIMARY KEY,
+  rfid_tag TEXT UNIQUE NOT NULL,
+  scanned_at TEXT NOT NULL,
+  scanned_by TEXT NOT NULL,
+  airport_code TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'scanned',
+  birs_report_id TEXT,
+  passenger_name TEXT,
+  pnr TEXT,
+  flight_number TEXT,
+  origin TEXT,
+  weight REAL,
+  remarks TEXT,
+  reconciled_at TEXT,
+  reconciled_by TEXT,
+  synced INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS birs_reports (
+  id TEXT PRIMARY KEY,
+  report_type TEXT NOT NULL,
+  flight_number TEXT NOT NULL,
+  flight_date TEXT NOT NULL,
+  origin TEXT NOT NULL,
+  destination TEXT NOT NULL,
+  airline TEXT NOT NULL,
+  airline_code TEXT,
+  file_name TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  uploaded_at TEXT NOT NULL,
+  uploaded_by TEXT NOT NULL,
+  airport_code TEXT NOT NULL,
+  total_baggages INTEGER DEFAULT 0,
+  reconciled_count INTEGER DEFAULT 0,
+  unmatched_count INTEGER DEFAULT 0,
+  processed_at TEXT,
+  raw_data TEXT NOT NULL,
+  synced INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS birs_report_items (
+  id TEXT PRIMARY KEY,
+  birs_report_id TEXT NOT NULL,
+  bag_id TEXT NOT NULL,
+  passenger_name TEXT NOT NULL,
+  pnr TEXT,
+  seat_number TEXT,
+  class TEXT,
+  psn TEXT,
+  weight REAL,
+  route TEXT,
+  categories TEXT,
+  loaded INTEGER,
+  received INTEGER,
+  international_baggage_id TEXT,
+  reconciled_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (birs_report_id) REFERENCES birs_reports(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_international_baggages_rfid ON international_baggages(rfid_tag);
+CREATE INDEX IF NOT EXISTS idx_international_baggages_status ON international_baggages(status);
+CREATE INDEX IF NOT EXISTS idx_international_baggages_airport ON international_baggages(airport_code);
+CREATE INDEX IF NOT EXISTS idx_international_baggages_birs_report ON international_baggages(birs_report_id);
+CREATE INDEX IF NOT EXISTS idx_birs_reports_flight ON birs_reports(flight_number);
+CREATE INDEX IF NOT EXISTS idx_birs_reports_airport ON birs_reports(airport_code);
+CREATE INDEX IF NOT EXISTS idx_birs_reports_date ON birs_reports(flight_date);
+CREATE INDEX IF NOT EXISTS idx_birs_report_items_report_id ON birs_report_items(birs_report_id);
+CREATE INDEX IF NOT EXISTS idx_birs_report_items_bag_id ON birs_report_items(bag_id);
+CREATE INDEX IF NOT EXISTS idx_birs_report_items_intl_baggage ON birs_report_items(international_baggage_id);
 `;
 

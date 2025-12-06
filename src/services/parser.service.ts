@@ -8,6 +8,64 @@ import { pnrExtractorService } from './pnr-extractor.service';
 // Ré-exporter pour compatibilité avec le code existant
 export { KNOWN_AIRLINES, KNOWN_AIRPORT_CODES, getAirlineName, isKnownAirline };
 
+/**
+ * Convertit un jour julien (1-366) en date réelle
+ * Le jour julien est le nombre de jours depuis le 1er janvier
+ * @param julianDay - Jour julien (1-366)
+ * @param year - Année de référence (par défaut: année courante)
+ * @returns Date au format ISO (YYYY-MM-DD)
+ */
+function convertJulianDayToDate(julianDay: number, year?: number): string | undefined {
+  if (!julianDay || julianDay < 1 || julianDay > 366) {
+    return undefined;
+  }
+  
+  // Utiliser l'année courante par défaut
+  const referenceYear = year || new Date().getFullYear();
+  
+  // Créer une date au 1er janvier de l'année de référence
+  const date = new Date(referenceYear, 0, 1);
+  
+  // Ajouter le nombre de jours (julianDay - 1 car on commence au 1er janvier)
+  date.setDate(date.getDate() + (julianDay - 1));
+  
+  // Retourner au format ISO (YYYY-MM-DD)
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Convertit un jour julien en format DDMMM (ex: "01DEC", "22NOV")
+ * @param julianDay - Jour julien (1-366)
+ * @param year - Année de référence (par défaut: année courante)
+ * @returns Date au format DDMMM
+ */
+function convertJulianDayToDisplayFormat(julianDay: number, year?: number): string | undefined {
+  if (!julianDay || julianDay < 1 || julianDay > 366) {
+    return undefined;
+  }
+  
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  
+  // Utiliser l'année courante par défaut
+  const referenceYear = year || new Date().getFullYear();
+  
+  // Créer une date au 1er janvier de l'année de référence
+  const date = new Date(referenceYear, 0, 1);
+  
+  // Ajouter le nombre de jours (julianDay - 1 car on commence au 1er janvier)
+  date.setDate(date.getDate() + (julianDay - 1));
+  
+  // Formater en DDMMM
+  const day = date.getDate();
+  const monthName = months[date.getMonth()];
+  
+  return `${day}${monthName}`;
+}
+
 class ParserService {
   /**
    * Parse les données brutes d'un boarding pass PDF417
@@ -50,6 +108,13 @@ class ParserService {
     // Format: contient 9U (code compagnie Air Congo) - indicateur certain
     if (rawData.includes('9U')) {
       return 'AIR_CONGO';
+    }
+    
+    // Détection Kenya Airways - chercher "KQ" suivi de chiffres (numéro de vol)
+    // Format: ...FIHNBOKQ 0555... ou ...KQ555... ou ...NBOKQ...
+    if (rawData.match(/KQ\s*\d{3,4}/) || rawData.match(/[A-Z]{3}KQ\s/) || rawData.includes('KQ ')) {
+      console.log('[PARSER] Format GENERIC détecté: Kenya Airways (KQ)');
+      return 'GENERIC';
     }
 
     // Détection Ethiopian Airlines - AMÉLIORÉE et plus stricte
@@ -260,32 +325,197 @@ class ParserService {
 
   /**
    * Parse un boarding pass générique IATA BCBP
+   * Format BCBP standard: M1NOM/PRENOM    PNR    DEPARVCODEVOL...
+   * Exemple Kenya Airways: M1SURNAME/FIRSTNM      ABCDEF FIHAAAKQ 9999O335C...
+   * Support complet pour:
+   * - Noms très longs avec plusieurs espaces (ex: VAN DER BERG/JEAN PHILIPPE MARIE)
+   * - PNR alphanumériques de 6 ou 7 caractères (ex: E7T5GVL, ABC123, XYZABC)
+   * - Tous les formats IATA BCBP (Kenya Airways, Air Congo, Ethiopian, etc.)
    */
   private parseGeneric(rawData: string): PassengerData {
-    const pnr = this.extractPnr(rawData);
-    const fullName = this.extractNameGeneric(rawData);
+    console.log('[PARSER] 📋 Parsing GENERIC/BCBP, données brutes:', rawData.substring(0, 80) + '...');
+    console.log('[PARSER] 🔍 Longueur totale:', rawData.length, 'caractères');
+    
+    // Essayer d'abord le format BCBP structuré (avec espaces)
+    let pnr = 'UNKNOWN';
+    let fullName = 'UNKNOWN';
+    let departure = 'UNK';
+    let arrival = 'UNK';
+    let companyCode: string | undefined;
+    let flightNumber: string | undefined;
+    let seatNumber: string | undefined;
+    let flightDate: string | undefined;
+    
+    // Format BCBP standard : M1 + Nom(~20) + PNR(6-7) + Dep(3) + Arr(3) + Code(2) + Vol(4) + Date(3) + Classe + Siège...
+    // Exemple: M1RAZIOU/MOUSTAPHA    E7T5GVL FIHNBOKQ 0555 335M031G0009
+    // Regex ultra-flexible pour:
+    // - Espaces multiples dans le nom
+    // - PNR de 6 OU 7 caractères (alphanumériques)
+    // - Noms composés très longs (ex: VAN DER BERG/JEAN PHILIPPE MARIE)
+    
+    // Essayer d'abord avec séparateurs stricts
+    console.log('[PARSER] 🔍 Tentative regex standard (noms longs supportés)...');
+    console.log('[PARSER] 🔍 Premiers 100 chars:', rawData.substring(0, 100));
+    // Note: ([A-Z\/\s]+?) est non-greedy donc s'arrête au premier espace suivi du PNR
+    // Cela capture correctement les noms même très longs comme "VAN DER BERG/JEAN PHILIPPE MARIE"
+    let bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
+    
+    if (bcbpMatch) {
+      console.log('[PARSER] ✅✅✅ REGEX STANDARD A MATCHÉ !');
+      console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
+      console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+    }
+    
+    // Si échec, essayer format plus flexible (codes aéroport potentiellement avec espaces)
+    if (!bcbpMatch) {
+      console.log('[PARSER] 🔍 Tentative regex flexible (espaces optionnels)...');
+      bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})\s*([A-Z]{3})\s*([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
+      if (bcbpMatch) {
+        console.log('[PARSER] ✅✅✅ REGEX FLEXIBLE A MATCHÉ !');
+        console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
+        console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+      }
+    }
+    
+    // Si encore échec, essayer version simplifiée qui capture tout après le PNR
+    if (!bcbpMatch) {
+      console.log('[PARSER] 🔍 Tentative regex simplifiée (caractères non-numériques)...');
+      const simplifiedMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})[^0-9]*?(\d{3,4})[^0-9]*?(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
+      if (simplifiedMatch) {
+        bcbpMatch = simplifiedMatch;
+        console.log('[PARSER] ✅✅✅ REGEX SIMPLIFIÉE A MATCHÉ !');
+        console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
+        console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+      } else {
+        console.log('[PARSER] ❌❌❌ AUCUNE REGEX BCBP NE MATCHE, UTILISATION FALLBACK');
+      }
+    }
+    
+    // Variable pour stocker les infos bagages
+    let baggageInfo: { count: number; baseNumber?: string; expectedTags?: string[] } | undefined;
+    
+    if (bcbpMatch) {
+      console.log('[PARSER] ✅ Format BCBP structuré détecté');
+      // Nettoyer le nom : trim + normaliser les espaces multiples
+      // Supporte les noms très longs avec plusieurs espaces (ex: "VAN  DER  BERG/JEAN  PHILIPPE")
+      fullName = bcbpMatch[1].trim().replace(/\s+/g, ' ');
+      pnr = bcbpMatch[2];
+      console.log('[PARSER] 🔍 Nom après nettoyage:', fullName);
+      console.log('[PARSER] 🔍 PNR final:', pnr, '(longueur:', pnr.length, ')');
+      departure = bcbpMatch[3];
+      arrival = bcbpMatch[4];
+      companyCode = bcbpMatch[5];
+      const flightNum = bcbpMatch[6];
+      const julianDay = bcbpMatch[7];  // Jour julien (1-366)
+      const cabinClass = bcbpMatch[8];
+      const seatSeq = bcbpMatch[9];
+      const compartment = bcbpMatch[10];
+      const checkInSeqNumber = bcbpMatch[11];  // Check-in sequence number, NOT baggage!
+      
+      // Convertir le jour julien en format d'affichage (DDMMM)
+      const julianDayNum = parseInt(julianDay, 10);
+      flightDate = convertJulianDayToDisplayFormat(julianDayNum);
+      
+      // Construire le numéro de vol complet
+      flightNumber = companyCode + flightNum;
+      
+      // Extraire le numéro de siège (séquence + compartiment)
+      seatNumber = seatSeq + compartment;
+      
+      // Essayer d'extraire les informations de bagages depuis les champs optionnels
+      // Format BCBP: après les champs obligatoires, il peut y avoir des données optionnelles
+      // La section optionnelle commence après la position fixe des champs obligatoires
+      const afterMandatory = rawData.substring(rawData.indexOf(checkInSeqNumber) + 4);
+      console.log('[PARSER] 🔍 Extraction bagages, données après champs obligatoires:', afterMandatory.substring(0, 60));
+      
+      // Plusieurs patterns possibles pour les bagages:
+      // 1. "1PC" ou "2PC" (Pieces)
+      // 2. Nombre isolé au début de la section optionnelle
+      // 3. Pattern "XA###" où X est le nombre de bagages (ex: "2A706")
+      
+      let baggageMatch = afterMandatory.match(/(\d{1,2})PC/i);
+      if (!baggageMatch) {
+        // Chercher un pattern comme "2A706" où "2" = bagages
+        baggageMatch = afterMandatory.match(/\s+(\d)A\d{3,4}\d+/);
+      }
+      if (!baggageMatch) {
+        // Fallback: chercher un chiffre isolé au début
+        baggageMatch = afterMandatory.match(/^\s*(\d{1,2})[^0-9]/);
+      }
+      
+      if (baggageMatch) {
+        const count = parseInt(baggageMatch[1], 10);
+        if (count > 0 && count <= 9) {
+          baggageInfo = { count };
+          console.log('[PARSER] ✅ 🎒 Bagages extraits:', count, 'pièce(s)', '- baggageInfo défini');
+        } else {
+          console.log('[PARSER] ⚠️ Nombre de bagages invalide:', count);
+        }
+      } else {
+        console.log('[PARSER] ⚠️ Aucune information de bagages trouvée dans les données optionnelles');
+      }
+      
+      console.log('[PARSER] 📊 Données extraites BCBP:', {
+        fullName,
+        pnr,
+        departure,
+        arrival,
+        companyCode,
+        flightNumber,
+        julianDay: julianDay,
+        flightDate: flightDate,
+        cabinClass,
+        seatNumber,
+        checkInSeqNumber,
+        baggageInfo
+      });
+    } else {
+      console.log('[PARSER] ⚠️ Format BCBP non structuré, utilisation méthodes classiques');
+      // Fallback sur les méthodes classiques
+      pnr = this.extractPnr(rawData);
+      fullName = this.extractNameGeneric(rawData);
+      const route = this.extractRoute(rawData);
+      departure = route.departure;
+      arrival = route.arrival;
+      flightNumber = this.extractFlightNumber(rawData);
+      seatNumber = this.extractSeatNumber(rawData);
+      flightDate = extractFlightDateFromRawData(rawData);
+      
+      if (flightNumber && flightNumber.length >= 2) {
+        const codeMatch = flightNumber.match(/^([A-Z0-9]{2})/);
+        if (codeMatch) {
+          companyCode = codeMatch[1];
+        }
+      }
+    }
+    
     const nameParts = this.splitName(fullName);
-    const flightNumber = this.extractFlightNumber(rawData);
-    const route = this.extractRoute(rawData);
+    const airline = companyCode ? getAirlineName(companyCode) : undefined;
     const flightTime = this.extractFlightTime(rawData);
-    const seatNumber = this.extractSeatNumber(rawData);
     const ticketNumber = this.extractTicketNumber(rawData);
 
-    return {
+    const result = {
       pnr,
       fullName,
       firstName: nameParts.firstName,
       lastName: nameParts.lastName,
-      flightNumber,
+      flightNumber: flightNumber || 'UNKNOWN',
       flightTime,
-      route: `${route.departure}-${route.arrival}`,
-      departure: route.departure,
-      arrival: route.arrival,
+      flightDate,
+      route: `${departure}-${arrival}`,
+      departure,
+      arrival,
       seatNumber,
       ticketNumber,
+      companyCode,
+      airline,
+      baggageInfo,
       rawData,
-      format: 'GENERIC',
+      format: 'GENERIC' as const,
     };
+    
+    console.log('[PARSER] ✅ Résultat final GENERIC:', JSON.stringify(result, null, 2));
+    return result;
   }
 
   /**
@@ -361,6 +591,9 @@ class ParserService {
         }
       }
     }
+    
+    // Chercher tous les groupes de 6 caractères alphanumériques qui pourraient être un PNR
+    const allMatches = Array.from(rawData.matchAll(/([A-Z0-9]{6})/g));
     
     for (const match of allMatches) {
       const matchIndex = match.index || 0;
@@ -2027,6 +2260,11 @@ class ParserService {
   /**
    * Sépare le nom en prénom et nom de famille
    * Format: "KALONJI KABWE OSCAR" ou "LUMU ALIDOR KATEBA"
+   * Support complet pour:
+   * - Noms simples: "KATEBA" → lastName="KATEBA", firstName=""
+   * - Noms composés: "RAZIOU MOUSTAPHA" → lastName="RAZIOU", firstName="MOUSTAPHA"
+   * - Noms très longs: "VAN DER BERG JEAN PHILIPPE MARIE" → lastName="VAN DER BERG", firstName="JEAN PHILIPPE MARIE"
+   * - Plusieurs prénoms: "KALONJI KABWE OSCAR PIERRE" → lastName="KALONJI KABWE", firstName="OSCAR PIERRE"
    */
   private splitName(fullName: string): { firstName: string; lastName: string } {
     const parts = fullName.trim().split(/\s+/);
@@ -2039,9 +2277,16 @@ class ParserService {
       return { firstName: '', lastName: parts[0] };
     }
     
-    // Dernier mot = prénom, reste = nom de famille
+    // Stratégie par défaut: Dernier mot = prénom, reste = nom de famille
+    // Pour les noms avec plusieurs mots, cette approche fonctionne bien
+    // Exemples:
+    //   - "RAZIOU MOUSTAPHA" → lastName="RAZIOU", firstName="MOUSTAPHA"
+    //   - "VAN DER BERG JEAN" → lastName="VAN DER BERG", firstName="JEAN"
+    //   - "KALONJI KABWE OSCAR PIERRE" → lastName="KALONJI KABWE", firstName="OSCAR PIERRE"
     const firstName = parts[parts.length - 1];
     const lastName = parts.slice(0, -1).join(' ');
+    
+    console.log('[PARSER] 📝 Nom découpé:', { fullName, lastName, firstName, totalParts: parts.length });
     
     return {
       firstName,

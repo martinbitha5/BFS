@@ -1,0 +1,41 @@
+TURKISH AIRLINES
+
+MANIF RCVD TK540 28 NOV
+
+Manifeste Bagages reçus du Vol TK540 du 28/11/2025
+Escale de réception : FIH
+
+N° TAG        Billet/Expedit    Nom Passager/Destinataire    Poids    Comment    Lib Etat
+23534523O                       EZANIDOMPANGI                 0        LOADED     Received
+23534631G                       EZANIDOMPANGI                 0        LOADED     Received
+23538710G                       MANIANGA                      0        LOADED     Received
+23535417                        MBANA                         0        LOADED     Received
+23536659                        MBANA                         0        LOADED     Received
+23536508                        PETROVIC                      0        LOADED     Received
+23535541                        PETROVIC                      0        LOADED     Received
+23535570                        PETROVIC                      0        LOADED     Received
+23535608                        PETROVIC                      0        LOADED     Received
+23530085                        MADIA                         0        LOADED     Received
+23530692                        KITAMA                        0        LOADED     Received
+23530723                        KITAMA                        0        LOADED     Received
+23531051                        KUMBIMAFUTA                   0        LOADED     Received
+23531107                        KUMBIMAFUTA                   0        LOADED     Received
+23531196                        KUMBIMAFUTA                   0        LOADED     Received
+23531271                        KUMBIMAFUTA                   0        LOADED     Received
+23535128                        KWEKO                         0        LOADED     Received
+23535159                        KWEKO                         0        LOADED     Received
+23535200                        KWEKO                         0        LOADED     Received
+23531098                        MBUKILA                       0        LOADED     Received
+23531169                        MBUKILA                       0        LOADED     Received
+23537696                        NGANDU                        0        LOADED     Received
+23537633                        NGANDU                        0        LOADED     Received
+23537703B                       NGANDU                        0        LOADED     Received
+23538423A                       PHEMBA                        0        LOADED     Received
+23536426O                       PHEMBA                        0        LOADED     Received
+23536434A                       PHEMBA                        0        LOADED     Received
+23536471S                       PHEMBA                        0        LOADED     Received
+23531841                        BOLUMBU                       0        LOADED     Received
+23532068                        BOLUMBU                       0        LOADED     Received
+23532223G                       BOLUMBU                       0        LOADED     Received
+23532249G                       BOLUMBU                       0        LOADED     Received
+23536981                        KANGA                         0        LOADED     Received

@@ -49,6 +49,14 @@ class DatabaseServiceMock {
     }
   }
 
+  /**
+   * Obtenir la référence à la base de données
+   * Utile pour les services qui en ont besoin (BIRS, etc.)
+   */
+  getDatabase(): SQLite.SQLiteDatabase | null {
+    return this.db;
+  }
+
   async close(): Promise<void> {
     if (this.db) {
       await this.db.closeAsync();
@@ -94,7 +102,7 @@ class DatabaseServiceMock {
     return await mockService.getBaggagesByAirport(airportCode);
   }
 
-  async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived', userId: string): Promise<void> {
+  async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived' | 'rush', userId: string): Promise<void> {
     return await mockService.updateBaggageStatus(baggageId, status, userId);
   }
 
