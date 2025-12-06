@@ -436,12 +436,12 @@ export default function SupervisorScreen({ navigation }: Props) {
             </View>
             <View style={styles.passengerBadges}>
               {boardingStatus?.boarded ? (
-                <Badge label="✓ Embarqué" variant="success" />
+                <Badge label="Embarqué" variant="success" />
               ) : (
                 <Badge label="Non embarqué" variant="warning" />
               )}
               {!item.synced && (
-                <Badge label="⏳ Sync" variant="info" />
+                <Badge label="Sync" variant="info" />
               )}
             </View>
           </View>

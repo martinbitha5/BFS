@@ -73,7 +73,7 @@ class BirsRealFormatParserService {
       }
     }
 
-    console.log(`[BIRS Parser] ✅ Turkish Airlines: ${items.length} bagages trouvés`);
+    console.log(`[BIRS Parser] Turkish Airlines: ${items.length} bagages trouvés`);
 
     return {
       reportType: 'turkish',
@@ -148,10 +148,10 @@ class BirsRealFormatParserService {
       }
     }
 
-    console.log(`[BIRS Parser] ✅ Brussels Airlines: ${items.length} bagages trouvés (attendus: ${expectedCount})`);
+    console.log(`[BIRS Parser] Brussels Airlines: ${items.length} bagages trouvés (attendus: ${expectedCount})`);
 
     if (items.length !== expectedCount && expectedCount > 0) {
-      console.warn(`[BIRS Parser] ⚠️ Nombre de bagages différent: trouvés ${items.length}, attendus ${expectedCount}`);
+      console.warn(`[BIRS Parser] Nombre de bagages différent: trouvés ${items.length}, attendus ${expectedCount}`);
     }
 
     return {
@@ -246,7 +246,7 @@ class BirsRealFormatParserService {
       }
     }
 
-    console.log(`[BIRS Parser] ✅ Ethiopian Airlines: ${items.length} bagages trouvés`);
+    console.log(`[BIRS Parser] Ethiopian Airlines: ${items.length} bagages trouvés`);
 
     return {
       reportType: 'ethiopian',
@@ -264,7 +264,7 @@ class BirsRealFormatParserService {
    * Parse automatiquement en détectant la compagnie
    */
   parseAutoDetect(content: string, fileName: string): ParsedBirsData {
-    console.log('[BIRS Parser] 🔍 Auto-détection du format...');
+    console.log('[BIRS Parser] Auto-détection du format...');
 
     // Détecter la compagnie
     if (content.match(/TURKISH\s*AIRLINES/i) || fileName.match(/TK\d+/i) || content.match(/TK\d+/)) {
@@ -280,7 +280,7 @@ class BirsRealFormatParserService {
     }
 
     // Par défaut, essayer Ethiopian (le plus commun)
-    console.log('[BIRS Parser] ⚠️ Format non détecté, tentative Ethiopian par défaut');
+    console.log('[BIRS Parser] Format non détecté, tentative Ethiopian par défaut');
     return this.parseEthiopianAirlines(content, fileName);
   }
 

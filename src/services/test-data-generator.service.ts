@@ -108,7 +108,7 @@ class TestDataGeneratorService {
   }> {
     const startTime = Date.now();
     
-    console.log('[TEST DATA] 🚀 Génération de données de test...');
+    console.log('[TEST DATA] Génération de données de test...');
     console.log(`[TEST DATA] National RUSH: ${options.nationalRushCount}`);
     console.log(`[TEST DATA] International RUSH: ${options.internationalRushCount}`);
 
@@ -149,10 +149,10 @@ class TestDataGeneratorService {
         nationalCreated++;
 
         if (nationalCreated % 1000 === 0) {
-          console.log(`[TEST DATA] ✅ National RUSH: ${nationalCreated}/${options.nationalRushCount}`);
+          console.log(`[TEST DATA] National RUSH: ${nationalCreated}/${options.nationalRushCount}`);
         }
       } catch (error) {
-        console.error(`[TEST DATA] ❌ Erreur création bagage national ${i}:`, error);
+        console.error(`[TEST DATA] Erreur création bagage national ${i}:`, error);
       }
     }
 
@@ -188,16 +188,16 @@ class TestDataGeneratorService {
         internationalCreated++;
 
         if (internationalCreated % 1000 === 0) {
-          console.log(`[TEST DATA] ✅ International RUSH: ${internationalCreated}/${options.internationalRushCount}`);
+          console.log(`[TEST DATA] International RUSH: ${internationalCreated}/${options.internationalRushCount}`);
         }
       } catch (error) {
-        console.error(`[TEST DATA] ❌ Erreur création bagage international ${i}:`, error);
+        console.error(`[TEST DATA] Erreur création bagage international ${i}:`, error);
       }
     }
 
     const duration = Date.now() - startTime;
 
-    console.log('[TEST DATA] ✅ Génération terminée !');
+    console.log('[TEST DATA] Génération terminée !');
     console.log(`[TEST DATA] National RUSH créés: ${nationalCreated}`);
     console.log(`[TEST DATA] International RUSH créés: ${internationalCreated}`);
     console.log(`[TEST DATA] Durée: ${(duration / 1000).toFixed(2)}s`);
@@ -217,7 +217,7 @@ class TestDataGeneratorService {
     itemCount: number;
     matchPercentage: number; // % qui matchent avec des bagages existants
   }): string {
-    console.log('[TEST DATA] 📄 Génération fichier BIRS CSV...');
+    console.log('[TEST DATA] Génération fichier BIRS CSV...');
 
     const airline = this.AIRLINES.find(a => 
       a.flights.some(f => f === options.flightNumber)
@@ -241,7 +241,7 @@ class TestDataGeneratorService {
       csv += `${bagId},${passengerName},${pnr},${seatNumber},${classType},${psn},${weight},${route}\n`;
     }
 
-    console.log(`[TEST DATA] ✅ Fichier CSV généré: ${options.itemCount} items`);
+    console.log(`[TEST DATA] Fichier CSV généré: ${options.itemCount} items`);
     return csv;
   }
 
@@ -252,7 +252,7 @@ class TestDataGeneratorService {
     flightNumber: string;
     itemCount: number;
   }): string {
-    console.log('[TEST DATA] 📄 Génération fichier BIRS TXT...');
+    console.log('[TEST DATA] Génération fichier BIRS TXT...');
 
     const airline = this.AIRLINES.find(a => 
       a.flights.some(f => f === options.flightNumber)
@@ -287,7 +287,7 @@ class TestDataGeneratorService {
     txt += `Total Baggages: ${options.itemCount}\n`;
     txt += `========================================\n`;
 
-    console.log(`[TEST DATA] ✅ Fichier TXT généré: ${options.itemCount} items`);
+    console.log(`[TEST DATA] Fichier TXT généré: ${options.itemCount} items`);
     return txt;
   }
 
@@ -298,7 +298,7 @@ class TestDataGeneratorService {
     flightNumber: string;
     itemCount: number;
   }): BirsTestFileData {
-    console.log('[TEST DATA] 📄 Génération fichier BIRS JSON...');
+    console.log('[TEST DATA] Génération fichier BIRS JSON...');
 
     const airline = this.AIRLINES.find(a => 
       a.flights.some(f => f === options.flightNumber)
@@ -319,7 +319,7 @@ class TestDataGeneratorService {
       });
     }
 
-    console.log(`[TEST DATA] ✅ Fichier JSON généré: ${options.itemCount} items`);
+    console.log(`[TEST DATA] Fichier JSON généré: ${options.itemCount} items`);
 
     return {
       flightNumber: options.flightNumber,
@@ -426,7 +426,7 @@ class TestDataGeneratorService {
    * Nettoie toutes les données de test
    */
   async cleanupTestData(): Promise<void> {
-    console.log('[TEST DATA] 🧹 Nettoyage des données de test...');
+    console.log('[TEST DATA] Nettoyage des données de test...');
 
     const db = databaseService.getDatabase();
     if (!db) throw new Error('Database not initialized');
@@ -440,7 +440,7 @@ class TestDataGeneratorService {
     // Supprimer les bagages internationaux de test
     await db.runAsync(`DELETE FROM international_baggages WHERE id LIKE 'intl_bag_%'`);
 
-    console.log('[TEST DATA] ✅ Données de test nettoyées');
+    console.log('[TEST DATA] Données de test nettoyées');
   }
 }
 

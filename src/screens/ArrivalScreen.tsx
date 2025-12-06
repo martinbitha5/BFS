@@ -40,12 +40,12 @@ export default function ArrivalScreen({ navigation }: Props) {
     
     // Vérifier si c'est un scan en double dans un court laps de temps
     if (lastScannedTag === data && now - lastScanTime < DEBOUNCE_TIME) {
-      console.log('[ARRIVAL] ⏸️ Scan ignoré - debounce actif (même tag dans les', DEBOUNCE_TIME, 'ms)');
+      console.log('[ARRIVAL] Scan ignoré - debounce actif (même tag dans les', DEBOUNCE_TIME, 'ms');
       return; // Ignorer silencieusement
     }
     
     if (scanned || processing || !showScanner) {
-      console.log('[ARRIVAL] ⚠️ Scan ignoré - déjà en cours de traitement', { scanned, processing, showScanner });
+      console.log('[ARRIVAL] Scan ignoré - déjà en cours de traitement', { scanned, processing, showScanner });
       return;
     }
     
@@ -55,7 +55,7 @@ export default function ArrivalScreen({ navigation }: Props) {
     setScanned(true);
     setProcessing(true);
 
-    console.log('[ARRIVAL] 🔔 Tag RFID ou code-barres scanné:', data);
+    console.log('[ARRIVAL] Tag RFID ou code-barres scanné:', data);
     
     // Jouer le son de scan automatique
     await playScanSound();
@@ -74,14 +74,14 @@ export default function ArrivalScreen({ navigation }: Props) {
       
       // SYSTÈME BIRS: Si le bagage n'est pas trouvé, le considérer comme international
       if (!found) {
-        console.log('[ARRIVAL] 🌍 Bagage non trouvé dans le système - Considéré comme INTERNATIONAL');
-        console.log('[ARRIVAL] 📊 Début du traitement bagage international pour tag:', rfidTag);
+        console.log('[ARRIVAL] Bagage non trouvé dans le système - Considéré comme INTERNATIONAL');
+        console.log('[ARRIVAL] Début du traitement bagage international pour tag:', rfidTag);
         
         // Parser le tag pour extraire les informations disponibles
         const { parserService } = await import('../services');
         const baggageTagData = parserService.parseBaggageTag(rfidTag);
         
-        console.log('[ARRIVAL] 📝 Données extraites du tag:', {
+        console.log('[ARRIVAL] Données extraites du tag:', {
           passengerName: baggageTagData.passengerName,
           pnr: baggageTagData.pnr,
           flightNumber: baggageTagData.flightNumber,
@@ -90,7 +90,7 @@ export default function ArrivalScreen({ navigation }: Props) {
         
         // Créer un bagage international
         try {
-          console.log('[ARRIVAL] 🔄 Appel de birsService.createInternationalBaggage...');
+          console.log('[ARRIVAL] Appel de birsService.createInternationalBaggage...');
           
           const internationalBaggage = await birsService.createInternationalBaggage(
             rfidTag,
@@ -102,7 +102,7 @@ export default function ArrivalScreen({ navigation }: Props) {
             baggageTagData.origin
           );
           
-          console.log('[ARRIVAL] ✅ Bagage international créé avec succès:', {
+          console.log('[ARRIVAL] Bagage international créé avec succès:', {
             id: internationalBaggage.id,
             tag: rfidTag,
             status: internationalBaggage.status,
@@ -114,13 +114,13 @@ export default function ArrivalScreen({ navigation }: Props) {
           setShowScanner(false);
           await playSuccessSound();
           
-          setToastMessage('✅ Bagage international enregistré avec succès');
+          setToastMessage('Bagage international enregistré avec succès');
           setToastType('success');
           setShowToast(true);
           return;
         } catch (error) {
-          console.error('[ARRIVAL] ❌ Erreur création bagage international:', error);
-          console.error('[ARRIVAL] 📋 Stack trace:', error instanceof Error ? error.stack : 'N/A');
+          console.error('[ARRIVAL] Erreur création bagage international:', error);
+          console.error('[ARRIVAL] Stack trace:', error instanceof Error ? error.stack : 'N/A');
           
           // Afficher un message d'erreur à l'utilisateur
           await playErrorSound();
@@ -167,11 +167,11 @@ export default function ArrivalScreen({ navigation }: Props) {
           return;
         }
       } else {
-        console.log('[ARRIVAL] 🧪 MODE TEST - Vérification aéroport désactivée:', {
+        console.log('[ARRIVAL] MODE TEST - Vérification aéroport désactivée:', {
           arrivalFromPassenger: passengerData.arrival,
           userAirport: user.airportCode,
         });
-        console.log('[ARRIVAL] ✅ Pas de vérification d\'aéroport - continuation du processus d\'arrivée');
+        console.log('[ARRIVAL] Pas de vérification d\'aéroport - continuation du processus d\'arrivée');
       }
 
       setBaggage(found);
@@ -349,7 +349,7 @@ export default function ArrivalScreen({ navigation }: Props) {
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
                   <Badge 
-                    label={baggage.status === 'arrived' ? "✓ Arrivé" : "En transit"} 
+                    label={baggage.status === 'arrived' ? "Arrivé" : "En transit"} 
                     variant={baggage.status === 'arrived' ? "success" : "info"} 
                   />
                 </View>
@@ -397,7 +397,7 @@ export default function ArrivalScreen({ navigation }: Props) {
 
               {baggage.status === 'arrived' && (
                 <Card style={styles.arrivedCard}>
-                  <Badge label="✓ Arrivé" variant="success" />
+                  <Badge label="Arrivé" variant="success" />
                   <Text style={[styles.arrivedText, { color: colors.text.secondary }]}>Ce bagage a déjà été marqué comme arrivé</Text>
                 </Card>
               )}
@@ -449,10 +449,10 @@ export default function ArrivalScreen({ navigation }: Props) {
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
                   <Badge 
                     label={
-                      internationalBaggage.status === 'scanned' ? '🌍 Scanné' :
-                      internationalBaggage.status === 'reconciled' ? '✅ Réconcilié' :
-                      internationalBaggage.status === 'unmatched' ? '⚠️ Non-matché' :
-                      '⏳ En attente'
+                      internationalBaggage.status === 'scanned' ? 'Scanné' :
+                      internationalBaggage.status === 'reconciled' ? 'Réconcilié' :
+                      internationalBaggage.status === 'unmatched' ? 'Non-matché' :
+                      'En attente'
                     }
                     variant={
                       internationalBaggage.status === 'reconciled' ? 'success' :

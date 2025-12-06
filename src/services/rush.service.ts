@@ -30,7 +30,7 @@ class RushService {
     nextFlightNumber?: string,
     remarks?: string
   ): Promise<void> {
-    console.log('[RUSH] 📦 Déclaration bagage national en RUSH:', {
+    console.log('[RUSH] Déclaration bagage national en RUSH:', {
       baggageId,
       userId,
       reason,
@@ -46,7 +46,7 @@ class RushService {
 
     // Vérifier le statut actuel
     if (baggage.status === 'rush') {
-      console.warn('[RUSH] ⚠️ Bagage déjà marqué comme RUSH');
+      console.warn('[RUSH] Bagage déjà marqué comme RUSH');
       throw new Error('Ce bagage est déjà marqué comme RUSH');
     }
 
@@ -73,7 +73,7 @@ class RushService {
       baggageId
     );
 
-    console.log('[RUSH] ✅ Bagage national marqué comme RUSH avec succès');
+    console.log('[RUSH] Bagage national marqué comme RUSH avec succès');
   }
 
   /**
@@ -86,7 +86,7 @@ class RushService {
     nextFlightNumber?: string,
     remarks?: string
   ): Promise<void> {
-    console.log('[RUSH] 🌍 Déclaration bagage international en RUSH:', {
+    console.log('[RUSH] Déclaration bagage international en RUSH:', {
       baggageId,
       userId,
       reason,
@@ -102,7 +102,7 @@ class RushService {
 
     // Vérifier le statut actuel
     if (baggage.status === 'rush') {
-      console.warn('[RUSH] ⚠️ Bagage déjà marqué comme RUSH');
+      console.warn('[RUSH] Bagage déjà marqué comme RUSH');
       throw new Error('Ce bagage est déjà marqué comme RUSH');
     }
 
@@ -130,7 +130,7 @@ class RushService {
       baggageId
     );
 
-    console.log('[RUSH] ✅ Bagage international marqué comme RUSH avec succès');
+    console.log('[RUSH] Bagage international marqué comme RUSH avec succès');
   }
 
   /**
@@ -143,7 +143,7 @@ class RushService {
     newStatus: 'checked' | 'arrived',
     reason: string
   ): Promise<void> {
-    console.log('[RUSH] 🔄 Annulation RUSH bagage national:', {
+    console.log('[RUSH] Annulation RUSH bagage national:', {
       baggageId,
       newStatus,
       reason
@@ -176,7 +176,7 @@ class RushService {
       baggageId
     );
 
-    console.log('[RUSH] ✅ RUSH annulé avec succès');
+    console.log('[RUSH] RUSH annulé avec succès');
   }
 
   /**
@@ -188,7 +188,7 @@ class RushService {
     newStatus: 'scanned' | 'reconciled',
     reason: string
   ): Promise<void> {
-    console.log('[RUSH] 🔄 Annulation RUSH bagage international:', {
+    console.log('[RUSH] Annulation RUSH bagage international:', {
       baggageId,
       newStatus,
       reason
@@ -226,7 +226,7 @@ class RushService {
       baggageId
     );
 
-    console.log('[RUSH] ✅ RUSH annulé avec succès');
+    console.log('[RUSH] RUSH annulé avec succès');
   }
 
   /**

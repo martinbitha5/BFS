@@ -51,7 +51,7 @@ export const KNOWN_AIRLINES: Airline[] = [
     name: 'Turkish Airlines',
     destinations: ['FIH', 'IST', 'LAD', 'NBO', 'CMN', 'ADD'],
   },
-  // ✅ NOUVELLES COMPAGNIES AJOUTÉES
+  // NOUVELLES COMPAGNIES AJOUTÉES
   // Tanzania
   {
     code: 'TC',

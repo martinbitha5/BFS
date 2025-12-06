@@ -269,12 +269,12 @@ class ParserService {
     // IMPORTANT: Extraire d'abord le PNR avec le service robuste et flexible
     // Le PNR est nécessaire pour extraire correctement le nom
     const pnr = pnrExtractorService.extractPnr(rawData);
-    console.log('[PARSER] 🔍 PNR extrait pour parseEthiopian:', pnr, 'Longueur:', pnr.length);
+    console.log('[PARSER] PNR extrait pour parseEthiopian:', pnr, 'Longueur:', pnr.length);
 
     // 1. Nom : Commence souvent par M1, ignorer le préfixe
     // Passer le PNR trouvé pour éviter de le rechercher à nouveau
     const fullName = this.extractNameEthiopian(rawData, pnr);
-    console.log('[PARSER] 🔍 Nom extrait pour parseEthiopian:', fullName);
+    console.log('[PARSER] Nom extrait pour parseEthiopian:', fullName);
     const nameParts = this.splitName(fullName);
     const firstName = nameParts.firstName;
     const lastName = nameParts.lastName;
@@ -327,7 +327,7 @@ class ParserService {
    * Parse un boarding pass générique IATA BCBP
    * Format BCBP standard: M1NOM/PRENOM    PNR    DEPARVCODEVOL...
    * 
-   * ✅ PARSER UNIVERSEL - Supporte TOUTES les compagnies aériennes utilisant le format IATA BCBP:
+   * PARSER UNIVERSEL - Supporte TOUTES les compagnies aériennes utilisant le format IATA BCBP:
    * - Kenya Airways (KQ), Air Congo (9U), Ethiopian Airlines (ET)
    * - Tanzania (TC, PW), RwandAir (WB), South African Airways (SA)
    * - Brussels Airlines (SN), Turkish Airlines (TK), Emirates (EK)
@@ -341,8 +341,8 @@ class ParserService {
    * - Détection automatique de la compagnie même si inconnue
    */
   private parseGeneric(rawData: string): PassengerData {
-    console.log('[PARSER] 📋 Parsing GENERIC/BCBP, données brutes:', rawData.substring(0, 80) + '...');
-    console.log('[PARSER] 🔍 Longueur totale:', rawData.length, 'caractères');
+    console.log('[PARSER] Parsing GENERIC/BCBP, données brutes:', rawData.substring(0, 80) + '...');
+    console.log('[PARSER] Longueur totale:', rawData.length, 'caractères');
     
     // Essayer d'abord le format BCBP structuré (avec espaces)
     let pnr = 'UNKNOWN';
@@ -357,45 +357,44 @@ class ParserService {
     // Format BCBP standard : M1 + Nom(~20) + PNR(6-7) + Dep(3) + Arr(3) + Code(2) + Vol(4) + Date(3) + Classe + Siège...
     // Exemple: M1RAZIOU/MOUSTAPHA    E7T5GVL FIHNBOKQ 0555 335M031G0009
     // Regex ultra-flexible pour:
-    // - Espaces multiples dans le nom
     // - PNR de 6 OU 7 caractères (alphanumériques)
     // - Noms composés très longs (ex: VAN DER BERG/JEAN PHILIPPE MARIE)
     
     // Essayer d'abord avec séparateurs stricts
-    console.log('[PARSER] 🔍 Tentative regex standard (noms longs supportés)...');
-    console.log('[PARSER] 🔍 Premiers 100 chars:', rawData.substring(0, 100));
+    console.log('[PARSER] Tentative regex standard (noms longs supportés)...');
+    console.log('[PARSER] Premiers 100 chars:', rawData.substring(0, 100));
     // Note: ([A-Z\/\s]+?) est non-greedy donc s'arrête au premier espace suivi du PNR
     // Cela capture correctement les noms même très longs comme "VAN DER BERG/JEAN PHILIPPE MARIE"
     let bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
     
     if (bcbpMatch) {
-      console.log('[PARSER] ✅✅✅ REGEX STANDARD A MATCHÉ !');
-      console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
-      console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+      console.log('[PARSER] REGEX STANDARD A MATCHÉ !');
+      console.log('[PARSER] Nom capturé:', bcbpMatch[1]);
+      console.log('[PARSER] PNR capturé:', bcbpMatch[2]);
     }
     
     // Si échec, essayer format plus flexible (codes aéroport potentiellement avec espaces)
     if (!bcbpMatch) {
-      console.log('[PARSER] 🔍 Tentative regex flexible (espaces optionnels)...');
+      console.log('[PARSER] Tentative regex flexible (espaces optionnels)...');
       bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})\s*([A-Z]{3})\s*([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
       if (bcbpMatch) {
-        console.log('[PARSER] ✅✅✅ REGEX FLEXIBLE A MATCHÉ !');
-        console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
-        console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+        console.log('[PARSER] REGEX FLEXIBLE A MATCHÉ !');
+        console.log('[PARSER] Nom capturé:', bcbpMatch[1]);
+        console.log('[PARSER] PNR capturé:', bcbpMatch[2]);
       }
     }
     
     // Si encore échec, essayer version simplifiée qui capture tout après le PNR
     if (!bcbpMatch) {
-      console.log('[PARSER] 🔍 Tentative regex simplifiée (caractères non-numériques)...');
+      console.log('[PARSER] Tentative regex simplifiée (caractères non-numériques)...');
       const simplifiedMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})[^0-9]*?(\d{3,4})[^0-9]*?(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
       if (simplifiedMatch) {
         bcbpMatch = simplifiedMatch;
-        console.log('[PARSER] ✅✅✅ REGEX SIMPLIFIÉE A MATCHÉ !');
-        console.log('[PARSER] 📝 Nom capturé:', bcbpMatch[1]);
-        console.log('[PARSER] 📝 PNR capturé:', bcbpMatch[2]);
+        console.log('[PARSER] REGEX SIMPLIFIÉE A MATCHÉ !');
+        console.log('[PARSER] Nom capturé:', bcbpMatch[1]);
+        console.log('[PARSER] PNR capturé:', bcbpMatch[2]);
       } else {
-        console.log('[PARSER] ❌❌❌ AUCUNE REGEX BCBP NE MATCHE, UTILISATION FALLBACK');
+        console.log('[PARSER] AUCUNE REGEX BCBP NE MATCHE, UTILISATION FALLBACK');
       }
     }
     
@@ -403,13 +402,13 @@ class ParserService {
     let baggageInfo: { count: number; baseNumber?: string; expectedTags?: string[] } | undefined;
     
     if (bcbpMatch) {
-      console.log('[PARSER] ✅ Format BCBP structuré détecté');
+      console.log('[PARSER] Format BCBP structuré détecté');
       // Nettoyer le nom : trim + normaliser les espaces multiples
       // Supporte les noms très longs avec plusieurs espaces (ex: "VAN  DER  BERG/JEAN  PHILIPPE")
       fullName = bcbpMatch[1].trim().replace(/\s+/g, ' ');
       pnr = bcbpMatch[2];
-      console.log('[PARSER] 🔍 Nom après nettoyage:', fullName);
-      console.log('[PARSER] 🔍 PNR final:', pnr, '(longueur:', pnr.length, ')');
+      console.log('[PARSER] Nom après nettoyage:', fullName);
+      console.log('[PARSER] PNR final:', pnr, '(longueur:', pnr.length, ')');
       departure = bcbpMatch[3];
       arrival = bcbpMatch[4];
       companyCode = bcbpMatch[5];
@@ -434,7 +433,7 @@ class ParserService {
       // Format BCBP: après les champs obligatoires, il peut y avoir des données optionnelles
       // La section optionnelle commence après la position fixe des champs obligatoires
       const afterMandatory = rawData.substring(rawData.indexOf(checkInSeqNumber) + 4);
-      console.log('[PARSER] 🔍 Extraction bagages, données après champs obligatoires:', afterMandatory.substring(0, 60));
+      console.log('[PARSER] Extraction bagages, données après champs obligatoires:', afterMandatory.substring(0, 60));
       
       // Plusieurs patterns possibles pour les bagages:
       // 1. "1PC" ou "2PC" (Pieces)
@@ -455,15 +454,15 @@ class ParserService {
         const count = parseInt(baggageMatch[1], 10);
         if (count > 0 && count <= 9) {
           baggageInfo = { count };
-          console.log('[PARSER] ✅ 🎒 Bagages extraits:', count, 'pièce(s)', '- baggageInfo défini');
+          console.log('[PARSER] Bagages extraits:', count, 'pièce(s)', '- baggageInfo défini');
         } else {
-          console.log('[PARSER] ⚠️ Nombre de bagages invalide:', count);
+          console.log('[PARSER] Nombre de bagages invalide:', count);
         }
       } else {
-        console.log('[PARSER] ⚠️ Aucune information de bagages trouvée dans les données optionnelles');
+        console.log('[PARSER] Aucune information de bagages trouvée dans les données optionnelles');
       }
       
-      console.log('[PARSER] 📊 Données extraites BCBP:', {
+      console.log('[PARSER] Données extraites BCBP:', {
         fullName,
         pnr,
         departure,
@@ -478,7 +477,7 @@ class ParserService {
         baggageInfo
       });
     } else {
-      console.log('[PARSER] ⚠️ Format BCBP non structuré, utilisation méthodes classiques');
+      console.log('[PARSER] Format BCBP non structuré, utilisation méthodes classiques');
       // Fallback sur les méthodes classiques
       pnr = this.extractPnr(rawData);
       fullName = this.extractNameGeneric(rawData);
@@ -507,7 +506,7 @@ class ParserService {
       // Si la compagnie n'est pas dans notre liste, créer un nom générique
       if (!airline || airline === 'Unknown Airline') {
         airline = `Airline ${companyCode}`;
-        console.log('[PARSER] ⚠️ Compagnie inconnue détectée:', companyCode, '- Utilisation du nom générique:', airline);
+        console.log('[PARSER] Compagnie inconnue détectée:', companyCode, '- Utilisation du nom générique:', airline);
       }
     }
     
@@ -534,7 +533,7 @@ class ParserService {
       format: 'GENERIC' as const,
     };
     
-    console.log('[PARSER] ✅ Résultat final GENERIC:', JSON.stringify(result, null, 2));
+    console.log('[PARSER] Résultat final GENERIC:', JSON.stringify(result, null, 2));
     return result;
   }
 
@@ -736,7 +735,7 @@ class ParserService {
     // Format spécial: M1MASIMANGO/ISSIAKA GROIFLBUET80 où "GR" fait partie du nom et "OIFLBU" est le PNR
     // Le nom se termine avant ET suivi de chiffres (numéro de vol) ou avant le PNR
     
-    console.log('[PARSER] 🔍 Extraction nom Ethiopian, données:', rawData.substring(0, 50) + '...', 'PNR fourni:', pnrFromParser);
+    console.log('[PARSER] Extraction nom Ethiopian, données:', rawData.substring(0, 50) + '...', 'PNR fourni:', pnrFromParser);
     
     // PRIORITÉ 1: Utiliser le PNR trouvé pour extraire le nom complet même si collé
     // C'est la méthode la plus fiable car on connaît déjà le PNR
@@ -744,7 +743,7 @@ class ParserService {
       const pnrIndex = rawData.indexOf(pnrFromParser);
       if (pnrIndex > 0) {
         const beforePnr = rawData.substring(0, pnrIndex);
-        console.log('[PARSER] 🔍 PNR trouvé à l\'index:', pnrIndex, 'Avant PNR:', beforePnr.substring(Math.max(0, beforePnr.length - 25)));
+        console.log('[PARSER] PNR trouvé à l\'index:', pnrIndex, 'Avant PNR:', beforePnr.substring(Math.max(0, beforePnr.length - 25)));
         
         // Chercher le pattern avec lettres avant le PNR (1-4 lettres)
         // Format: "MASIMANGO/ISSIAKA GREOIFLBU" → nom = "MASIMANGO/ISSIAKA", PNR = "OIFLBU"
@@ -778,7 +777,7 @@ class ParserService {
           if (cleanedName.length > 3) {
             // S'assurer qu'on a le nom complet (doit contenir "/" ou être assez long)
             if (namePart.includes('/') || cleanedName.length > 8) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (avec PNR connu):', cleanedName);
+              console.log('[PARSER] Nom final extrait (avec PNR connu):', cleanedName);
               return cleanedName;
             }
           }
@@ -793,7 +792,7 @@ class ParserService {
             const namePart = rawData.substring(2, pnrIndex - 8);
             let cleanedName = namePart.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (cleanedName.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (pattern 8 lettres):', cleanedName);
+              console.log('[PARSER] Nom final extrait (pattern 8 lettres):', cleanedName);
               return cleanedName;
             }
           }
@@ -850,7 +849,7 @@ class ParserService {
             
             // Vérifier que le nom est complet (contient deux parties séparées)
             if (cleanedName.length > 3 && cleanedName.includes(' ')) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (avec slash):', cleanedName);
+              console.log('[PARSER] Nom final extrait (avec slash):', cleanedName);
               return cleanedName;
             }
           } else if (spaceIndex > 0) {
@@ -858,7 +857,7 @@ class ParserService {
             const namePart = rawData.substring(2, spaceIndex + 1);
             let cleanedName = namePart.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (cleanedName.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (avec espace):', cleanedName);
+              console.log('[PARSER] Nom final extrait (avec espace):', cleanedName);
               return cleanedName;
             }
           }
@@ -869,14 +868,14 @@ class ParserService {
     // PRIORITÉ 2: Chercher directement le pattern "MASIMANGO/ISSIAKA GREOIFLBU"
     // Format: M1 + nom + espace optionnel + lettres(3) + PNR(6) + codes aéroports ou ET
     const patternWithPnrMatches = Array.from(rawData.matchAll(/^M[12](.+?)(?:\s+)?([A-Z]{3})([A-Z]{6})([A-Z]{3,6}|ET\s*\d)/g));
-    console.log('[PARSER] 🔍 Recherche pattern 3+6, matches trouvés:', patternWithPnrMatches.length);
+    console.log('[PARSER] Recherche pattern 3+6, matches trouvés:', patternWithPnrMatches.length);
     for (const match of patternWithPnrMatches) {
       const name = match[1].trim();
       const lettersBefore = match[2]; // "GRE"
       const pnrFound = match[3]; // "OIFLBU"
       const afterPnr = match[4]; // "FIHMDK" ou "ET 0080"
       
-      console.log('[PARSER] ✅ Pattern 3+6 trouvé - Nom:', name, 'Lettres avant PNR:', lettersBefore, 'PNR:', pnrFound, 'Après:', afterPnr);
+      console.log('[PARSER] Pattern 3+6 trouvé - Nom:', name, 'Lettres avant PNR:', lettersBefore, 'PNR:', pnrFound, 'Après:', afterPnr);
       
       // Vérifier que ce qui suit le PNR est soit un code aéroport, soit ET
       const airportPattern = KNOWN_AIRPORT_CODES.join('|');
@@ -891,7 +890,7 @@ class ParserService {
           cleanedName = trailingMatch[1].trim();
           console.log('[PARSER] Lettres de queue retirées (correspondent aux lettres avant PNR):', trailingMatch[2]);
         }
-        console.log('[PARSER] ✅✅✅ Nom final extrait (pattern 3+6):', cleanedName);
+        console.log('[PARSER] Nom final extrait (pattern 3+6):', cleanedName);
         return cleanedName;
       }
     }
@@ -903,7 +902,7 @@ class ParserService {
       const pnrIndex = rawData.indexOf(pnrFromParser);
       if (pnrIndex > 0) {
         const beforePnr = rawData.substring(0, pnrIndex);
-        console.log('[PARSER] 🔍 Extraction nom avec PNR connu, avant PNR:', beforePnr.substring(Math.max(0, beforePnr.length - 20)));
+        console.log('[PARSER] Extraction nom avec PNR connu, avant PNR:', beforePnr.substring(Math.max(0, beforePnr.length - 20)));
         
         // Chercher le pattern avec lettres avant le PNR (3 lettres)
         const patternMatch = beforePnr.match(/([A-Z]{3})([A-Z]{6})$/);
@@ -924,7 +923,7 @@ class ParserService {
           
           // Vérifier que le nom est valide (contient au moins un "/" ou est raisonnablement long)
           if (cleanedName.length > 3) {
-            console.log('[PARSER] ✅✅✅ Nom final extrait (avec PNR connu):', cleanedName);
+            console.log('[PARSER] Nom final extrait (avec PNR connu):', cleanedName);
             return cleanedName;
           }
         } else {
@@ -938,7 +937,7 @@ class ParserService {
             const namePart = rawData.substring(2, lastSeparator + (slashIndex > spaceIndex ? 0 : 1));
             let cleanedName = namePart.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (cleanedName.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (avec séparateur):', cleanedName);
+              console.log('[PARSER] Nom final extrait (avec séparateur):', cleanedName);
               return cleanedName;
             }
           }
@@ -948,14 +947,14 @@ class ParserService {
     
     // Fallback: chercher le pattern collé normalement
     const patternColled = Array.from(rawData.matchAll(/^M[12](.+?)([A-Z]{3})([A-Z]{6})([A-Z]{3,6}|ET\s*\d)/g));
-    console.log('[PARSER] 🔍 Recherche pattern collé, matches trouvés:', patternColled.length);
+    console.log('[PARSER] Recherche pattern collé, matches trouvés:', patternColled.length);
     for (const match of patternColled) {
       const name = match[1].trim();
       const lettersBefore = match[2];
       const pnrFound = match[3];
       const afterPnr = match[4];
       
-      console.log('[PARSER] ✅ Pattern collé trouvé - Nom:', name, 'Lettres avant PNR:', lettersBefore, 'PNR:', pnrFound);
+      console.log('[PARSER] Pattern collé trouvé - Nom:', name, 'Lettres avant PNR:', lettersBefore, 'PNR:', pnrFound);
       
       const airportPattern = KNOWN_AIRPORT_CODES.join('|');
       const isFollowedByAirportOrEt = new RegExp(`^(${airportPattern})`).test(afterPnr) || /^ET\s*\d/.test(afterPnr);
@@ -967,7 +966,7 @@ class ParserService {
           cleanedName = cleanedName.substring(0, cleanedName.length - lettersBefore.length).trim();
           console.log('[PARSER] Lettres collées retirées:', lettersBefore);
         }
-        console.log('[PARSER] ✅✅✅ Nom final extrait (pattern collé):', cleanedName);
+        console.log('[PARSER] Nom final extrait (pattern collé):', cleanedName);
         return cleanedName;
       }
     }
@@ -989,7 +988,7 @@ class ParserService {
         if (trailingMatch && trailingMatch[2] === lettersBefore) {
           cleanedName = trailingMatch[1].trim();
         }
-        console.log('[PARSER] ✅✅✅ Nom final extrait (flexible):', cleanedName);
+        console.log('[PARSER] Nom final extrait (flexible):', cleanedName);
         return cleanedName;
       }
     }
@@ -1242,7 +1241,7 @@ class ParserService {
           
           // Vérifier que le nom ne contient pas le PNR
           if (!cleanedName.includes(finalPnr) && cleanedName.length > 3) {
-            console.log('[PARSER] ✅✅✅ Nom final extrait (vérification finale):', cleanedName);
+            console.log('[PARSER] Nom final extrait (vérification finale):', cleanedName);
             return cleanedName;
           }
         }
@@ -1277,7 +1276,7 @@ class ParserService {
             // Nettoyer le nom
             name = name.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (name.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (PNR potentiel détecté):', name);
+              console.log('[PARSER] Nom final extrait (PNR potentiel détecté):', name);
               return name;
             }
           }
@@ -1299,7 +1298,7 @@ class ParserService {
             // Nettoyer le nom
             name = name.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (name.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (PNR simple détecté):', name);
+              console.log('[PARSER] Nom final extrait (PNR simple détecté):', name);
               return name;
             }
           }
@@ -1328,7 +1327,7 @@ class ParserService {
             // Nettoyer le nom
             name = name.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
             if (name.length > 3) {
-              console.log('[PARSER] ✅✅✅ Nom final extrait (PNR avec lettres supplémentaires détecté):', name, 'PNR potentiel:', potentialPnr);
+              console.log('[PARSER] Nom final extrait (PNR avec lettres supplémentaires détecté):', name, 'PNR potentiel:', potentialPnr);
               return name;
             }
           }
@@ -1356,7 +1355,7 @@ class ParserService {
     // Le pattern peut être suivi de codes aéroports (FIHMDK) ou ET + chiffres
     // STRATÉGIE: Chercher un groupe de 9 lettres (3+6) suivi de codes aéroports ou ET, puis extraire les 6 dernières
     // IMPORTANT: Chercher d'abord les patterns suivis de codes aéroports (plus fiables)
-    console.log('[PARSER] 🔍 Recherche PNR avec pattern 3+6 dans:', rawData.substring(0, 50) + '...');
+    console.log('[PARSER] Recherche PNR avec pattern 3+6 dans:', rawData.substring(0, 50) + '...');
     
     // PRIORITÉ 1A: Pattern suivi directement de codes aéroports (ex: "GREOIFLBUFIHMDK")
     // Chercher spécifiquement les patterns qui sont suivis de codes aéroports connus
@@ -1383,7 +1382,7 @@ class ParserService {
           // Vérifier que pnrCandidate correspond bien aux 6 dernières lettres
           const expectedPnr = fullPattern.substring(2); // Les 6 dernières lettres
           if (pnrCandidate !== expectedPnr) {
-            console.log('[PARSER] ⚠️ CORRECTION: PNR candidat ne correspond pas aux 6 dernières lettres. Pattern:', fullPattern, 'Attendu:', expectedPnr, 'Obtenu:', pnrCandidate);
+            console.log('[PARSER] CORRECTION: PNR candidat ne correspond pas aux 6 dernières lettres. Pattern:', fullPattern, 'Attendu:', expectedPnr, 'Obtenu:', pnrCandidate);
             // Utiliser les 6 dernières lettres du pattern complet
             const correctedPnr = fullPattern.substring(2);
             const pnrIndex = airportIndex - searchWindow.length + patternIndexInWindow + 2; // Position réelle du PNR
@@ -1408,7 +1407,7 @@ class ParserService {
                   // Vérifier que les lettres avant ne font pas partie du nom
                   if (!nameEndTrimmed.endsWith(lettersBefore) && !nameEndTrimmed.includes(lettersBefore + correctedPnr[0])) {
                     validMatches.push({ matchIndex: pnrIndex, pnrCandidate: correctedPnr, lettersBefore, airportCode: airport });
-                    console.log('[PARSER] ✅ Pattern 2+6 valide ajouté (corrigé):', correctedPnr, 'lettres avant:', lettersBefore);
+                    console.log('[PARSER] Pattern 2+6 valide ajouté (corrigé):', correctedPnr, 'lettres avant:', lettersBefore);
                   }
                 }
               }
@@ -1438,7 +1437,7 @@ class ParserService {
                 // Vérifier que les lettres avant ne font pas partie du nom
                 if (!nameEndTrimmed.endsWith(lettersBefore) && !nameEndTrimmed.includes(lettersBefore + pnrCandidate[0])) {
                   validMatches.push({ matchIndex: pnrIndex, pnrCandidate, lettersBefore, airportCode: airport });
-                  console.log('[PARSER] ✅ Pattern 2+6 valide ajouté:', pnrCandidate, 'lettres avant:', lettersBefore);
+                  console.log('[PARSER] Pattern 2+6 valide ajouté:', pnrCandidate, 'lettres avant:', lettersBefore);
                 }
               }
             }
@@ -1487,17 +1486,17 @@ class ParserService {
                   // Vérifier que le nom ne se termine pas par ces lettres exactes
                   if (!nameEndTrimmed.endsWith(lettersBefore) && !nameEndLastChars.endsWith(lettersBefore + lettersBefore)) {
                     validMatches.push({ matchIndex: pnrIndex, pnrCandidate, lettersBefore, airportCode: airport });
-                    console.log('[PARSER] ✅ Pattern valide ajouté:', pnrCandidate, 'lettres avant:', lettersBefore);
+                    console.log('[PARSER] Pattern valide ajouté:', pnrCandidate, 'lettres avant:', lettersBefore);
                   } else {
-                    console.log('[PARSER] ⚠️ Pattern ignoré (lettres avant font partie du nom):', lettersBefore, 'nom fin:', nameEndTrimmed);
+                    console.log('[PARSER] Pattern ignoré (lettres avant font partie du nom):', lettersBefore, 'nom fin:', nameEndTrimmed);
                   }
                 } else {
                   // Pour d'autres lettres, être plus strict
                   if (!nameEndTrimmed.endsWith(lettersBefore) && !nameEndTrimmed.includes(lettersBefore + pnrCandidate[0])) {
                     validMatches.push({ matchIndex: pnrIndex, pnrCandidate, lettersBefore, airportCode: airport });
-                    console.log('[PARSER] ✅ Pattern valide ajouté:', pnrCandidate);
+                    console.log('[PARSER] Pattern valide ajouté:', pnrCandidate);
                   } else {
-                    console.log('[PARSER] ⚠️ Pattern ignoré (lettres avant font partie du nom):', lettersBefore);
+                    console.log('[PARSER] Pattern ignoré (lettres avant font partie du nom):', lettersBefore);
                   }
                 }
               }
@@ -1517,14 +1516,14 @@ class ParserService {
         return b.matchIndex - a.matchIndex;
       });
       const bestMatch = validMatches[0];
-      console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec aéroport (priorité 1A):', bestMatch.pnrCandidate, 'Index:', bestMatch.matchIndex, 'Aéroport:', bestMatch.airportCode);
+      console.log('[PARSER] PNR TROUVÉ avec aéroport (priorité 1A):', bestMatch.pnrCandidate, 'Index:', bestMatch.matchIndex, 'Aéroport:', bestMatch.airportCode);
       return bestMatch.pnrCandidate;
     }
     
     // Fallback: chercher patterns 2+6 lettres suivis de codes aéroports (ex: "EEMXTRJEFIHGMA")
     const airportPattern = KNOWN_AIRPORT_CODES.join('|');
     const pnr8WithAirports = Array.from(rawData.matchAll(new RegExp(`([A-Z]{2})([A-Z]{6})(${airportPattern})`, 'g')));
-    console.log('[PARSER] 🔍 Patterns 2+6 suivis de codes aéroports:', pnr8WithAirports.length);
+    console.log('[PARSER] Patterns 2+6 suivis de codes aéroports:', pnr8WithAirports.length);
     
     for (const match of pnr8WithAirports) {
       const lettersBefore = match[1];
@@ -1542,7 +1541,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec pattern 2+6 et aéroport:', pnrCandidate, 'lettres avant:', lettersBefore);
+          console.log('[PARSER] PNR TROUVÉ avec pattern 2+6 et aéroport:', pnrCandidate, 'lettres avant:', lettersBefore);
           return pnrCandidate;
         }
       }
@@ -1550,7 +1549,7 @@ class ParserService {
     
     // Fallback: chercher tous les patterns avec regex (3+6 lettres)
     const pnrWithAirports = Array.from(rawData.matchAll(new RegExp(`([A-Z]{3})([A-Z]{6})(${airportPattern})`, 'g')));
-    console.log('[PARSER] 🔍 Patterns 3+6 suivis de codes aéroports (fallback):', pnrWithAirports.length);
+    console.log('[PARSER] Patterns 3+6 suivis de codes aéroports (fallback):', pnrWithAirports.length);
     
     for (const match of pnrWithAirports) {
       const lettersBefore = match[1];
@@ -1568,7 +1567,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec aéroport (fallback):', pnrCandidate);
+          console.log('[PARSER] PNR TROUVÉ avec aéroport (fallback):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1576,7 +1575,7 @@ class ParserService {
     
     // PRIORITÉ 1B: Pattern 2+6 lettres suivi de ET + chiffres (ex: "EEMXTRJEET0072")
     const pnr2WithEt = Array.from(rawData.matchAll(/([A-Z]{2})([A-Z]{6})(ET\s*\d|ET\d{2,4})/g));
-    console.log('[PARSER] 🔍 Patterns 2+6 suivis de ET:', pnr2WithEt.length);
+    console.log('[PARSER] Patterns 2+6 suivis de ET:', pnr2WithEt.length);
     
     for (const match of pnr2WithEt) {
       const lettersBefore = match[1];
@@ -1595,7 +1594,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec pattern 2+6 et ET (priorité 1B):', pnrCandidate);
+          console.log('[PARSER] PNR TROUVÉ avec pattern 2+6 et ET (priorité 1B):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1603,7 +1602,7 @@ class ParserService {
     
     // PRIORITÉ 1B: Pattern 3+6 lettres suivi de ET + chiffres
     const pnrWithEt = Array.from(rawData.matchAll(/([A-Z]{3})([A-Z]{6})(ET\s*\d|ET\d{2,4})/g));
-    console.log('[PARSER] 🔍 Patterns 3+6 suivis de ET:', pnrWithEt.length);
+    console.log('[PARSER] Patterns 3+6 suivis de ET:', pnrWithEt.length);
     
     for (const match of pnrWithEt) {
       const lettersBefore = match[1];
@@ -1622,7 +1621,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec ET (priorité 1B):', pnrCandidate);
+          console.log('[PARSER] PNR TROUVÉ avec ET (priorité 1B):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1630,7 +1629,7 @@ class ParserService {
     
     // PRIORITÉ 1C: Pattern générique (fallback)
     const pnrWithLettersPatterns = Array.from(rawData.matchAll(/([A-Z]{3})([A-Z]{6})([A-Z]{3,6}|ET\s*\d)/g));
-    console.log('[PARSER] 🔍 Nombre de patterns 3+6 génériques trouvés:', pnrWithLettersPatterns.length);
+    console.log('[PARSER] Nombre de patterns 3+6 génériques trouvés:', pnrWithLettersPatterns.length);
     
     for (const match of pnrWithLettersPatterns) {
       const lettersBefore = match[1];
@@ -1652,7 +1651,7 @@ class ParserService {
         const isFollowedByAirportOrEt = knownAirports.some(apt => afterPnr.includes(apt)) || /^ET\s*\d/.test(afterPnr);
         
         if (!isAirport && isFollowedByAirportOrEt) {
-          console.log('[PARSER] ✅✅✅✅✅ PNR TROUVÉ avec 3 lettres avant (priorité 1C):', pnrCandidate);
+          console.log('[PARSER] PNR TROUVÉ avec 3 lettres avant (priorité 1C):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1678,7 +1677,7 @@ class ParserService {
         const isFollowedByAirportOrEt = knownAirports.some(apt => afterPnr.includes(apt)) || /^ET\s*\d/.test(afterPnr);
         
         if (!isAirport && isFollowedByAirportOrEt) {
-          console.log('[PARSER] ✅✅✅ PNR trouvé avec lettres avant (priorité 1B):', pnrCandidate, 'lettres avant:', lettersBefore);
+          console.log('[PARSER] PNR trouvé avec lettres avant (priorité 1B):', pnrCandidate, 'lettres avant:', lettersBefore);
           return pnrCandidate;
         }
       }
@@ -1707,7 +1706,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅ PNR trouvé dans pattern 8 lettres avant ET (priorité 2A):', pnrCandidate, 'pattern complet:', fullPattern);
+          console.log('[PARSER] PNR trouvé dans pattern 8 lettres avant ET (priorité 2A):', pnrCandidate, 'pattern complet:', fullPattern);
           return pnrCandidate;
         }
       }
@@ -1731,7 +1730,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅ PNR trouvé directement avant ET (priorité 2B):', pnrCandidate);
+          console.log('[PARSER] PNR trouvé directement avant ET (priorité 2B):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1751,17 +1750,17 @@ class ParserService {
       
       // Vérification 1: Si le nom se termine par une lettre qui correspond au début du PNR, c'est probablement une partie du nom
       if (lastCharOfName && lastCharOfName === pnrCandidate[0]) {
-        console.log('[PARSER] ⚠️⚠️⚠️ PNR IGNORÉ (fait partie du nom - dernier char):', pnrCandidate, 'dernier char du nom:', lastCharOfName, 'nom:', trimmedName);
+        console.log('[PARSER] PNR IGNORÉ (fait partie du nom - dernier char):', pnrCandidate, 'dernier char du nom:', lastCharOfName, 'nom:', trimmedName);
         // NE PAS retourner, continuer
       } 
       // Vérification 2: Si le PNR est contenu dans le nom (ex: "ISSIAK" dans "ISSIAKA"), l'ignorer
       else if (trimmedName.includes(pnrCandidate)) {
-        console.log('[PARSER] ⚠️⚠️⚠️ PNR IGNORÉ (contenu dans le nom):', pnrCandidate, 'nom:', trimmedName);
+        console.log('[PARSER] PNR IGNORÉ (contenu dans le nom):', pnrCandidate, 'nom:', trimmedName);
         // NE PAS retourner, continuer
       } 
       // Vérification 3: Si le nom se termine par le PNR (ex: "ISSIAKA" se termine par "ISSIAK"), l'ignorer
       else if (trimmedName.endsWith(pnrCandidate)) {
-        console.log('[PARSER] ⚠️⚠️⚠️ PNR IGNORÉ (nom se termine par PNR):', pnrCandidate, 'nom:', trimmedName);
+        console.log('[PARSER] PNR IGNORÉ (nom se termine par PNR):', pnrCandidate, 'nom:', trimmedName);
         // NE PAS retourner, continuer
       }
       else {
@@ -1774,7 +1773,7 @@ class ParserService {
           }
         }
         if (!isAirport) {
-          console.log('[PARSER] ✅ PNR trouvé après nom (priorité 3):', pnrCandidate);
+          console.log('[PARSER] PNR trouvé après nom (priorité 3):', pnrCandidate);
           return pnrCandidate;
         }
       }
@@ -1806,7 +1805,7 @@ class ParserService {
           const after8 = rawData.substring(matchIndex + 8, matchIndex + 12);
           if (/^ET\d/.test(after8) || knownAirports.some(apt => after8.includes(apt))) {
             // C'est probablement un pattern de 8 lettres, ignorer ce match de 6 lettres
-            console.log('[PARSER] ⚠️ Pattern de 6 lettres ignoré (fait partie d\'un pattern de 8 lettres):', matchStr, 'Pattern complet:', full8Pattern);
+            console.log('[PARSER] Pattern de 6 lettres ignoré (fait partie d\'un pattern de 8 lettres):', matchStr, 'Pattern complet:', full8Pattern);
             continue;
           }
         }
@@ -1876,7 +1875,7 @@ class ParserService {
           if (/^ET\d/.test(afterMatch) || knownAirports.some(apt => rawData.substring(matchIndex + 6, matchIndex + 12).includes(apt))) {
             // C'est un pattern de 8 lettres, le vrai PNR est les 6 dernières lettres
             // Ignorer ce match de 6 lettres qui commence par les 2 premières lettres du préfixe
-            console.log('[PARSER] ⚠️ Pattern de 6 lettres ignoré (fait partie d\'un pattern de 8 lettres):', matchStr, 'Pattern complet:', potential8Pattern, 'Vrai PNR:', pnr6);
+            console.log('[PARSER] Pattern de 6 lettres ignoré (fait partie d\'un pattern de 8 lettres):', matchStr, 'Pattern complet:', potential8Pattern, 'Vrai PNR:', pnr6);
             continue;
           }
         }
@@ -2306,7 +2305,7 @@ class ParserService {
     const firstName = parts[parts.length - 1];
     const lastName = parts.slice(0, -1).join(' ');
     
-    console.log('[PARSER] 📝 Nom découpé:', { fullName, lastName, firstName, totalParts: parts.length });
+    console.log('[PARSER] Nom découpé:', { fullName, lastName, firstName, totalParts: parts.length });
     
     return {
       firstName,
@@ -2552,7 +2551,7 @@ class ParserService {
    * Exemple: "2A0712154800800" → heure=0712, numéro=2154800800
    */
   private extractTicketNumber(rawData: string): string | undefined {
-    console.log('[PARSER] 🎫 Extraction numéro de billet depuis:', rawData.substring(0, 100) + '...');
+    console.log('[PARSER] Extraction numéro de billet depuis:', rawData.substring(0, 100) + '...');
     
     // PRIORITÉ 1: Format Ethiopian - chercher le pattern "2A" + heure + numéro de billet
     // Pattern: "2A" + 4 chiffres (heure HHMM) + 10 chiffres (numéro de billet)
@@ -2561,24 +2560,24 @@ class ParserService {
     
     if (ethiopianMatch) {
       const ticketNumber = ethiopianMatch[2]; // Les 10 chiffres du numéro de billet
-      console.log('[PARSER] ✅ Numéro de billet extrait (pattern Ethiopian 2A):', ticketNumber);
+      console.log('[PARSER] Numéro de billet extrait (pattern Ethiopian 2A):', ticketNumber);
       
       // Valider que le numéro commence bien par 21-70 (selon les specs IATA)
       const firstTwoDigits = parseInt(ticketNumber.substring(0, 2), 10);
       if (firstTwoDigits >= 21 && firstTwoDigits <= 70) {
-        console.log('[PARSER] ✅ Numéro validé (commence par', firstTwoDigits, 'dans plage 21-70)');
+        console.log('[PARSER] Numéro validé (commence par', firstTwoDigits, 'dans plage 21-70)');
         return ticketNumber;
       }
       
       // Si pas dans la plage mais pattern valide, retourner quand même
-      console.log('[PARSER] ⚠️ Numéro hors plage 21-70 mais retourné quand même:', ticketNumber);
+      console.log('[PARSER] Numéro hors plage 21-70 mais retourné quand même:', ticketNumber);
       return ticketNumber;
     }
     
     // PRIORITÉ 2: Format standard IATA - chercher dans la zone 21-70
     if (rawData.length > 21) {
       const ticketPart = rawData.substring(21, Math.min(70, rawData.length));
-      console.log('[PARSER] 🔍 Recherche dans zone 21-70:', ticketPart);
+      console.log('[PARSER] Recherche dans zone 21-70:', ticketPart);
       
       // Chercher 13 chiffres (code compagnie 3 chiffres + numéro 10 chiffres)
       const thirteenDigitMatch = ticketPart.match(/(\d{13})/);
@@ -2586,7 +2585,7 @@ class ParserService {
         const fullNumber = thirteenDigitMatch[1];
         // Enlever les 3 premiers chiffres (code compagnie)
         const ticketNumber = fullNumber.substring(3);
-        console.log('[PARSER] ✅ Numéro extrait (13 chiffres):', ticketNumber, 'depuis', fullNumber);
+        console.log('[PARSER] Numéro extrait (13 chiffres):', ticketNumber, 'depuis', fullNumber);
         
         const firstTwoDigits = parseInt(ticketNumber.substring(0, 2), 10);
         if (firstTwoDigits >= 21 && firstTwoDigits <= 70) {
@@ -2600,25 +2599,25 @@ class ParserService {
       const twelveDigitMatch = ticketPart.match(/(\d{12})/);
       if (twelveDigitMatch) {
         const ticketNumber = twelveDigitMatch[1].substring(2);
-        console.log('[PARSER] ✅ Numéro extrait (12 chiffres):', ticketNumber);
+        console.log('[PARSER] Numéro extrait (12 chiffres):', ticketNumber);
         return ticketNumber;
       }
       
       // Chercher directement 10 chiffres
       const tenDigitMatch = ticketPart.match(/(\d{10})/);
       if (tenDigitMatch) {
-        console.log('[PARSER] ✅ Numéro extrait (10 chiffres):', tenDigitMatch[1]);
+        console.log('[PARSER] Numéro extrait (10 chiffres):', tenDigitMatch[1]);
         return tenDigitMatch[1];
       }
     }
     
     // PRIORITÉ 3: Recherche fallback dans toutes les données
-    console.log('[PARSER] 🔍 Recherche fallback dans toutes les données...');
+    console.log('[PARSER] Recherche fallback dans toutes les données...');
     
     // Chercher n'importe quelle séquence de 10+ chiffres qui pourrait être un numéro de billet
     const allMatches = Array.from(rawData.matchAll(/(\d{10,})/g));
     if (allMatches.length > 0) {
-      console.log('[PARSER] 🔍 Trouvé', allMatches.length, 'séquences de 10+ chiffres');
+      console.log('[PARSER] Trouvé', allMatches.length, 'séquences de 10+ chiffres');
       
       // Filtrer pour exclure les numéros qui sont clairement des bagages ou autres
       for (const match of allMatches) {
@@ -2631,18 +2630,18 @@ class ParserService {
         
         // Accepter les numéros qui commencent par 21-99 (plage élargie)
         if (firstTwoDigits >= 21 && firstTwoDigits <= 99) {
-          console.log('[PARSER] ✅ Numéro extrait (fallback):', ticketNumber);
+          console.log('[PARSER] Numéro extrait (fallback):', ticketNumber);
           return ticketNumber;
         }
       }
       
       // Si aucun ne correspond aux critères, prendre le premier
       const firstNumber = allMatches[0][1].substring(0, 10);
-      console.log('[PARSER] ⚠️ Numéro extrait (premier trouvé sans validation):', firstNumber);
+      console.log('[PARSER] Numéro extrait (premier trouvé sans validation):', firstNumber);
       return firstNumber;
     }
     
-    console.log('[PARSER] ⚠️ Aucun numéro de billet trouvé');
+    console.log('[PARSER] Aucun numéro de billet trouvé');
     return undefined;
   }
 
@@ -2943,19 +2942,19 @@ class ParserService {
 
     console.log('');
     console.log('┌─────────────────────────────────────────────────┐');
-    console.log('│  🔍 PARSER - ANALYSE DU TAG BAGAGE             │');
+    console.log('│  PARSER - ANALYSE DU TAG BAGAGE                 │');
     console.log('├─────────────────────────────────────────────────┤');
     console.log('│  Données brutes:', rawData.substring(0, 50) + '...');
     console.log('├─────────────────────────────────────────────────┤');
-    console.log('│  📝 Nom          :', result.passengerName || '❌');
-    console.log('│  ✈️  Origine     :', result.origin || '❌');
-    console.log('│  🏁 Destination  :', result.destination || '❌');
-    console.log('│  🧳 Nb bagages   :', result.baggageCount || '❌');
-    console.log('│  🔢 Bagage n°    :', result.baggageSequence || '❌');
-    console.log('│  🛫 Vol          :', result.flightNumber || '❌');
-    console.log('│  📅 Date         :', result.flightDate || '❌');
-    console.log('│  🎟️  PNR          :', result.pnr || '❌');
-    console.log('│  🏷️  Tag RFID    :', result.rfidTag);
+    console.log('│  Nom          :', result.passengerName || 'X');
+    console.log('│  Origine      :', result.origin || 'X');
+    console.log('│  Destination  :', result.destination || 'X');
+    console.log('│  Nb bagages   :', result.baggageCount || 'X');
+    console.log('│  Bagage n°    :', result.baggageSequence || 'X');
+    console.log('│  Vol          :', result.flightNumber || 'X');
+    console.log('│  Date         :', result.flightDate || 'X');
+    console.log('│  PNR          :', result.pnr || 'X');
+    console.log('│  Tag RFID     :', result.rfidTag);
     console.log('└─────────────────────────────────────────────────┘');
     console.log('');
     return result;

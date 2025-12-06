@@ -48,7 +48,7 @@ export default function SelectModal({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={styles.closeText}>X</Text>
             </TouchableOpacity>
           </View>
 
@@ -71,7 +71,7 @@ export default function SelectModal({
                 </Text>
                 {selectedValue === option.value && (
                   <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
+                    <Text style={styles.checkmarkText}>•</Text>
                   </View>
                 )}
               </TouchableOpacity>

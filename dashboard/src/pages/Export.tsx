@@ -31,7 +31,7 @@ export default function Export() {
         .filter((flight: any) => flight) // Filtrer les valeurs null/undefined
         .sort() as string[]; // Trier alphabétiquement
       setFlights(uniqueFlights);
-      console.log(`✈️ ${uniqueFlights.length} vols trouvés pour ${user.airportCode}:`, uniqueFlights);
+      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airportCode}:`, uniqueFlights);
     } catch (err) {
       console.error('Error fetching flights:', err);
       setFlights([]);

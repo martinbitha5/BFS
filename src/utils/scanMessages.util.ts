@@ -33,7 +33,7 @@ export const getScanResultMessage = (
     case 'checkin':
       if (action === 'checkin') {
         return {
-          title: '✓ Enregistré',
+          title: 'Enregistré',
           message: details?.passengerName
             ? `Passager ${details.passengerName} enregistré avec succès${details.pnr ? ` (PNR: ${details.pnr})` : ''}`
             : 'Passager enregistré avec succès',
@@ -48,20 +48,20 @@ export const getScanResultMessage = (
           const remaining = details.baggageCount - details.scannedCount;
           if (remaining === 0) {
             return {
-              title: '✓ Tous les bagages scannés',
+              title: 'Tous les bagages scannés',
               message: `Tous les bagages (${details.baggageCount}) ont été enregistrés pour ${details.passengerName || 'ce passager'}`,
               type: 'success',
             };
           } else {
             return {
-              title: '✓ Bagage enregistré',
+              title: 'Bagage enregistré',
               message: `Bagage enregistré (${details.scannedCount}/${details.baggageCount} restants)`,
               type: 'success',
             };
           }
         }
         return {
-          title: '✓ Bagage enregistré',
+          title: 'Bagage enregistré',
           message: 'Bagage enregistré avec succès',
           type: 'success',
         };
@@ -71,7 +71,7 @@ export const getScanResultMessage = (
     case 'boarding':
       if (action === 'boarding') {
         return {
-          title: '✓ Embarqué',
+          title: 'Embarqué',
           message: details?.passengerName
             ? `Passager ${details.passengerName} embarqué avec succès${details.flightNumber ? ` - Vol ${details.flightNumber}` : ''}`
             : 'Passager embarqué avec succès',
@@ -83,7 +83,7 @@ export const getScanResultMessage = (
     case 'arrival':
       if (action === 'arrival') {
         return {
-          title: '✓ Arrivée confirmée',
+          title: 'Arrivée confirmée',
           message: details?.passengerName
             ? `Bagage de ${details.passengerName} marqué comme arrivé`
             : 'Bagage marqué comme arrivé',
@@ -98,7 +98,7 @@ export const getScanResultMessage = (
 
   // Message par défaut
   return {
-    title: '✓ Succès',
+    title: 'Succès',
     message: 'Opération effectuée avec succès',
     type: 'success',
   };
@@ -118,19 +118,19 @@ export const getScanErrorMessage = (
         switch (errorType) {
           case 'duplicate':
             return {
-              title: '⚠ Déjà enregistré',
+              title: 'Déjà enregistré',
               message: 'Ce passager a déjà été enregistré',
               type: 'warning',
             };
           case 'wrong_airport':
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Ce vol ne concerne pas votre aéroport',
               type: 'error',
             };
           default:
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Erreur lors de l\'enregistrement du passager',
               type: 'error',
             };
@@ -143,19 +143,19 @@ export const getScanErrorMessage = (
         switch (errorType) {
           case 'not_checked_in':
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Ce passager n\'est pas encore enregistré. Effectuez d\'abord le check-in.',
               type: 'error',
             };
           case 'duplicate':
             return {
-              title: '⚠ Déjà scanné',
+              title: 'Déjà scanné',
               message: 'Ce tag RFID est déjà enregistré',
               type: 'warning',
             };
           default:
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Erreur lors de l\'enregistrement du bagage',
               type: 'error',
             };
@@ -168,25 +168,25 @@ export const getScanErrorMessage = (
         switch (errorType) {
           case 'not_checked_in':
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Ce passager n\'est pas encore enregistré. Effectuez d\'abord le check-in.',
               type: 'error',
             };
           case 'wrong_airport':
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Ce vol ne concerne pas votre aéroport',
               type: 'error',
             };
           case 'already_processed':
             return {
-              title: '⚠ Déjà embarqué',
+              title: 'Déjà embarqué',
               message: 'Ce passager a déjà été embarqué',
               type: 'warning',
             };
           default:
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Erreur lors de l\'embarquement',
               type: 'error',
             };
@@ -199,25 +199,25 @@ export const getScanErrorMessage = (
         switch (errorType) {
           case 'not_found':
             return {
-              title: '✕ Non trouvé',
+              title: 'Non trouvé',
               message: 'Aucun bagage trouvé avec ce tag RFID',
               type: 'error',
             };
           case 'wrong_airport':
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Ce bagage ne concerne pas votre aéroport',
               type: 'error',
             };
           case 'already_processed':
             return {
-              title: '⚠ Déjà arrivé',
+              title: 'Déjà arrivé',
               message: 'Ce bagage a déjà été marqué comme arrivé',
               type: 'warning',
             };
           default:
             return {
-              title: '✕ Erreur',
+              title: 'Erreur',
               message: 'Erreur lors de la recherche du bagage',
               type: 'error',
             };
@@ -230,7 +230,7 @@ export const getScanErrorMessage = (
   }
 
   return {
-    title: '✕ Erreur',
+    title: 'Erreur',
     message: 'Une erreur est survenue',
     type: 'error',
   };

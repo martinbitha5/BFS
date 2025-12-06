@@ -25,7 +25,7 @@ class BirsService {
       return;
     }
 
-    console.log('[BIRS] 🔧 birsDatabaseService n\'est pas initialisé, tentative d\'initialisation...');
+    console.log('[BIRS] birsDatabaseService n\'est pas initialisé, tentative d\'initialisation...');
     
     // Importer le service de base de données et obtenir la référence
     const { databaseServiceInstance } = await import('./index');
@@ -38,13 +38,13 @@ class BirsService {
       const db = databaseServiceInstance.getDatabase();
       
       if (db) {
-        console.log('[BIRS] ✅ Base de données principale trouvée, initialisation de BIRS...');
+        console.log('[BIRS] Base de données principale trouvée, initialisation de BIRS...');
         birsDatabaseService.initialize(db);
         return;
       }
       
       attempts++;
-      console.warn(`[BIRS] ⏳ Base de données principale non prête, tentative ${attempts}/${maxAttempts}...`);
+      console.warn(`[BIRS] Base de données principale non prête, tentative ${attempts}/${maxAttempts}...`);
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     
@@ -100,7 +100,7 @@ class BirsService {
       // Vérifier si un bagage international avec ce tag existe déjà
       const existing = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
       if (existing) {
-        console.log('[BIRS] 🔄 Bagage international déjà existant:', existing.id);
+        console.log('[BIRS] Bagage international déjà existant:', existing.id);
         return existing;
       }
     } catch (error) {
@@ -131,12 +131,12 @@ class BirsService {
         throw new Error('Failed to create international baggage');
       }
 
-      console.log('[BIRS] ✅ Nouveau bagage international créé:', baggage.id);
+      console.log('[BIRS] Nouveau bagage international créé:', baggage.id);
       return baggage;
     } catch (error) {
       // Gérer l'erreur de contrainte UNIQUE (le bagage a été créé entre temps)
       if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-        console.log('[BIRS] 🔄 Contrainte UNIQUE - Le bagage existe déjà, récupération...');
+        console.log('[BIRS] Contrainte UNIQUE - Le bagage existe déjà, récupération...');
         const existing = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
         if (existing) {
           return existing;
@@ -303,7 +303,7 @@ class BirsService {
     // Assurer que la base de données BIRS est initialisée
     await this.ensureBirsDatabaseInitialized();
 
-    console.log('[BIRS] 📄 Upload de rapport BIRS:', {
+    console.log('[BIRS] Upload de rapport BIRS:', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type
@@ -316,11 +316,11 @@ class BirsService {
     const validation = birsFileParserService.validateParsedData(parsedData);
     
     if (!validation.valid) {
-      console.warn('[BIRS] ⚠️ Validation échouée:', validation.errors);
+      console.warn('[BIRS] Validation échouée:', validation.errors);
       throw new Error(`Fichier invalide: ${validation.errors.join(', ')}`);
     }
 
-    console.log('[BIRS] ✅ Fichier parsé avec succès:', {
+    console.log('[BIRS] Fichier parsé avec succès:', {
       flightNumber: parsedData.flightNumber,
       itemCount: parsedData.items.length,
       airline: parsedData.airline
@@ -349,7 +349,7 @@ class BirsService {
       synced: false
     });
 
-    console.log('[BIRS] 💾 Rapport créé:', reportId);
+    console.log('[BIRS] Rapport créé:', reportId);
 
     // Créer les items du rapport
     for (const item of parsedData.items) {
@@ -359,7 +359,7 @@ class BirsService {
       });
     }
 
-    console.log('[BIRS] ✅ Tous les items créés:', parsedData.items.length);
+    console.log('[BIRS] Tous les items créés:', parsedData.items.length);
 
     return {
       reportId,
@@ -395,7 +395,7 @@ class BirsService {
       airportCode
     );
 
-    console.log('[BIRS] 🔄 Lancement de la réconciliation automatique...');
+    console.log('[BIRS] Lancement de la réconciliation automatique...');
 
     // Lancer la réconciliation automatique
     const reconciliationResult = await this.reconcileReport(
@@ -405,7 +405,7 @@ class BirsService {
       reconciliationOptions
     );
 
-    console.log('[BIRS] ✅ Réconciliation terminée:', {
+    console.log('[BIRS] Réconciliation terminée:', {
       matched: reconciliationResult.matchedCount,
       unmatchedScanned: reconciliationResult.unmatchedScanned,
       unmatchedReport: reconciliationResult.unmatchedReport

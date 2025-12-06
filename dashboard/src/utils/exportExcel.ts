@@ -102,7 +102,7 @@ export const exportToExcel = async (
   infoSheet.getCell('A13').value = 'Période analysée';
   infoSheet.getCell('B13').value = periodText;
 
-  infoSheet.getCell('A15').value = '📊 INDICATEURS DE PERFORMANCE';
+  infoSheet.getCell('A15').value = 'INDICATEURS DE PERFORMANCE';
   infoSheet.getCell('A15').font = { bold: true, size: 12, color: { argb: 'FF2563EB' } };
 
   const statsData = [

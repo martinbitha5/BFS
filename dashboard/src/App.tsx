@@ -1,10 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
+import DashboardEnhanced from './pages/DashboardEnhanced';
 import Passengers from './pages/Passengers';
 import Baggages from './pages/Baggages';
 import Export from './pages/Export';
 import BIRS from './pages/BIRS';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -15,13 +16,14 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Dashboard />
+                  <DashboardEnhanced />
                 </Layout>
               </ProtectedRoute>
             }

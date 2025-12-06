@@ -81,7 +81,7 @@ export default function BaggageCard({ baggage, showPassengerInfo, passengerName,
         )}
         {baggage.expectedTag && baggage.expectedTag === baggage.rfidTag && (
           <View style={[styles.expectedBadge, { backgroundColor: colors.success.light + '15' }]}>
-            <Text style={[styles.expectedText, { color: colors.success.dark }]}>✓ Tag attendu</Text>
+            <Text style={[styles.expectedText, { color: colors.success.dark }]}>Tag attendu</Text>
           </View>
         )}
       </View>

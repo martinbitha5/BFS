@@ -167,7 +167,7 @@ export default function PassengerDetailScreen({ route, navigation }: Props) {
         </View>
         {boardingStatus?.boarded ? (
           <View style={styles.boardingStatus}>
-            <Badge label="✓ Embarqué" variant="success" />
+            <Badge label="Embarqué" variant="success" />
             {boardingStatus.boardedAt && (
               <Text style={styles.boardingDate}>
                 Le {formatDate(boardingStatus.boardedAt)}

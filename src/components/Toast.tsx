@@ -81,13 +81,13 @@ export default function Toast({
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return '✓';
+        return '';
       case 'error':
-        return '✕';
+        return 'X';
       case 'warning':
-        return '⚠';
+        return '!';
       default:
-        return 'ℹ';
+        return 'i';
     }
   };
 

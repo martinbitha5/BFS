@@ -63,7 +63,7 @@ class PnrExtractorService {
     
     // Si aucun candidat trouvé
     if (candidates.length === 0) {
-      console.log('[PNR-EXTRACTOR] ⚠️ Aucun candidat PNR trouvé');
+      console.log('[PNR-EXTRACTOR] Aucun candidat PNR trouvé');
       return 'UNKNOWN';
     }
 
@@ -108,7 +108,7 @@ class PnrExtractorService {
     // Prendre le meilleur candidat
     const bestCandidate = filteredByPosition[0];
     
-    console.log('[PNR-EXTRACTOR] ✅ PNR extrait:', bestCandidate.pnr, {
+    console.log('[PNR-EXTRACTOR] PNR extrait:', bestCandidate.pnr, {
       pattern: bestCandidate.pattern,
       confidence: bestCandidate.confidence,
       position: bestCandidate.position,
@@ -123,7 +123,7 @@ class PnrExtractorService {
                                 (bestCandidate.context.after.match(/^(ET|\s+ET|[A-Z]{3})/) || 
                                  airportCodes.some(apt => bestCandidate.context.after.includes(apt)));
       if (isWellPositioned) {
-        console.log('[PNR-EXTRACTOR] ✅ PNR accepté malgré confiance modérée (bien positionné)');
+        console.log('[PNR-EXTRACTOR] PNR accepté malgré confiance modérée (bien positionné)');
         return bestCandidate.pnr;
       }
     }
@@ -132,7 +132,7 @@ class PnrExtractorService {
     // Mais accepter des confiances plus faibles si le pattern est spécifique et bien positionné
     const minConfidence = bestCandidate.pattern.includes('générique') ? 40 : 30;
     if (bestCandidate.confidence < minConfidence) {
-      console.log('[PNR-EXTRACTOR] ⚠️ Confiance trop faible, retour UNKNOWN');
+      console.log('[PNR-EXTRACTOR] Confiance trop faible, retour UNKNOWN');
       return 'UNKNOWN';
     }
 

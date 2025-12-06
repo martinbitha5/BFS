@@ -5,6 +5,69 @@ import { validateSupervisor, getSupervisorById } from '../data/mockSupervisors';
 const router = Router();
 
 /**
+ * POST /api/v1/auth/register
+ * Inscription d'un nouveau superviseur
+ */
+router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password, name, airportCode } = req.body;
+
+    if (!email || !password || !name || !airportCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tous les champs sont requis'
+      });
+    }
+
+    if (isMockMode) {
+      // Vérifier si l'email existe déjà
+      const { mockSupervisors } = require('../data/mockSupervisors');
+      const existingSupervisor = mockSupervisors.find((s: any) => s.email === email);
+      
+      if (existingSupervisor) {
+        return res.status(409).json({
+          success: false,
+          error: 'Cet email est déjà utilisé'
+        });
+      }
+
+      // Créer le nouveau superviseur
+      const newSupervisor = {
+        id: `sup_${Date.now()}`,
+        email,
+        name,
+        airportCode,
+        role: 'supervisor' as const,
+        password
+      };
+
+      // Ajouter aux données mockées (en mémoire uniquement)
+      mockSupervisors.push(newSupervisor);
+
+      const { password: _, ...supervisorData } = newSupervisor;
+      
+      return res.status(201).json({
+        success: true,
+        data: {
+          user: supervisorData,
+          token: `mock_token_${newSupervisor.id}`,
+        },
+        message: 'Inscription réussie'
+      });
+    }
+
+    // TODO: Implémenter l'inscription avec Supabase en mode production
+    return res.status(501).json({
+      success: false,
+      error: 'Inscription avec base de données non implémentée'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/auth/login
  * Connexion d'un superviseur
  */

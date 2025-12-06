@@ -66,9 +66,9 @@ export default function BIRS() {
     const extension = file.name.toLowerCase().split('.').pop();
     
     if (extension === 'pdf') {
-      setFilePreview('📄 Fichier PDF détecté. Le contenu sera extrait lors du traitement.');
+      setFilePreview('Fichier PDF détecté. Le contenu sera extrait lors du traitement.');
     } else if (extension === 'xlsx' || extension === 'xls') {
-      setFilePreview('📊 Fichier Excel détecté. Les données seront extraites lors du traitement.');
+      setFilePreview('Fichier Excel détecté. Les données seront extraites lors du traitement.');
     } else {
       // Pour TXT et CSV, afficher un aperçu
       const reader = new FileReader();
@@ -412,7 +412,7 @@ export default function BIRS() {
         {/* Aperçu du fichier */}
         {filePreview && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm font-medium text-blue-800 mb-2">📋 Aperçu du fichier:</p>
+            <p className="text-sm font-medium text-blue-800 mb-2">Aperçu du fichier:</p>
             <div className="text-sm text-blue-700 whitespace-pre-wrap overflow-x-auto max-h-40 overflow-y-auto">
               {filePreview}
             </div>
@@ -499,9 +499,9 @@ export default function BIRS() {
                         <span className="font-semibold">{report.total_baggages}</span>
                         {report.processed_at && (
                           <>
-                            <span className="text-green-600">({report.reconciled_count} ✓)</span>
+                            <span className="text-green-600">({report.reconciled_count} OK)</span>
                             {report.unmatched_count > 0 && (
-                              <span className="text-orange-600">({report.unmatched_count} ⚠)</span>
+                              <span className="text-orange-600">({report.unmatched_count} !)</span>
                             )}
                           </>
                         )}

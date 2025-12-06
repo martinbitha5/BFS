@@ -16,7 +16,7 @@ class BirsDatabaseService {
 
   initialize(database: SQLite.SQLiteDatabase): void {
     this.db = database;
-    console.log('[BIRS DB] ✅ Base de données BIRS initialisée');
+    console.log('[BIRS DB] Base de données BIRS initialisée');
   }
 
   /**

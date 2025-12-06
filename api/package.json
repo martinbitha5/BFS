@@ -9,11 +9,17 @@
     "start": "node dist/server.js",
     "test": "jest"
   },
-  "keywords": ["baggage", "flight", "api", "express"],
+  "keywords": [
+    "baggage",
+    "flight",
+    "api",
+    "express"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
+    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",

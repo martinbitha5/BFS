@@ -76,7 +76,7 @@ export default function BoardingScreen({ navigation }: Props) {
       let passenger = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
       
       if (!passenger) {
-        console.log('[BOARDING] 🧪 MODE TEST - Passager non trouvé, création automatique pour test');
+        console.log('[BOARDING] MODE TEST - Passager non trouvé, création automatique pour test');
         
         // Créer le passager automatiquement en mode test
         try {
@@ -106,7 +106,7 @@ export default function BoardingScreen({ navigation }: Props) {
           });
           
           passenger = await databaseServiceInstance.getPassengerById(passengerId);
-          console.log('[BOARDING] ✅ Passager créé automatiquement:', passenger?.pnr);
+          console.log('[BOARDING] Passager créé automatiquement:', passenger?.pnr);
         } catch (error) {
           console.error('[BOARDING] Erreur lors de la création automatique:', error);
           await playErrorSound();
@@ -133,13 +133,13 @@ export default function BoardingScreen({ navigation }: Props) {
 
       // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
       // Permet de tester avec n'importe quel boarding pass sans blocage
-      console.log('[BOARDING] 🧪 MODE TEST - Vérification aéroport désactivée:', {
+      console.log('[BOARDING] MODE TEST - Vérification aéroport désactivée:', {
         departureFromParsed: passengerData.departure,
         departureFromPassenger: passenger.departure,
         userAirport: user.airportCode,
         arrival: passengerData.arrival,
       });
-      console.log('[BOARDING] ✅ Pas de vérification d\'aéroport - continuation du processus d\'embarquement');
+      console.log('[BOARDING] Pas de vérification d\'aéroport - continuation du processus d\'embarquement');
 
       // Récupérer ou créer le statut d'embarquement
       let currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
@@ -190,7 +190,7 @@ export default function BoardingScreen({ navigation }: Props) {
           userId: user.id,
         });
       } else {
-        console.log('[BOARDING] 🧪 MODE TEST - Scan non enregistré dans la base de données');
+        console.log('[BOARDING] MODE TEST - Scan non enregistré dans la base de données');
         // En mode test, créer un statut fictif pour l'affichage
         if (!currentBoardingStatus) {
           currentBoardingStatus = {
@@ -355,7 +355,7 @@ export default function BoardingScreen({ navigation }: Props) {
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
                   <Badge 
-                    label={boardingStatus?.boarded ? "✓ Embarqué" : "En attente"} 
+                    label={boardingStatus?.boarded ? "Embarqué" : "En attente"} 
                     variant={boardingStatus?.boarded ? "success" : "warning"} 
                   />
                 </View>

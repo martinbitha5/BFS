@@ -126,12 +126,12 @@ export default function CheckinScreen({ navigation }: Props) {
           return;
         }
       } else {
-        console.log('[CHECK-IN] 🧪 MODE TEST - Vérification aéroport désactivée:', {
+        console.log('[CHECK-IN] MODE TEST - Vérification aéroport désactivée:', {
           departureFromParsed: passengerData.departure,
           userAirport: user.airportCode,
           arrival: passengerData.arrival,
         });
-        console.log('[CHECK-IN] ✅ Pas de vérification d\'aéroport - continuation du processus de check-in');
+        console.log('[CHECK-IN] Pas de vérification d\'aéroport - continuation du processus de check-in');
       }
 
       // VÉRIFICATION DES DOUBLONS DÉSACTIVÉE EN MODE TEST
@@ -151,8 +151,8 @@ export default function CheckinScreen({ navigation }: Props) {
           return;
         }
       } else {
-        console.log('[CHECK-IN] 🧪 MODE TEST - Vérification doublons désactivée');
-        console.log('[CHECK-IN] ✅ Permet de scanner le même boarding pass plusieurs fois pour les tests');
+        console.log('[CHECK-IN] MODE TEST - Vérification doublons désactivée');
+        console.log('[CHECK-IN] Permet de scanner le même boarding pass plusieurs fois pour les tests');
       }
 
       // Extraire la classe cabine depuis les données

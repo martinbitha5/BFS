@@ -105,14 +105,14 @@ export default function BaggageScreen({ navigation }: Props) {
           return;
         }
       } else {
-        console.log('[BAGGAGE] 🧪 MODE TEST - Vérification aéroport désactivée');
+        console.log('[BAGGAGE] MODE TEST - Vérification aéroport désactivée');
       }
 
       let found = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
       
       // EN MODE TEST: Créer un passager fictif si non trouvé
       if (!found && __DEV__) {
-        console.log('[BAGGAGE] 🧪 MODE TEST - Passager non trouvé, création automatique');
+        console.log('[BAGGAGE] MODE TEST - Passager non trouvé, création automatique');
         const passengerId = await databaseServiceInstance.createPassenger({
           pnr: passengerData.pnr,
           fullName: passengerData.fullName,
@@ -138,7 +138,7 @@ export default function BaggageScreen({ navigation }: Props) {
           synced: false,
         });
         found = await databaseServiceInstance.getPassengerById(passengerId);
-        console.log('[BAGGAGE] ✅ Passager créé automatiquement pour test');
+        console.log('[BAGGAGE] Passager créé automatiquement pour test');
       }
       
       if (!found) {
@@ -199,17 +199,17 @@ export default function BaggageScreen({ navigation }: Props) {
 
     // Si pas de passager, traiter comme bagage international
     if (!passenger) {
-      console.log('[BAGGAGE SCAN] 🌍 Passager non trouvé - Traitement comme bagage international');
+      console.log('[BAGGAGE SCAN] Passager non trouvé - Traitement comme bagage international');
       // Continue le flux normalement, la logique internationale sera gérée plus bas
     }
 
     // En mode debug sans passager, afficher les informations extraites du tag
     if (!passenger && __DEV__) {
       console.log('');
-      console.log('🧪════════════════════════════════════════════════════🧪');
+      console.log('==================================================');
       console.log('   MODE TEST - SCAN BAGAGE SANS PASSAGER');
-      console.log('🧪════════════════════════════════════════════════════🧪');
-      console.log('📦 DONNÉES BRUTES SCANNÉES:');
+      console.log('==================================================');
+      console.log('DONNÉES BRUTES SCANNÉES:');
       console.log(data);
       console.log('─────────────────────────────────────────────────────');
       
@@ -229,17 +229,17 @@ export default function BaggageScreen({ navigation }: Props) {
         
         console.log('');
         console.log('═══════════════════════════════════════════════════');
-        console.log('🎫 INFORMATIONS EXTRAITES DU TAG BAGAGE');
+        console.log('INFORMATIONS EXTRAITES DU TAG BAGAGE');
         console.log('═══════════════════════════════════════════════════');
-        console.log('📝 Nom complet      :', baggageTagData.passengerName || '❌ NON EXTRAIT');
-        console.log('✈️  Origine         :', baggageTagData.origin || '❌ NON EXTRAIT');
-        console.log('🏁 Destination      :', baggageTagData.destination || '❌ NON EXTRAIT');
-        console.log('🧳 Nombre bagages   :', baggageTagData.baggageCount || '❌ NON EXTRAIT');
-        console.log('🔢 Bagage n°        :', baggageTagData.baggageSequence ? `${baggageTagData.baggageSequence}/${baggageTagData.baggageCount}` : '❌ NON EXTRAIT');
-        console.log('🛫 Vol              :', baggageTagData.flightNumber || '❌ NON EXTRAIT');
-        console.log('📅 Date vol         :', baggageTagData.flightDate || '❌ NON EXTRAIT');
-        console.log('🎟️  PNR             :', baggageTagData.pnr || '❌ NON EXTRAIT');
-        console.log('🏷️  Tag RFID        :', rfidTag);
+        console.log('Nom complet      :', baggageTagData.passengerName || 'NON EXTRAIT');
+        console.log('Origine         :', baggageTagData.origin || 'NON EXTRAIT');
+        console.log('Destination      :', baggageTagData.destination || 'NON EXTRAIT');
+        console.log('Nombre bagages   :', baggageTagData.baggageCount || 'NON EXTRAIT');
+        console.log('Bagage n°        :', baggageTagData.baggageSequence ? `${baggageTagData.baggageSequence}/${baggageTagData.baggageCount}` : 'NON EXTRAIT');
+        console.log('Vol              :', baggageTagData.flightNumber || 'NON EXTRAIT');
+        console.log('Date vol         :', baggageTagData.flightDate || 'NON EXTRAIT');
+        console.log('PNR             :', baggageTagData.pnr || 'NON EXTRAIT');
+        console.log('Tag RFID        :', rfidTag);
         console.log('═══════════════════════════════════════════════════');
         console.log('');
         
@@ -253,11 +253,11 @@ export default function BaggageScreen({ navigation }: Props) {
         setShowScanner(false);
         
         await playSuccessSound();
-        setToastMessage(`✅ Tag RFID scanné: ${rfidTag}`);
+        setToastMessage(`Tag RFID scanné: ${rfidTag}`);
         setToastType('success');
         setShowToast(true);
       } catch (error) {
-        console.error('[BAGGAGE] ❌ Erreur:', error);
+        console.error('[BAGGAGE] Erreur:', error);
         await playErrorSound();
         setToastMessage(`Erreur: ${error instanceof Error ? error.message : 'Inconnue'}`);
         setToastType('error');
@@ -349,7 +349,7 @@ export default function BaggageScreen({ navigation }: Props) {
         const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
         if (existing) {
           await playErrorSound();
-          setToastMessage(`⚠️ Bagage déjà scanné: ${rfidTag}`);
+          setToastMessage(`Bagage déjà scanné: ${rfidTag}`);
           setToastType('error');
           setShowToast(true);
           setProcessing(false);
@@ -362,7 +362,7 @@ export default function BaggageScreen({ navigation }: Props) {
         const existingInternational = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
         if (existingInternational) {
           await playErrorSound();
-          setToastMessage(`⚠️ Bagage international déjà scanné: ${rfidTag}`);
+          setToastMessage(`Bagage international déjà scanné: ${rfidTag}`);
           setToastType('error');
           setShowToast(true);
           setProcessing(false);
@@ -371,7 +371,7 @@ export default function BaggageScreen({ navigation }: Props) {
           return;
         }
       } else {
-        console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Vérification "déjà scanné" désactivée');
+        console.log('[BAGGAGE SCAN] MODE TEST - Vérification "déjà scanné" désactivée');
       }
 
       // Afficher les informations extraites
@@ -380,17 +380,17 @@ Tag RFID: ${rfidTag}
 ${baggageTagData.passengerName !== 'UNKNOWN' ? `Passager: ${baggageTagData.passengerName}\n` : ''}
 ${baggageTagData.flightNumber ? `Vol: ${baggageTagData.flightNumber}\n` : ''}
 ${baggageTagData.pnr ? `PNR: ${baggageTagData.pnr}\n` : ''}
-${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistré'}
+${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
       `.trim();
 
       // Afficher les informations dans un toast
-      console.log('[BAGGAGE SCAN] 📝 Affichage du toast avec tag RFID:', rfidTag);
-      setToastMessage(`✅ Tag RFID extrait: ${rfidTag}\nEnregistrement en cours...`);
+      console.log('[BAGGAGE SCAN] Affichage du toast avec tag RFID:', rfidTag);
+      setToastMessage(`Tag RFID extrait: ${rfidTag}\nEnregistrement en cours...`);
       setToastType('success');
       setShowToast(true);
 
       // Enregistrer automatiquement le bagage
-      console.log('[BAGGAGE SCAN] 🔄 Début de l\'enregistrement automatique...');
+      console.log('[BAGGAGE SCAN] Début de l\'enregistrement automatique...');
       try {
         let updatedBaggages: Baggage[] = [];
         let baggageId: string | undefined;
@@ -399,7 +399,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         if (!__DEV__) {
           // Si le passager existe, créer un bagage normal
           if (passenger) {
-            console.log('[BAGGAGE SCAN] 🧳 Passager trouvé - Création bagage normal');
+            console.log('[BAGGAGE SCAN] Passager trouvé - Création bagage normal');
             
             // Vérifier si c'est un tag attendu (format Air Congo)
             const expectedTags = passenger.baggageBaseNumber
@@ -442,7 +442,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
             updatedBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
           } else {
             // Si le passager n'existe pas, créer un bagage international
-            console.log('[BAGGAGE SCAN] 🌍 Passager non trouvé - Création bagage INTERNATIONAL');
+            console.log('[BAGGAGE SCAN] Passager non trouvé - Création bagage INTERNATIONAL');
             
             const internationalBaggage = await birsService.createInternationalBaggage(
               rfidTag,
@@ -463,10 +463,10 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
               internationalBaggage.id
             );
 
-            console.log('[BAGGAGE SCAN] ✅ Bagage international créé:', internationalBaggage.id);
+            console.log('[BAGGAGE SCAN] Bagage international créé:', internationalBaggage.id);
           }
         } else {
-          console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Bagage non enregistré dans la base de données');
+          console.log('[BAGGAGE SCAN] MODE TEST - Bagage non enregistré dans la base de données');
           // En mode test, simuler les bagages existants pour l'affichage
           updatedBaggages = baggages;
         }
@@ -485,7 +485,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         } else {
           // Message pour bagage international
           successMsg = {
-            title: '✓ Bagage International',
+            title: 'Bagage International',
             message: `Bagage international enregistré`,
             type: 'success' as const
           };
@@ -493,38 +493,27 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         
         // Mettre à jour le toast avec le message de succès
         if (__DEV__) {
-          console.log('[BAGGAGE SCAN] 🧪 MODE TEST - Scan simulé (non enregistré)');
+          console.log('[BAGGAGE SCAN] MODE TEST - Scan simulé (non enregistré)');
           console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
         } else {
           if (passenger) {
-            console.log('[BAGGAGE SCAN] ✅✅✅ Enregistrement réussi dans la base de données ✅✅✅');
+            console.log('[BAGGAGE SCAN] Enregistrement réussi dans la base de données');
             console.log('[BAGGAGE SCAN] Bagage ID:', baggageId);
             console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
             console.log('[BAGGAGE SCAN] Nombre de bagages scannés:', updatedBaggages.length);
           } else {
-            console.log('[BAGGAGE SCAN] 🌍🌍🌍 Bagage INTERNATIONAL enregistré ✅✅✅');
+            console.log('[BAGGAGE SCAN] Bagage INTERNATIONAL enregistré');
             console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
             console.log('[BAGGAGE SCAN] Type: INTERNATIONAL');
           }
         }
         
-        setToastMessage(`✅ ${successMsg.message}\nTag RFID: ${rfidTag}${!passenger ? '\n🌍 BAGAGE INTERNATIONAL' : ''}`);
+        setToastMessage(`${successMsg.message}\nTag RFID: ${rfidTag}${!passenger ? '\nBAGAGE INTERNATIONAL' : ''}`);
         setToastType('success');
         setShowToast(true);
         
         // Stocker le tag RFID scanné pour l'afficher dans l'écran de succès
         setLastScannedRfidTag(rfidTag);
-        
-        // En mode test, incrémenter le compteur de bagages scannés
-        if (__DEV__ && passenger) {
-          setScannedBaggagesCount(prev => prev + 1);
-        }
-        
-        console.log('[BAGGAGE SCAN] ✅✅✅ Enregistrement réussi - Préparation de l\'écran de succès');
-        console.log('[BAGGAGE SCAN] Tag RFID stocké:', rfidTag);
-        
-        // IMPORTANT: D'abord réinitialiser processing pour sortir du loader
-        setProcessing(false);
         
         // Ensuite masquer le scanner et afficher l'écran de succès
         // Le résultat restera affiché jusqu'à ce que l'utilisateur clique sur "Scanner à nouveau"
@@ -533,18 +522,18 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
         // IMPORTANT: Garder scanned à true pour empêcher tout nouveau scan automatique
         // Il sera réinitialisé uniquement quand l'utilisateur clique sur le bouton
         
-        console.log('[BAGGAGE SCAN] 🎯🎯🎯 ÉTATS MIS À JOUR:', { 
+        console.log('[BAGGAGE SCAN] ÉTATS MIS À JOUR:', { 
           showScanner: false, 
           processing: false, 
           scanned: true,
           lastScannedRfidTag: rfidTag,
           type: passenger ? 'NORMAL' : 'INTERNATIONAL'
         });
-        console.log('[BAGGAGE SCAN] ✅ Écran de succès devrait maintenant être visible');
+        console.log('[BAGGAGE SCAN] Écran de succès devrait maintenant être visible');
         // Le résultat reste affiché jusqu'à ce que l'utilisateur clique sur "Scanner à nouveau"
       } catch (error) {
         await playErrorSound();
-        setToastMessage(`❌ Erreur lors de l'enregistrement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+        setToastMessage(`Erreur lors de l'enregistrement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
         setToastType('error');
         setShowToast(true);
         setProcessing(false);
@@ -756,14 +745,14 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
               
               <Text style={[styles.successText, { color: colors.text.secondary }]}>
                 {passenger && (__DEV__ ? scannedBaggagesCount : baggages.length) >= passenger.baggageCount
-                  ? '✓ Tous les bagages ont été scannés avec succès.'
-                  : '✓ Le bagage a été enregistré avec succès.'}
+                  ? 'Tous les bagages ont été scannés avec succès.'
+                  : 'Le bagage a été enregistré avec succès.'}
               </Text>
             </View>
             <TouchableOpacity
               style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
               onPress={() => {
-                console.log('[BAGGAGE SCAN] 🖱️ Bouton "Scanner à nouveau" cliqué');
+                console.log('[BAGGAGE SCAN] Bouton "Scanner à nouveau" cliqué');
                 // Réinitialiser tous les états pour permettre un nouveau scan
                 setLastScannedRfidTag(null);
                 setScannedTagInfo(null);
@@ -774,7 +763,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
                 if (passenger) {
                   loadBaggages();
                 }
-                console.log('[BAGGAGE SCAN] ✅ Scanner réactivé - Prêt pour un nouveau scan');
+                console.log('[BAGGAGE SCAN] Scanner réactivé - Prêt pour un nouveau scan');
               }}
               activeOpacity={0.8}>
               <Ionicons name="barcode-outline" size={24} color={colors.primary.contrast} />
@@ -792,7 +781,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
           onBarcodeScanned={(event) => {
             // IMPORTANT: Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
             if (scanned || processing || lastScannedRfidTag) {
-              console.log('[BAGGAGE SCAN] ⏸️ Scan ignoré - déjà en traitement ou résultat affiché', { 
+              console.log('[BAGGAGE SCAN] Scan ignoré - déjà en traitement ou résultat affiché', { 
                 scanned, 
                 processing, 
                 lastScannedRfidTag 
@@ -800,7 +789,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
               return;
             }
             
-            console.log('[BAGGAGE SCAN] ⚡⚡⚡ onBarcodeScanned DÉCLENCHÉ ⚡⚡⚡', { 
+            console.log('[BAGGAGE SCAN] onBarcodeScanned DÉCLENCHÉ', { 
               data: event.data, 
               type: event.type,
               scanMode,
@@ -815,11 +804,11 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
             
             // Vérifier si les données sont valides
             if (!event || !event.data || event.data.trim().length === 0) {
-              console.warn('[BAGGAGE SCAN] ❌ Données vides ou événement invalide');
+              console.warn('[BAGGAGE SCAN] Données vides ou événement invalide');
               return;
             }
             
-            console.log('[BAGGAGE SCAN] ✅ Données valides, traitement...');
+            console.log('[BAGGAGE SCAN] Données valides, traitement...');
             
             // En mode debug, détecter automatiquement si c'est une étiquette de bagage (Interleaved2of5, ITF14, etc.)
             // et permettre le scan direct même en mode boarding_pass
@@ -827,7 +816,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
             const isBaggageTagData = /^\d{4,}$/.test(event.data.trim()); // Nombre de 4+ chiffres
             
             if (scanMode === 'boarding_pass' && (isBaggageTagType || isBaggageTagData) && __DEV__) {
-              console.log('[BAGGAGE SCAN] 🔧 MODE DEBUG - Détection automatique d\'étiquette de bagage');
+              console.log('[BAGGAGE SCAN] MODE DEBUG - Détection automatique d\'étiquette de bagage');
               console.log('[BAGGAGE SCAN] Type détecté:', event.type, 'Données:', event.data);
               console.log('[BAGGAGE SCAN] → Appel handleRfidScanned (mode debug)');
               handleRfidScanned(event);
@@ -862,8 +851,8 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
               barcodeTypes: barcodeTypes,
               debugMode: __DEV__,
               message: scanMode === 'boarding_pass' 
-                ? (__DEV__ ? '🔧 MODE DEBUG: Tous formats activés (y compris étiquettes bagage)' : 'En attente du scan du boarding pass...')
-                : (passenger ? `Prêt à scanner les bagages de ${passenger.fullName}` : '⚠️ Passager requis - Scannez d\'abord le boarding pass')
+                ? (__DEV__ ? 'MODE DEBUG: Tous formats activés (y compris étiquettes bagage)' : 'En attente du scan du boarding pass...')
+                : (passenger ? `Prêt à scanner les bagages de ${passenger.fullName}` : 'Passager requis - Scannez d\'abord le boarding pass')
             });
             setCameraReady(true);
           }}
@@ -915,7 +904,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : '⚠️ Passager non enregistr
             </View>
             {baggages.length >= passenger.baggageCount && (
               <View style={styles.completeContainer}>
-                <Text style={styles.completeText}>✓ Tous les bagages ont été scannés</Text>
+                <Text style={styles.completeText}>Tous les bagages ont été scannés</Text>
               </View>
             )}
           </Card>

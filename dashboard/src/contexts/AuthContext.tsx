@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../config/api';
 
 interface User {
@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string, airportCode: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -76,6 +77,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const register = async (email: string, password: string, name: string, airportCode: string) => {
+    try {
+      const response = await api.post('/api/v1/auth/register', {
+        email,
+        password,
+        name,
+        airportCode
+      });
+
+      if (response.data.success) {
+        const { user: userData, token } = response.data.data;
+        setUser(userData);
+        localStorage.setItem('bfs_token', token);
+      } else {
+        throw new Error(response.data.error || 'Erreur d\'inscription');
+      }
+    } catch (error: any) {
+      console.error('Register error:', error);
+      throw new Error(error.response?.data?.error || 'Erreur lors de l\'inscription');
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('bfs_token');
@@ -87,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     loading,
     login,
+    register,
     logout,
     isAuthenticated: !!user,
   };
