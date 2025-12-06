@@ -326,11 +326,19 @@ class ParserService {
   /**
    * Parse un boarding pass générique IATA BCBP
    * Format BCBP standard: M1NOM/PRENOM    PNR    DEPARVCODEVOL...
-   * Exemple Kenya Airways: M1SURNAME/FIRSTNM      ABCDEF FIHAAAKQ 9999O335C...
+   * 
+   * ✅ PARSER UNIVERSEL - Supporte TOUTES les compagnies aériennes utilisant le format IATA BCBP:
+   * - Kenya Airways (KQ), Air Congo (9U), Ethiopian Airlines (ET)
+   * - Tanzania (TC, PW), RwandAir (WB), South African Airways (SA)
+   * - Brussels Airlines (SN), Turkish Airlines (TK), Emirates (EK)
+   * - Air France (AF), KLM (KL), Lufthansa (LH)
+   * - Et TOUTES les autres compagnies IATA (200+ compagnies)
+   * 
    * Support complet pour:
    * - Noms très longs avec plusieurs espaces (ex: VAN DER BERG/JEAN PHILIPPE MARIE)
    * - PNR alphanumériques de 6 ou 7 caractères (ex: E7T5GVL, ABC123, XYZABC)
-   * - Tous les formats IATA BCBP (Kenya Airways, Air Congo, Ethiopian, etc.)
+   * - Tous les codes de compagnies (2 lettres ou 2 caractères alphanumériques)
+   * - Détection automatique de la compagnie même si inconnue
    */
   private parseGeneric(rawData: string): PassengerData {
     console.log('[PARSER] 📋 Parsing GENERIC/BCBP, données brutes:', rawData.substring(0, 80) + '...');
@@ -490,7 +498,19 @@ class ParserService {
     }
     
     const nameParts = this.splitName(fullName);
-    const airline = companyCode ? getAirlineName(companyCode) : undefined;
+    
+    // Détection automatique du nom de la compagnie
+    // Si le code n'est pas dans notre liste, on utilise un nom générique intelligent
+    let airline: string | undefined;
+    if (companyCode) {
+      airline = getAirlineName(companyCode);
+      // Si la compagnie n'est pas dans notre liste, créer un nom générique
+      if (!airline || airline === 'Unknown Airline') {
+        airline = `Airline ${companyCode}`;
+        console.log('[PARSER] ⚠️ Compagnie inconnue détectée:', companyCode, '- Utilisation du nom générique:', airline);
+      }
+    }
+    
     const flightTime = this.extractFlightTime(rawData);
     const ticketNumber = this.extractTicketNumber(rawData);
 

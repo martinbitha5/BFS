@@ -9,7 +9,6 @@ import CheckinScreen from '../screens/CheckinScreen';
 import BaggageScreen from '../screens/BaggageScreen';
 import BoardingScreen from '../screens/BoardingScreen';
 import ArrivalScreen from '../screens/ArrivalScreen';
-import SupervisorScreen from '../screens/SupervisorScreen';
 import BagageListScreen from '../screens/BagageListScreen';
 import BagageDetailScreen from '../screens/BagageDetailScreen';
 import PassengerDetailScreen from '../screens/PassengerDetailScreen';
@@ -25,7 +24,6 @@ export type RootStackParamList = {
   Baggage: undefined;
   Boarding: undefined;
   Arrival: undefined;
-  Supervisor: undefined;
   BagageList: undefined;
   BagageDetail: { id: string };
   PassengerDetail: { id: string };
@@ -57,7 +55,6 @@ export default function RootStack() {
       <Stack.Screen name="Baggage" component={BaggageScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Boarding" component={BoardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Arrival" component={ArrivalScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Supervisor" component={SupervisorScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BagageList" component={BagageListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BagageDetail" component={BagageDetailScreen} options={{ title: 'Détails du Bagage' }} />
       <Stack.Screen name="PassengerDetail" component={PassengerDetailScreen} options={{ title: 'Détails du Passager' }} />

@@ -195,25 +195,6 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
 
-          {user.role === 'supervisor' && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('Supervisor')}>
-              <Card style={styles.menuCard} elevated>
-                <View style={styles.menuCardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: colors.secondary.light + '15' }]}>
-                  <Ionicons name="stats-chart" size={28} color={colors.secondary.main} />
-                </View>
-                  <View style={styles.menuCardText}>
-                    <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Supervision</Text>
-                    <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Tableau de bord et statistiques</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          )}
-
           {/* Lien vers Paramètres */}
           <TouchableOpacity
             activeOpacity={0.7}

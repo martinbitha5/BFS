@@ -51,6 +51,103 @@ export const KNOWN_AIRLINES: Airline[] = [
     name: 'Turkish Airlines',
     destinations: ['FIH', 'IST', 'LAD', 'NBO', 'CMN', 'ADD'],
   },
+  // ✅ NOUVELLES COMPAGNIES AJOUTÉES
+  // Tanzania
+  {
+    code: 'TC',
+    name: 'Air Tanzania',
+    destinations: ['DAR', 'JRO', 'NBO', 'EBB', 'JNB', 'ADD'],
+  },
+  {
+    code: 'PW',
+    name: 'Precision Air',
+    destinations: ['DAR', 'JRO', 'NBO', 'EBB', 'JNB'],
+  },
+  // Rwanda
+  {
+    code: 'WB',
+    name: 'RwandAir',
+    destinations: ['KGL', 'FIH', 'NBO', 'EBB', 'ADD', 'JNB', 'LAD'],
+  },
+  // Afrique du Sud
+  {
+    code: 'SA',
+    name: 'South African Airways',
+    destinations: ['JNB', 'CPT', 'FIH', 'LAD', 'NBO', 'ADD', 'LOS'],
+  },
+  {
+    code: '4Z',
+    name: 'SA Airlink',
+    destinations: ['JNB', 'CPT', 'FIH', 'LAD', 'NBO'],
+  },
+  // Autres compagnies africaines
+  {
+    code: 'MS',
+    name: 'EgyptAir',
+    destinations: ['CAI', 'FIH', 'LAD', 'JNB', 'ADD', 'NBO'],
+  },
+  {
+    code: 'L6',
+    name: 'Mauritania Airlines',
+    destinations: ['NKC', 'FIH', 'ABJ', 'CMN'],
+  },
+  {
+    code: 'W3',
+    name: 'Arik Air',
+    destinations: ['LOS', 'ABJ', 'FIH', 'LAD', 'JNB'],
+  },
+  {
+    code: 'P4',
+    name: 'Air Peace',
+    destinations: ['LOS', 'ABJ', 'FIH', 'LAD', 'JNB'],
+  },
+  // Compagnies européennes
+  {
+    code: 'SN',
+    name: 'Brussels Airlines',
+    destinations: ['BRU', 'FIH', 'LAD', 'NBO', 'ADD', 'JNB', 'LOS'],
+  },
+  {
+    code: 'AF',
+    name: 'Air France',
+    destinations: ['CDG', 'FIH', 'LAD', 'NBO', 'ABJ', 'LFW'],
+  },
+  {
+    code: 'KL',
+    name: 'KLM',
+    destinations: ['AMS', 'FIH', 'LAD', 'NBO', 'JNB'],
+  },
+  {
+    code: 'LH',
+    name: 'Lufthansa',
+    destinations: ['FRA', 'FIH', 'LAD', 'NBO', 'JNB', 'ADD'],
+  },
+  {
+    code: 'BA',
+    name: 'British Airways',
+    destinations: ['LHR', 'FIH', 'LAD', 'NBO', 'JNB', 'ADD'],
+  },
+  {
+    code: 'TP',
+    name: 'TAP Air Portugal',
+    destinations: ['LIS', 'LAD', 'FIH', 'GMA', 'LFW'],
+  },
+  // Compagnies du Moyen-Orient
+  {
+    code: 'EK',
+    name: 'Emirates',
+    destinations: ['DXB', 'FIH', 'LAD', 'NBO', 'JNB', 'DAR', 'EBB'],
+  },
+  {
+    code: 'QR',
+    name: 'Qatar Airways',
+    destinations: ['DOH', 'FIH', 'LAD', 'NBO', 'JNB', 'DAR', 'EBB'],
+  },
+  {
+    code: 'EY',
+    name: 'Etihad Airways',
+    destinations: ['AUH', 'FIH', 'LAD', 'NBO', 'JNB'],
+  },
 ];
 
 /**
