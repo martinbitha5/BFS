@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
-import { mockBaggages } from '../data/mockData';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -11,33 +10,19 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, flight, status } = req.query;
-
-    // Mode test avec données mockées
-    if (isMockMode) {
-      let filtered = [...mockBaggages];
-      if (airport) filtered = filtered.filter(b => b.airport_code === airport);
-      if (flight) filtered = filtered.filter(b => b.flight_number === flight);
-      if (status) filtered = filtered.filter(b => b.status === status);
-      
-      return res.json({
-        success: true,
-        count: filtered.length,
-        data: filtered
-      });
-    }
     
     let query = supabase
       .from('baggages')
       .select('*, passengers(*)');
 
     if (airport) {
-      query = query.eq('airportCode', airport);
+      query = query.eq('airport_code', airport);
     }
     if (status) {
       query = query.eq('status', status);
     }
     if (flight) {
-      query = query.eq('flightNumber', flight);
+      query = query.eq('flight_number', flight);
     }
 
     const { data, error } = await query;
@@ -65,7 +50,7 @@ router.get('/:tagNumber', async (req, res, next) => {
     const { data, error } = await supabase
       .from('baggages')
       .select('*, passengers(*)')
-      .eq('tagNumber', tagNumber)
+      .eq('tag_number', tagNumber)
       .single();
 
     if (error) {
@@ -99,21 +84,21 @@ router.get('/track/:tagNumber', async (req, res, next) => {
       .from('baggages')
       .select(`
         id,
-        tagNumber,
+        tag_number,
         weight,
         status,
-        checkedAt,
-        arrivedAt,
-        currentLocation,
-        flightNumber,
+        checked_at,
+        arrived_at,
+        current_location,
+        flight_number,
         passengers (
-          fullName,
+          full_name,
           pnr,
           departure,
           arrival
         )
       `)
-      .eq('tagNumber', tagNumber)
+      .eq('tag_number', tagNumber)
       .single();
 
     if (error) {
@@ -131,15 +116,15 @@ router.get('/track/:tagNumber', async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        tagNumber: baggage.tagNumber,
+        tagNumber: baggage.tag_number,
         status: baggage.status,
         weight: baggage.weight,
-        flightNumber: baggage.flightNumber,
-        checkedAt: baggage.checkedAt,
-        arrivedAt: baggage.arrivedAt,
-        currentLocation: baggage.currentLocation,
+        flightNumber: baggage.flight_number,
+        checkedAt: baggage.checked_at,
+        arrivedAt: baggage.arrived_at,
+        currentLocation: baggage.current_location,
         passenger: passenger ? {
-          name: passenger.fullName,
+          name: passenger.full_name,
           pnr: passenger.pnr,
           route: `${passenger.departure} → ${passenger.arrival}`
         } : null
@@ -157,14 +142,6 @@ router.get('/track/:tagNumber', async (req, res, next) => {
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const baggageData = req.body;
-
-    if (isMockMode) {
-      return res.status(201).json({
-        success: true,
-        message: 'Baggage created (mock mode)',
-        data: { id: `mock_${Date.now()}`, ...baggageData }
-      });
-    }
 
     const { data, error } = await supabase
       .from('baggages')
@@ -191,14 +168,6 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Baggage updated (mock mode)',
-        data: { id, ...updates }
-      });
-    }
 
     const { data, error } = await supabase
       .from('baggages')
@@ -233,23 +202,15 @@ router.post('/scan', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Baggage scanned (mock mode)',
-        data: { tagNumber, location, scannedBy, scannedAt: new Date().toISOString() }
-      });
-    }
-
     // Mettre à jour le bagage avec la nouvelle localisation
     const { data, error } = await supabase
       .from('baggages')
       .update({
-        currentLocation: location,
-        lastScannedAt: new Date().toISOString(),
-        lastScannedBy: scannedBy
+        current_location: location,
+        last_scanned_at: new Date().toISOString(),
+        last_scanned_by: scannedBy
       })
-      .eq('tagNumber', tagNumber)
+      .eq('tag_number', tagNumber)
       .select()
       .single();
 
@@ -276,14 +237,6 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({
         success: false,
         error: 'baggages must be an array'
-      });
-    }
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: `${baggages.length} baggages synced (mock mode)`,
-        count: baggages.length
       });
     }
 

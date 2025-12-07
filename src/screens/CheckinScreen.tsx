@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
@@ -32,6 +32,8 @@ export default function CheckinScreen({ navigation }: Props) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const lastScanTimeRef = useRef<number>(0);
+  const SCAN_COOLDOWN = 2000; // 2 secondes entre chaque scan
 
   useEffect(() => {
     loadUser();
@@ -60,12 +62,18 @@ export default function CheckinScreen({ navigation }: Props) {
   };
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || processing || !showScanner || lastPassenger) {
-      console.log('Scan ignoré - déjà en cours de traitement ou résultat affiché');
+    const now = Date.now();
+    
+    // Cooldown: ignorer si moins de 2 secondes depuis le dernier scan
+    if (now - lastScanTimeRef.current < SCAN_COOLDOWN) {
       return;
     }
-
-    console.log('Code-barres scanné:', data);
+    
+    if (scanned || processing || !showScanner || lastPassenger) {
+      return;
+    }
+    
+    lastScanTimeRef.current = now;
     
     // Jouer le son de scan automatique
     await playScanSound();
@@ -88,71 +96,36 @@ export default function CheckinScreen({ navigation }: Props) {
       // Parser les données du boarding pass
       const passengerData: PassengerData = parserService.parse(data);
       
-      // Logs de débogage pour voir ce qui est parsé
-      console.log('[CHECK-IN] Données brutes scannées:', data);
-      console.log('[CHECK-IN] Données parsées:', {
-        pnr: passengerData.pnr,
-        fullName: passengerData.fullName,
-        firstName: passengerData.firstName,
-        lastName: passengerData.lastName,
-        flightNumber: passengerData.flightNumber,
-        route: passengerData.route,
-        departure: passengerData.departure,
-        arrival: passengerData.arrival,
-        flightTime: passengerData.flightTime,
-        seatNumber: passengerData.seatNumber,
-        baggageInfo: passengerData.baggageInfo,
-        format: passengerData.format,
-        companyCode: passengerData.companyCode,
-        airline: passengerData.airline,
-      });
+      // Passenger data parsed successfully
 
-      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
-      // Permet de tester avec n'importe quel boarding pass sans blocage
-      if (!__DEV__) {
-        // Vérifier que le vol concerne l'aéroport de l'agent
-        if (
-          passengerData.departure !== user.airportCode &&
-          passengerData.arrival !== user.airportCode
-        ) {
-          await playErrorSound();
-          const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'wrong_airport');
-          setToastMessage(errorMsg.message);
-          setToastType(errorMsg.type);
-          setShowToast(true);
-          setProcessing(false);
-          setScanned(false);
-          setShowScanner(true);
-          return;
-        }
-      } else {
-        console.log('[CHECK-IN] MODE TEST - Vérification aéroport désactivée:', {
-          departureFromParsed: passengerData.departure,
-          userAirport: user.airportCode,
-          arrival: passengerData.arrival,
-        });
-        console.log('[CHECK-IN] Pas de vérification d\'aéroport - continuation du processus de check-in');
+      // Vérifier que le vol concerne l'aéroport de l'agent
+      if (
+        passengerData.departure !== user.airportCode &&
+        passengerData.arrival !== user.airportCode
+      ) {
+        await playErrorSound();
+        const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'wrong_airport');
+        setToastMessage(errorMsg.message);
+        setToastType(errorMsg.type);
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
       }
 
-      // VÉRIFICATION DES DOUBLONS DÉSACTIVÉE EN MODE TEST
-      // Permet de tester avec le même boarding pass plusieurs fois
-      if (!__DEV__) {
-        // Vérifier les doublons (par PNR)
-        const existing = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
-        if (existing) {
-          await playErrorSound();
-          const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'duplicate');
-          setToastMessage(errorMsg.message);
-          setToastType(errorMsg.type);
-          setShowToast(true);
-          setProcessing(false);
-          setScanned(false);
-          setShowScanner(true);
-          return;
-        }
-      } else {
-        console.log('[CHECK-IN] MODE TEST - Vérification doublons désactivée');
-        console.log('[CHECK-IN] Permet de scanner le même boarding pass plusieurs fois pour les tests');
+      // Vérifier les doublons (par PNR)
+      const existing = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      if (existing) {
+        await playErrorSound();
+        const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'duplicate');
+        setToastMessage(errorMsg.message);
+        setToastType(errorMsg.type);
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
       }
 
       // Extraire la classe cabine depuis les données
@@ -204,19 +177,6 @@ export default function CheckinScreen({ navigation }: Props) {
       });
 
       setLastPassenger(passengerData);
-      
-      // Log pour vérifier ce qui sera affiché
-      console.log('[CHECK-IN] Données qui seront affichées:', {
-        fullName: passengerData.fullName,
-        pnr: passengerData.pnr,
-        flightNumber: passengerData.flightNumber,
-        route: passengerData.route,
-        departure: passengerData.departure,
-        arrival: passengerData.arrival,
-        flightTime: passengerData.flightTime,
-        seatNumber: passengerData.seatNumber,
-        baggageInfo: passengerData.baggageInfo,
-      });
       
       // Jouer le son de succès
       await playSuccessSound();
@@ -451,14 +411,15 @@ export default function CheckinScreen({ navigation }: Props) {
           onBarcodeScanned={(event) => {
             // Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
             if (scanned || processing || lastPassenger || !showScanner) {
-              console.log('[CHECK-IN] Scan ignoré - déjà en traitement ou résultat affiché');
               return;
             }
             handleBarCodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
-            barcodeTypes: ['pdf417', 'qr'],
-            interval: 1000,
+            // Support maximal des types de codes-barres pour boarding pass
+            // PDF417 est le standard IATA pour les boarding pass
+            // Ajout d'autres formats pour compatibilité maximale
+            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
           }}
           onCameraReady={() => {
             console.log('Caméra prête pour le scan');

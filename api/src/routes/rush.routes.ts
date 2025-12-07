@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
-import { mockBaggages, mockInternationalBaggages } from '../data/mockData';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -8,20 +7,6 @@ const router = Router();
 router.get('/baggages', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, type } = req.query; // type: 'national' | 'international' | 'all'
-
-    // Mode test avec données mockées
-    if (isMockMode) {
-      const rushBaggages = [
-        ...mockBaggages.filter(b => b.status === 'rush' && (!airport || b.airport_code === airport)),
-        ...mockInternationalBaggages.filter(b => b.status === 'rush' && (!airport || b.airport_code === airport))
-      ];
-      
-      return res.json({
-        success: true,
-        count: rushBaggages.length,
-        data: rushBaggages
-      });
-    }
 
     const rushBaggages: any[] = [];
 

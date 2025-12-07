@@ -70,23 +70,23 @@ export default function Baggages() {
       
       const allBaggages: (Baggage | InternationalBaggage)[] = [];
 
-      if (!user?.airportCode) return;
+      if (!user?.airport_code) return;
 
       // Charger les bagages selon le type sélectionné
       if (baggageType === 'all' || baggageType === 'national') {
-        const response = await api.get(`/api/v1/baggage?airport=${user.airportCode}`);
+        const response = await api.get(`/api/v1/baggage?airport=${user.airport_code}`);
         const nationalBags = response.data.data.map((b: any) => ({ ...b, baggageType: 'national' }));
         allBaggages.push(...nationalBags);
       }
 
       if (baggageType === 'all' || baggageType === 'international') {
-        const response = await api.get(`/api/v1/birs/international-baggages?airport=${user.airportCode}`);
+        const response = await api.get(`/api/v1/birs/international-baggages?airport=${user.airport_code}`);
         const intlBags = response.data.data.map((b: any) => ({ ...b, baggageType: 'international' }));
         allBaggages.push(...intlBags);
       }
 
       if (baggageType === 'rush') {
-        const response = await api.get(`/api/v1/rush/baggages?airport=${user.airportCode}`);
+        const response = await api.get(`/api/v1/rush/baggages?airport=${user.airport_code}`);
         allBaggages.push(...response.data.data);
       }
 
@@ -101,7 +101,7 @@ export default function Baggages() {
   };
 
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchBaggages();
     }
   }, [user, baggageType]);
@@ -238,8 +238,12 @@ export default function Baggages() {
           <div className="flex items-center text-gray-500">
             <Clock className="w-4 h-4 mr-2" />
             {isNational 
-              ? new Date((baggage as Baggage).checkedAt).toLocaleString('fr-FR')
-              : new Date((baggage as InternationalBaggage).scannedAt).toLocaleString('fr-FR')
+              ? ((baggage as Baggage).checkedAt && !isNaN(new Date((baggage as Baggage).checkedAt).getTime())
+                  ? new Date((baggage as Baggage).checkedAt).toLocaleString('fr-FR')
+                  : 'Non disponible')
+              : ((baggage as InternationalBaggage).scannedAt && !isNaN(new Date((baggage as InternationalBaggage).scannedAt).getTime())
+                  ? new Date((baggage as InternationalBaggage).scannedAt).toLocaleString('fr-FR')
+                  : 'Non disponible')
             }
           </div>
           {!isNational && (baggage as InternationalBaggage).remarks && (
@@ -269,7 +273,7 @@ export default function Baggages() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Gestion des bagages - {user?.airportCode}</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Gestion des bagages - {user?.airport_code}</h2>
         <p className="mt-1 text-sm text-gray-500">
           Suivi des bagages nationaux, internationaux et RUSH
         </p>

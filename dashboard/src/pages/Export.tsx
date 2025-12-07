@@ -18,20 +18,20 @@ export default function Export() {
 
   // Charger les vols de l'aéroport
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchFlights();
     }
   }, [user]);
 
   const fetchFlights = async () => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
     try {
-      const response = await api.get(`/api/v1/passengers?airport=${user.airportCode}`);
+      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
       const uniqueFlights = [...new Set(response.data.data.map((p: any) => p.flight_number))]
         .filter((flight: any) => flight) // Filtrer les valeurs null/undefined
         .sort() as string[]; // Trier alphabétiquement
       setFlights(uniqueFlights);
-      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airportCode}:`, uniqueFlights);
+      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airport_code}:`, uniqueFlights);
     } catch (err) {
       console.error('Error fetching flights:', err);
       setFlights([]);
@@ -39,7 +39,7 @@ export default function Export() {
   };
 
   const handleExportFile = async () => {
-    if (!user?.airportCode) {
+    if (!user?.airport_code) {
       setMessage({ type: 'error', text: 'Aucun aéroport assigné' });
       return;
     }
@@ -49,7 +49,7 @@ export default function Export() {
 
     try {
       const exportData: any = {
-        airport: user.airportCode,
+        airport: user.airport_code,
         exportDate: new Date().toISOString(),
         filters: {
           startDate: startDate || null,
@@ -190,7 +190,7 @@ export default function Export() {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             >
               <option value="all">Toutes les destinations</option>
-              {user?.airportCode && getDestinationsFrom(user.airportCode).map((airport) => (
+              {user?.airport_code && getDestinationsFrom(user.airport_code).map((airport) => (
                 <option key={airport.code} value={airport.code}>
                   {airport.city} ({airport.code})
                 </option>
@@ -294,14 +294,14 @@ export default function Export() {
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Générer l'export - {user?.airportCode}</h3>
+            <h3 className="text-lg font-medium text-gray-900">Générer l'export - {user?.airport_code}</h3>
             <p className="mt-1 text-sm text-gray-500">
               Télécharger les données filtrées au format Excel (.xlsx)
             </p>
           </div>
           <button
             onClick={handleExportFile}
-            disabled={exporting || !user?.airportCode}
+            disabled={exporting || !user?.airport_code}
             className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />

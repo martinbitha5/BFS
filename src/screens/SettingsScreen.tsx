@@ -8,6 +8,7 @@ import Card from '../components/Card';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, settingsService } from '../services';
+import { clearLocalDataService } from '../services/clear-local-data.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { User } from '../types/user.types';
 
@@ -36,6 +37,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -122,6 +124,57 @@ export default function SettingsScreen({ navigation }: Props) {
           [{ text: 'OK' }]
         );
       });
+  };
+
+  const handleClearLocalData = async () => {
+    Alert.alert(
+      '⚠️ Nettoyer les données locales',
+      'Cette action va supprimer TOUTES les données locales (passagers, bagages, embarquements) stockées sur cet appareil.\n\nLes données déjà synchronisées avec le cloud ne seront pas affectées.\n\nÊtes-vous sûr de vouloir continuer ?',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel'
+        },
+        {
+          text: 'Nettoyer',
+          style: 'destructive',
+          onPress: async () => {
+            setClearing(true);
+            try {
+              // Nettoyer toutes les données locales
+              await clearLocalDataService.clearAllLocalData();
+              
+              // Enregistrer l'action d'audit
+              try {
+                const { logAudit } = await import('../utils/audit.util');
+                await logAudit(
+                  'EXPORT_DATA',
+                  'system',
+                  `🧹 Nettoyage données locales effectué`
+                );
+              } catch (auditError) {
+                console.log('Audit log failed (non-critical):', auditError);
+              }
+              
+              Alert.alert(
+                '✅ Nettoyage réussi',
+                'Toutes les données locales ont été supprimées avec succès.\n\nVous pouvez maintenant scanner de nouveaux boarding pass.',
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              console.error('Error clearing local data:', error);
+              Alert.alert(
+                '❌ Erreur',
+                `Une erreur est survenue lors du nettoyage des données locales.\n\nDétails: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+                [{ text: 'OK' }]
+              );
+            } finally {
+              setClearing(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -291,6 +344,30 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Build</Text>
             <Text style={[styles.infoValue, { color: colors.text.primary }]}>2024.01</Text>
           </View>
+        </Card>
+
+        {/* Actions */}
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Actions</Text>
+          
+          <TouchableOpacity
+            style={styles.linkItem}
+            activeOpacity={0.7}
+            disabled={clearing}
+            onPress={handleClearLocalData}>
+            <View style={styles.linkLeft}>
+              <Ionicons name="trash-outline" size={24} color={clearing ? colors.text.disabled : colors.error.main} />
+              <View style={styles.settingText}>
+                <Text style={[styles.linkLabel, { color: clearing ? colors.text.disabled : colors.error.main }]}>
+                  {clearing ? 'Nettoyage en cours...' : 'Nettoyer données locales'}
+                </Text>
+                <Text style={[styles.settingDescription, { color: colors.text.secondary }]}>
+                  Supprimer toutes les données enregistrées sur cet appareil
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
         </Card>
 
         {/* Déconnexion */}

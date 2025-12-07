@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Download, LogOut, MapPin, Plane } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Download, LogOut, Plane } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from './Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
     { path: '/baggages', label: 'Bagages', icon: Plane },
     { path: '/passengers', label: 'Passagers', icon: Users },
     { path: '/birs', label: 'BIRS International', icon: Package },
@@ -24,14 +25,24 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-2xl font-bold text-primary-600">BFS Dashboard</h1>
-                {user && (
-                  <div className="ml-4 flex items-center text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    <span className="font-medium">{user.airportCode}</span>
-                  </div>
-                )}
+              <div className="flex-shrink-0 flex items-center space-x-3">
+                {/* Logo ATS/CSI */}
+                <Logo width={90} height={45} className="hover:scale-105 transition-transform duration-200" />
+                
+                {/* Separateur vertical */}
+                <div className="h-12 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent"></div>
+                
+                {/* Info Dashboard */}
+                <div>
+                  <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                    OPS
+                  </h1>
+                  {user && (
+                    <p className="text-xs text-gray-600 font-medium">
+                      {user.airport_code}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="ml-10 flex space-x-8">
                 {navItems.map((item) => {
@@ -57,7 +68,7 @@ export default function Layout({ children }: LayoutProps) {
             {user && (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-right">
-                  <p className="font-medium text-gray-900">{user.name}</p>
+                  <p className="font-medium text-gray-900">{user.full_name}</p>
                   <p className="text-gray-500">{user.email}</p>
                 </div>
                 <button

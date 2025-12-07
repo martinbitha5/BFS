@@ -12,6 +12,7 @@ import rushRoutes from './routes/rush.routes';
 import airportsRoutes from './routes/airports.routes';
 import authRoutes from './routes/auth.routes';
 import boardingRoutes from './routes/boarding.routes';
+import confirmRoutes from './routes/confirm.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { apiKeyAuth } from './middleware/auth.middleware';
 
@@ -23,7 +24,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -35,6 +36,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.use('/api/v1/confirm', confirmRoutes); // Confirmation email - endpoint public
 app.use('/api/v1/auth', authRoutes); // Authentification - endpoint public
 app.use('/api/v1/baggage', apiKeyAuth, baggageRoutes);
 app.use('/api/v1/passengers', apiKeyAuth, passengerRoutes);
@@ -54,7 +56,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`BFS API Server running on port ${PORT}`);
+  console.log(`Baggage Found Solution API Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
 });

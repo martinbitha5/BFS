@@ -42,20 +42,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // GET /api/v1/airports/active - Aéroports avec des données actives
 router.get('/active', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // En mode test, retourner FIH, GOM et FBM comme actifs
-    const useMockData = process.env.USE_MOCK_DATA === 'true';
-    
-    if (useMockData) {
-      const activeAirports = SUPPORTED_AIRPORTS.filter(a => 
-        ['FIH', 'GOM', 'FBM'].includes(a.code)
-      );
-      return res.json({
-        success: true,
-        count: activeAirports.length,
-        data: activeAirports
-      });
-    }
-
     // Récupérer les aéroports qui ont des passagers enregistrés
     const { data: passengers, error } = await supabase
       .from('passengers')

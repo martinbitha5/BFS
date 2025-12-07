@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { isMockMode } from '../config/database';
-import { validateSupervisor, getSupervisorById } from '../data/mockSupervisors';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -10,7 +9,7 @@ const router = Router();
  */
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name, airportCode } = req.body;
+    const { email, password, name, airportCode, role = 'supervisor' } = req.body;
 
     if (!email || !password || !name || !airportCode) {
       return res.status(400).json({
@@ -19,47 +18,62 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       });
     }
 
-    if (isMockMode) {
-      // Vérifier si l'email existe déjà
-      const { mockSupervisors } = require('../data/mockSupervisors');
-      const existingSupervisor = mockSupervisors.find((s: any) => s.email === email);
-      
-      if (existingSupervisor) {
-        return res.status(409).json({
-          success: false,
-          error: 'Cet email est déjà utilisé'
-        });
-      }
+    // Créer l'utilisateur dans Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
 
-      // Créer le nouveau superviseur
-      const newSupervisor = {
-        id: `sup_${Date.now()}`,
-        email,
-        name,
-        airportCode,
-        role: 'supervisor' as const,
-        password
-      };
-
-      // Ajouter aux données mockées (en mémoire uniquement)
-      mockSupervisors.push(newSupervisor);
-
-      const { password: _, ...supervisorData } = newSupervisor;
-      
-      return res.status(201).json({
-        success: true,
-        data: {
-          user: supervisorData,
-          token: `mock_token_${newSupervisor.id}`,
-        },
-        message: 'Inscription réussie'
+    if (authError) {
+      return res.status(400).json({
+        success: false,
+        error: authError.message
       });
     }
 
-    // TODO: Implémenter l'inscription avec Supabase en mode production
-    return res.status(501).json({
-      success: false,
-      error: 'Inscription avec base de données non implémentée'
+    // Créer le profil dans la table users
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email,
+        full_name: name,
+        airport_code: airportCode,
+        role
+      })
+      .select()
+      .single();
+
+    if (userError) {
+      // Nettoyer l'utilisateur créé si l'insertion du profil échoue
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return res.status(400).json({
+        success: false,
+        error: userError.message
+      });
+    }
+
+    // Connecter automatiquement l'utilisateur après l'inscription
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (signInError) {
+      return res.status(500).json({
+        success: false,
+        error: 'Compte créé mais erreur de connexion automatique'
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        user: userData,
+        token: signInData.session?.access_token
+      },
+      message: 'Inscription réussie'
     });
 
   } catch (error) {
@@ -82,34 +96,39 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
-    if (isMockMode) {
-      // Mode test avec données mockées
-      const supervisor = validateSupervisor(email, password);
-      
-      if (!supervisor) {
-        return res.status(401).json({
-          success: false,
-          error: 'Email ou mot de passe incorrect'
-        });
-      }
+    // Authentification avec Supabase
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-      // Retourner les infos du superviseur (sans le mot de passe)
-      const { password: _, ...supervisorData } = supervisor;
-      
-      return res.json({
-        success: true,
-        data: {
-          user: supervisorData,
-          // En production, on générerait un vrai JWT token
-          token: `mock_token_${supervisor.id}`,
-        }
+    if (authError) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email ou mot de passe incorrect'
       });
     }
 
-    // TODO: Implémenter l'authentification avec Supabase en mode production
-    return res.status(501).json({
-      success: false,
-      error: 'Authentification avec base de données non implémentée'
+    // Récupérer le profil utilisateur
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (userError) {
+      return res.status(404).json({
+        success: false,
+        error: 'Profil utilisateur non trouvé'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        user: userData,
+        token: authData.session?.access_token
+      }
     });
 
   } catch (error) {
@@ -135,39 +154,33 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
 
     const token = authHeader.substring(7); // Enlever "Bearer "
 
-    if (isMockMode) {
-      // Extraire l'ID du token mock
-      const match = token.match(/^mock_token_(.+)$/);
-      if (!match) {
-        return res.status(401).json({
-          success: false,
-          error: 'Token invalide'
-        });
-      }
+    // Vérifier le token avec Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-      const supervisorId = match[1];
-      const supervisor = getSupervisorById(supervisorId);
-
-      if (!supervisor) {
-        return res.status(401).json({
-          success: false,
-          error: 'Superviseur non trouvé'
-        });
-      }
-
-      // Retourner les infos (sans le mot de passe)
-      const { password: _, ...supervisorData } = supervisor;
-      
-      return res.json({
-        success: true,
-        data: supervisorData
+    if (authError || !user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token invalide'
       });
     }
 
-    // TODO: Implémenter la vérification JWT en mode production
-    return res.status(501).json({
-      success: false,
-      error: 'Vérification token non implémentée'
+    // Récupérer le profil utilisateur
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (userError) {
+      return res.status(404).json({
+        success: false,
+        error: 'Profil utilisateur non trouvé'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: userData
     });
 
   } catch (error) {
@@ -177,11 +190,17 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * POST /api/v1/auth/logout
- * Déconnexion (pour invalidation token côté serveur si besoin)
+ * Déconnexion
  */
 router.post('/logout', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // En mode mock, rien à faire côté serveur
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      await supabase.auth.signOut();
+    }
+
     res.json({
       success: true,
       message: 'Déconnexion réussie'

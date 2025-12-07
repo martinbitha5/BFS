@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
-import { mockInternationalBaggages } from '../data/mockData';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -8,20 +7,6 @@ const router = Router();
 router.get('/international-baggages', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, status, flight } = req.query;
-
-    // Mode test avec données mockées
-    if (isMockMode) {
-      let filtered = [...mockInternationalBaggages];
-      if (airport) filtered = filtered.filter(b => b.airport_code === airport);
-      if (status) filtered = filtered.filter(b => b.status === status);
-      if (flight) filtered = filtered.filter(b => b.flight_number === flight);
-      
-      return res.json({
-        success: true,
-        count: filtered.length,
-        data: filtered
-      });
-    }
 
     let query = supabase
       .from('international_baggages')
@@ -196,21 +181,6 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    if (isMockMode) {
-      return res.status(201).json({
-        success: true,
-        message: 'BIRS report uploaded (mock mode)',
-        data: {
-          id: `mock_${Date.now()}`,
-          fileName,
-          reportType,
-          flightNumber,
-          totalBaggages: items?.length || 0,
-          uploadedAt: new Date().toISOString()
-        }
-      });
-    }
-
     // Créer le rapport BIRS
     const { data: report, error: reportError } = await supabase
       .from('birs_reports')
@@ -277,18 +247,6 @@ router.post('/reconcile/:reportId', async (req: Request, res: Response, next: Ne
   try {
     const { reportId } = req.params;
     const { airportCode } = req.body;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Reconciliation started (mock mode)',
-        data: {
-          reportId,
-          matched: 0,
-          unmatched: 0
-        }
-      });
-    }
 
     // Récupérer les items du rapport
     const { data: reportItems, error: itemsError } = await supabase

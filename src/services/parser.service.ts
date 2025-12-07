@@ -104,104 +104,118 @@ class ParserService {
    * Détecte le format du boarding pass
    */
   private detectFormat(rawData: string): 'AIR_CONGO' | 'ETHIOPIAN' | 'GENERIC' {
+    console.log('[PARSER] === DÉTECTION FORMAT ===');
+    console.log('[PARSER] Longueur données:', rawData.length, 'caractères');
+    console.log('[PARSER] Aperçu:', rawData.substring(0, 120));
+    
     // Détection Air Congo EN PREMIER (car peut contenir "BET" et "1ET" qui ne sont pas Ethiopian)
     // Format: contient 9U (code compagnie Air Congo) - indicateur certain
     if (rawData.includes('9U')) {
+      console.log('[PARSER] ✓ Format AIR_CONGO détecté (code 9U trouvé)');
       return 'AIR_CONGO';
     }
     
     // Détection Kenya Airways - chercher "KQ" suivi de chiffres (numéro de vol)
     // Format: ...FIHNBOKQ 0555... ou ...KQ555... ou ...NBOKQ...
     if (rawData.match(/KQ\s*\d{3,4}/) || rawData.match(/[A-Z]{3}KQ\s/) || rawData.includes('KQ ')) {
-      console.log('[PARSER] Format GENERIC détecté: Kenya Airways (KQ)');
+      console.log('[PARSER] ✓ Format GENERIC détecté: Kenya Airways (KQ)');
       return 'GENERIC';
     }
 
-    // Détection Ethiopian Airlines - AMÉLIORÉE et plus stricte
-    // Pour être sûr que c'est Ethiopian, on doit avoir plusieurs indicateurs :
-    // 1. "ET" suivi de 2-4 chiffres comme numéro de vol (ET80, ET0080, ET701, ET4071, ET 0840)
-    // 2. ET ne doit PAS être précédé de B ou 1 (BET, 1ET sont d'autres codes)
-    // 3. Le pattern doit être dans un contexte qui suggère un numéro de vol (pas juste des lettres)
+    // Détection Ethiopian Airlines - ULTRA ROBUSTE
+    // Ethiopian Airlines utilise le code ET et a des patterns spécifiques
+    // Exemples de vols: ET 0840, ET 0863, ET701, ET4071
+    // Patterns à détecter:
+    // 1. "ET" suivi de 2-4 chiffres (avec ou sans espace)
+    // 2. Codes aéroports Ethiopian typiques: ADD (Addis Ababa)
+    // 3. PNR de 6-7 lettres suivi de codes aéroports
     
-    // Chercher "ET" suivi de 2-4 chiffres avec ou sans espace
-    const ethiopianPatterns = [
-      /ET\s+\d{2,4}/g,  // ET 0080, ET 0840
-      /ET\d{2,4}/g       // ET80, ET0080, ET701
+    console.log('[PARSER] Recherche patterns Ethiopian...');
+    
+    // STRATÉGIE 1: Chercher les vols ET avec numéros
+    // Pattern flexible qui accepte ET précédé de n'importe quelle lettre sauf B ou 1
+    const ethiopianFlightPatterns = [
+      /ET\s+0?8[0-9]{2}/gi,      // ET 0840, ET 0863, ET 863, ET840 (vols 800-899)
+      /ET\s+0?[0-9]{3,4}/gi,     // ET 0080, ET 701, etc.
+      /[^B1]ET\s+\d{3,4}/gi,     // Précédé d'une lettre autre que B ou 1
+      /[A-Z]{3}ET\s+\d{3,4}/gi,  // ADDET 0840, FBMET 123, etc.
+      /ET\s*\d{3,4}/gi,          // ET suivi de 3-4 chiffres (avec ou sans espace)
+      /ET\d{3,4}/gi,             // ET suivi de 3-4 chiffres (sans espace)
+      /\bET\b\s*\d{3,4}/gi,      // ET (mot entier) suivi de 3-4 chiffres (avec ou sans espace)
     ];
     
-    let hasEthiopianFlight = false;
-    let ethiopianMatch: RegExpMatchArray | null = null;
-    
-    for (const pattern of ethiopianPatterns) {
-      const matches = Array.from(rawData.matchAll(pattern));
-      for (const match of matches) {
-        const matchIndex = match.index || 0;
-        const beforeChar = matchIndex > 0 ? rawData[matchIndex - 1] : '';
-        const afterMatch = rawData.substring(matchIndex + match[0].length, matchIndex + match[0].length + 3);
-        
-        // Ignorer si c'est "BET" ou "1ET" (codes compagnie, pas numéro de vol)
-        if (beforeChar === 'B' || beforeChar === '1') {
-          continue;
-        }
-        
-        // Vérifier que ce n'est pas dans un mot (ex: "WILLIAMET701" est OK car c'est collé au nom)
-        // Mais "MET701" pourrait être un problème - vérifier le contexte
-        // Si c'est précédé d'une lettre mais que c'est après M1/M2, c'est probablement Ethiopian
-        const beforeMatch = rawData.substring(0, matchIndex);
-        
-        // Si c'est après M1 ou M2 et suivi de codes aéroports ou d'autres patterns Ethiopian, c'est Ethiopian
-        if (beforeMatch.match(/^M[12][A-Z\s\/]+/)) {
-          // Vérifier que ce qui suit est cohérent avec Ethiopian (codes aéroports, PNR, etc.)
-          const afterPattern = rawData.substring(matchIndex);
-          const airportPattern = KNOWN_AIRPORT_CODES.join('|');
-          const hasAirportAfter = new RegExp(`(${airportPattern})`).test(afterPattern);
-          const hasPnrPattern = /([A-Z]{3})([A-Z]{6})/.test(afterPattern);
-          
-          if (hasAirportAfter || hasPnrPattern || match[0].includes(' ')) {
-            hasEthiopianFlight = true;
-            ethiopianMatch = match;
-            break;
-          }
-        } else {
-          // Si ce n'est pas après M1/M2, vérifier d'autres indicateurs
-          // Chercher des patterns typiques Ethiopian ailleurs dans les données
-          const airportPattern = KNOWN_AIRPORT_CODES.join('|');
-          const hasEthiopianPatterns = new RegExp(`([A-Z]{3})([A-Z]{6})(${airportPattern}|ET\\s*\\d)`).test(rawData);
-          if (hasEthiopianPatterns) {
-            hasEthiopianFlight = true;
-            ethiopianMatch = match;
-            break;
-          }
-        }
+    let ethiopianFlightFound = false;
+    for (const pattern of ethiopianFlightPatterns) {
+      const matches = rawData.match(pattern);
+      if (matches && matches.length > 0) {
+        console.log('[PARSER] Pattern vol Ethiopian trouvé:', matches[0]);
+        ethiopianFlightFound = true;
+        break;
       }
-      if (hasEthiopianFlight) break;
     }
     
-    // Si on a trouvé un pattern Ethiopian valide
-    if (hasEthiopianFlight && ethiopianMatch) {
-      console.log('[PARSER] Format ETHIOPIAN détecté:', ethiopianMatch[0]);
+    // STRATÉGIE 2: Chercher des indicateurs multiples Ethiopian
+    // Inspiré des techniques de Scan-IT to Office pour la détection PDF417
+    const hasAddisAbaba = /ADD/.test(rawData);  // Code aéroport Addis Ababa
+    const hasEthiopianCode = /\bET\b/.test(rawData);  // Code compagnie ET (mot entier)
+    const hasM2Format = /^M[12]/.test(rawData);  // Format M1 ou M2 (BCBP standard)
+    const hasMultiSegment = /\n/.test(rawData) || rawData.length > 250;  // Multi-segments ou long
+    
+    // STRATÉGIE 3: Pattern complet BCBP Ethiopian
+    // Format: M2NOM/PRENOM PNR DEPADDXXYYYYY
+    // Utilisation de patterns similaires à ceux de Scan-IT to Office pour PDF417
+    const ethiopianBCBPPatterns = [
+      /M[12][A-Z\/\s]+[A-Z0-9]{6,7}\s+[A-Z]{3}ADD/,  // Format standard avec ADD
+      /ADD[A-Z]{3}/,                                    // ADD suivi du code destination
+      /[A-Z]{3}ADD/,                                    // Code origine + ADD
+      /M[12].*ADD.*ET\s*\d{3,4}/,                      // M1/M2 + ADD + Vol ET
+    ];
+    const hasBCBPPattern = ethiopianBCBPPatterns.some(pattern => pattern.test(rawData));
+    
+    // DÉCISION: Système de scoring inspiré de Scan-IT to Office
+    // Utilisation de poids différents pour les indicateurs selon leur fiabilité
+    let ethiopianScore = 0;
+    if (ethiopianFlightFound) {
+      ethiopianScore += 2;  // Poids double - indicateur très fort
+      console.log('[PARSER] ✓ Indicateur 1: Vol Ethiopian trouvé (poids: 2)');
+    }
+    if (hasAddisAbaba) {
+      ethiopianScore++;
+      console.log('[PARSER] ✓ Indicateur 2: Code ADD (Addis Ababa) trouvé (poids: 1)');
+    }
+    if (hasBCBPPattern) {
+      ethiopianScore++;
+      console.log('[PARSER] ✓ Indicateur 3: Pattern BCBP Ethiopian trouvé (poids: 1)');
+    }
+    if (hasM2Format && hasEthiopianCode) {
+      ethiopianScore++;
+      console.log('[PARSER] ✓ Indicateur 4: Format BCBP + code ET trouvé (poids: 1)');
+    }
+    if (hasMultiSegment) {
+      ethiopianScore++;
+      console.log('[PARSER] ✓ Indicateur 5: Multi-segments détecté (poids: 1)');
+    }
+    
+    console.log('[PARSER] Score Ethiopian:', ethiopianScore, '/ 6 (seuil: 2)');
+    
+    // Si score >= 2, c'est Ethiopian (système de scoring pondere)
+    if (ethiopianScore >= 2) {
+      console.log('[PARSER] ✓ Format ETHIOPIAN détecté (score:', ethiopianScore, '/ 6)');
       return 'ETHIOPIAN';
     }
+    
+    console.log('[PARSER] ✗ Score Ethiopian insuffisant (', ethiopianScore, '/ 6, seuil: 2)');
 
-    // Si les données commencent par M1 mais ne sont ni Air Congo (9U) ni Ethiopian
-    // Vérifier si c'est un format Air Congo sans "9U" visible
-    // Format Air Congo typique: M1[NOM]... avec codes aéroports FIH, FBM, etc.
-    if (rawData.match(/^M1/)) {
-      // Si on trouve des codes aéroports typiques d'Air Congo (FIH, FBM) sans "ET" comme numéro de vol
-      // et sans "9U", c'est probablement Air Congo
-      const airportPattern = KNOWN_AIRPORT_CODES.join('|');
-      const hasAirCongoAirports = new RegExp(`(${airportPattern})`).test(rawData);
-      const hasEthiopianFlightStrict = /ET\s+\d{2,4}|ET\d{3,4}/.test(rawData);
-      
-      if (hasAirCongoAirports && !hasEthiopianFlightStrict) {
-        // Probablement Air Congo même sans "9U" visible
-        return 'AIR_CONGO';
-      }
-      
-      // Par défaut, format générique si commence par M1 mais sans indicateurs spécifiques
+    // FALLBACK UNIVERSEL: Si les données commencent par M1 ou M2 (format IATA BCBP standard)
+    // alors c'est un boarding pass valide, on utilise le parser GENERIC
+    if (rawData.match(/^M[12]/)) {
+      console.log('[PARSER] ✓ Format GENERIC détecté (IATA BCBP standard M1/M2)');
       return 'GENERIC';
     }
 
+    // Si ça ne commence même pas par M1/M2, on essaie quand même GENERIC
+    // (peut-être un format non-standard ou corrompu)
+    console.log('[PARSER] ⚠️  Format GENERIC détecté (par défaut - données non-standard)');
     return 'GENERIC';
   }
 

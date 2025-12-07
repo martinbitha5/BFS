@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
-import { mockPassengers } from '../data/mockData';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -11,19 +10,6 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, flight, status } = req.query;
-
-    // Mode test avec données mockées
-    if (isMockMode) {
-      let filtered = [...mockPassengers];
-      if (airport) filtered = filtered.filter(p => p.airport_code === airport);
-      if (flight) filtered = filtered.filter(p => p.flight_number === flight);
-      
-      return res.json({
-        success: true,
-        count: filtered.length,
-        data: filtered
-      });
-    }
     
     let query = supabase
       .from('passengers')
@@ -124,14 +110,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const passengerData = req.body;
 
-    if (isMockMode) {
-      return res.status(201).json({
-        success: true,
-        message: 'Passenger created (mock mode)',
-        data: { id: `mock_${Date.now()}`, ...passengerData }
-      });
-    }
-
     const { data, error } = await supabase
       .from('passengers')
       .insert(passengerData)
@@ -157,14 +135,6 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Passenger updated (mock mode)',
-        data: { id, ...updates }
-      });
-    }
 
     const { data, error } = await supabase
       .from('passengers')
@@ -196,14 +166,6 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({
         success: false,
         error: 'passengers must be an array'
-      });
-    }
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: `${passengers.length} passengers synced (mock mode)`,
-        count: passengers.length
       });
     }
 

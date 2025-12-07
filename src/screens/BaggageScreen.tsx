@@ -87,59 +87,23 @@ export default function BaggageScreen({ navigation }: Props) {
 
       const passengerData = parserService.parse(data);
       
-      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
-      if (!__DEV__) {
-        // Vérifier que le vol concerne l'aéroport de l'agent
-        if (
-          passengerData.departure !== user.airportCode &&
-          passengerData.arrival !== user.airportCode
-        ) {
-          await playErrorSound();
-          const errorMsg = getScanErrorMessage(user.role as any, 'baggage', 'wrong_airport');
-          setToastMessage(errorMsg.message);
-          setToastType(errorMsg.type);
-          setShowToast(true);
-          setProcessing(false);
-          setScanned(false);
-          setShowScanner(true);
-          return;
-        }
-      } else {
-        console.log('[BAGGAGE] MODE TEST - Vérification aéroport désactivée');
+      // Vérifier que le vol concerne l'aéroport de l'agent
+      if (
+        passengerData.departure !== user.airportCode &&
+        passengerData.arrival !== user.airportCode
+      ) {
+        await playErrorSound();
+        const errorMsg = getScanErrorMessage(user.role as any, 'baggage', 'wrong_airport');
+        setToastMessage(errorMsg.message);
+        setToastType(errorMsg.type);
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
       }
 
-      let found = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
-      
-      // EN MODE TEST: Créer un passager fictif si non trouvé
-      if (!found && __DEV__) {
-        console.log('[BAGGAGE] MODE TEST - Passager non trouvé, création automatique');
-        const passengerId = await databaseServiceInstance.createPassenger({
-          pnr: passengerData.pnr,
-          fullName: passengerData.fullName,
-          firstName: passengerData.firstName,
-          lastName: passengerData.lastName,
-          flightNumber: passengerData.flightNumber || 'TEST123',
-          flightTime: passengerData.flightTime || new Date().toISOString(),
-          airline: passengerData.airline || 'Test Airline',
-          airlineCode: passengerData.companyCode || 'TT',
-          departure: passengerData.departure || 'TEST',
-          arrival: passengerData.arrival || user.airportCode,
-          route: passengerData.route || 'TEST-' + user.airportCode,
-          companyCode: passengerData.companyCode || 'TT',
-          ticketNumber: passengerData.ticketNumber,
-          seatNumber: passengerData.seatNumber,
-          cabinClass: 'Y',
-          baggageCount: passengerData.baggageInfo?.count || 1,
-          baggageBaseNumber: passengerData.baggageInfo?.baseNumber,
-          rawData: data,
-          format: passengerData.format || 'generic',
-          checkedInAt: new Date().toISOString(),
-          checkedInBy: user.id,
-          synced: false,
-        });
-        found = await databaseServiceInstance.getPassengerById(passengerId);
-        console.log('[BAGGAGE] Passager créé automatiquement pour test');
-      }
+      const found = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
       
       if (!found) {
         await playErrorSound();

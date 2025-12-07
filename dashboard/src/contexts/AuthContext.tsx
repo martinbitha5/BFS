@@ -4,9 +4,11 @@ import api from '../config/api';
 interface User {
   id: string;
   email: string;
-  name: string;
-  airportCode: string;
+  full_name: string;
+  airport_code: string;
   role: 'supervisor' | 'admin';
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
@@ -73,7 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      throw new Error(error.response?.data?.error || 'Email ou mot de passe incorrect');
+      
+      // Gérer les différents types d'erreurs avec des messages en français
+      if (error.response?.status === 401) {
+        throw new Error('Email ou mot de passe incorrect. Veuillez réessayer.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Aucun compte trouvé avec cet email. Veuillez vous inscrire.');
+      } else if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else {
+        throw new Error('Erreur de connexion. Vérifiez votre connexion internet.');
+      }
     }
   };
 
@@ -95,7 +107,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       console.error('Register error:', error);
-      throw new Error(error.response?.data?.error || 'Erreur lors de l\'inscription');
+      
+      // Gérer les différents types d'erreurs d'inscription
+      if (error.response?.status === 400) {
+        const errorMsg = error.response.data?.error;
+        if (errorMsg?.includes('already') || errorMsg?.includes('existe')) {
+          throw new Error('Cet email est déjà utilisé. Veuillez vous connecter ou utiliser un autre email.');
+        } else {
+          throw new Error(errorMsg || 'Veuillez remplir tous les champs requis.');
+        }
+      } else if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else {
+        throw new Error('Erreur lors de l\'inscription. Vérifiez votre connexion internet.');
+      }
     }
   };
 

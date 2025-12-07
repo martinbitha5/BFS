@@ -13,10 +13,10 @@ router.get('/', async (req, res, next) => {
 
     let query = supabase
       .from('passengers')
-      .select('flightNumber, departure, arrival, checkedInAt, airportCode');
+      .select('flight_number, departure, arrival, checked_in_at, airport_code');
 
     if (airport) {
-      query = query.eq('airportCode', airport);
+      query = query.eq('airport_code', airport);
     }
 
     const { data, error } = await query;
@@ -26,20 +26,20 @@ router.get('/', async (req, res, next) => {
     // Grouper par numéro de vol
     const flightsMap = new Map();
     data?.forEach(passenger => {
-      if (!flightsMap.has(passenger.flightNumber)) {
-        flightsMap.set(passenger.flightNumber, {
-          flightNumber: passenger.flightNumber,
+      if (!flightsMap.has(passenger.flight_number)) {
+        flightsMap.set(passenger.flight_number, {
+          flightNumber: passenger.flight_number,
           departure: passenger.departure,
           arrival: passenger.arrival,
-          airportCode: passenger.airportCode,
+          airportCode: passenger.airport_code,
           passengerCount: 0,
-          firstCheckin: passenger.checkedInAt
+          firstCheckin: passenger.checked_in_at
         });
       }
-      const flight = flightsMap.get(passenger.flightNumber);
+      const flight = flightsMap.get(passenger.flight_number);
       flight.passengerCount++;
-      if (passenger.checkedInAt < flight.firstCheckin) {
-        flight.firstCheckin = passenger.checkedInAt;
+      if (passenger.checked_in_at < flight.firstCheckin) {
+        flight.firstCheckin = passenger.checked_in_at;
       }
     });
 
@@ -66,7 +66,7 @@ router.get('/:flightNumber', async (req, res, next) => {
     const { data: passengers, error: passError } = await supabase
       .from('passengers')
       .select('*, baggages(*), boarding_status(*)')
-      .eq('flightNumber', flightNumber);
+      .eq('flight_number', flightNumber);
 
     if (passError) throw passError;
 
@@ -89,7 +89,7 @@ router.get('/:flightNumber', async (req, res, next) => {
         flightNumber,
         departure: passengers[0].departure,
         arrival: passengers[0].arrival,
-        airportCode: passengers[0].airportCode,
+        airportCode: passengers[0].airport_code,
         totalPassengers,
         boardedPassengers,
         notBoardedPassengers: totalPassengers - boardedPassengers,

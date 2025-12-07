@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmez votre compte BFS</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f7fafc;">
+  
+  <!-- Container principal -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7fafc; padding: 40px 0;">
+    <tr>
+      <td align="center">
+        
+        <!-- Carte email -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); overflow: hidden; max-width: 600px;">
+          
+          <!-- Header avec gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              
+              <!-- Logo BFS -->
+              <div style="background-color: rgba(255, 255, 255, 0.2); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                <span style="font-size: 48px; line-height: 80px;">✈️</span>
+              </div>
+              
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                BFS
+              </h1>
+              <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">
+                BAGGAGE FOUND SOLUTION
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Contenu principal -->
+          <tr>
+            <td style="padding: 40px 40px 30px 40px;">
+              
+              <h2 style="color: #2d3748; margin: 0 0 16px 0; font-size: 24px; font-weight: 700;">
+                Bienvenue dans l'équipe BFS ! 🎉
+              </h2>
+              
+              <p style="color: #4a5568; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
+                Nous sommes ravis de vous accueillir. Pour commencer à utiliser votre compte et accéder à toutes les fonctionnalités de la plateforme, veuillez confirmer votre adresse email.
+              </p>
+              
+              <!-- Bouton CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 32px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                      Confirmer mon email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Info supplémentaire -->
+              <div style="background-color: #edf2f7; border-left: 4px solid #667eea; padding: 16px 20px; border-radius: 4px; margin: 24px 0;">
+                <p style="color: #2d3748; margin: 0; font-size: 14px; line-height: 1.6;">
+                  <strong>💡 Astuce :</strong> Ce lien de confirmation est valide pendant 24 heures. Si vous n'avez pas demandé la création de ce compte, vous pouvez ignorer cet email en toute sécurité.
+                </p>
+              </div>
+              
+              <p style="color: #718096; margin: 24px 0 0 0; font-size: 14px; line-height: 1.6;">
+                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
+              </p>
+              <p style="color: #667eea; margin: 8px 0 0 0; font-size: 13px; word-break: break-all; background-color: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                {{ .ConfirmationURL }}
+              </p>
+              
+            </td>
+          </tr>
+          
+          <!-- Features -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="33%" align="center" style="padding: 20px 10px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                    <p style="color: #4a5568; margin: 0; font-size: 13px; font-weight: 600;">
+                      Gestion des<br>bagages
+                    </p>
+                  </td>
+                  <td width="33%" align="center" style="padding: 20px 10px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🎫</div>
+                    <p style="color: #4a5568; margin: 0; font-size: 13px; font-weight: 600;">
+                      Suivi des<br>passagers
+                    </p>
+                  </td>
+                  <td width="33%" align="center" style="padding: 20px 10px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+                    <p style="color: #4a5568; margin: 0; font-size: 13px; font-weight: 600;">
+                      Rapports<br>en temps réel
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
+              <p style="color: #718096; margin: 0 0 12px 0; font-size: 13px; line-height: 1.6; text-align: center;">
+                Cet email a été envoyé à <strong>{{ .Email }}</strong>
+              </p>
+              <p style="color: #a0aec0; margin: 0; font-size: 12px; line-height: 1.6; text-align: center;">
+                © 2024 BFS - Baggage Found Solution. Tous droits réservés.<br>
+                Système de gestion des bagages pour aéroports.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
+  
+</body>
+</html>

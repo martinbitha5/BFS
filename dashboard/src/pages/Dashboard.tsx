@@ -24,12 +24,12 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   const fetchStats = async () => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
     
     try {
       setLoading(true);
       setError('');
-      const response = await api.get(`/api/v1/stats/airport/${user.airportCode}`);
+      const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
       setStats(response.data.data);
     } catch (err: any) {
       console.error('Error fetching stats:', err);
@@ -40,7 +40,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchStats();
     }
   }, [user]);
@@ -54,7 +54,7 @@ export default function Dashboard() {
     );
   }
 
-  if (!user?.airportCode) {
+  if (!user?.airport_code) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-gray-600">Aucun aéroport assigné</p>
@@ -75,7 +75,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tableau de bord - {user?.airportCode}</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Tableau de bord - {user?.airport_code}</h2>
           <p className="mt-1 text-sm text-gray-500">Vue d'ensemble des opérations aéroportuaires</p>
         </div>
         <button

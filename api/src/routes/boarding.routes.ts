@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -10,14 +10,6 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, flight } = req.query;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Boarding statuses (mock mode)',
-        data: []
-      });
-    }
 
     let query = supabase
       .from('boarding_status')
@@ -53,14 +45,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const boardingData = req.body;
 
-    if (isMockMode) {
-      return res.status(201).json({
-        success: true,
-        message: 'Boarding status created (mock mode)',
-        data: { id: `mock_${Date.now()}`, ...boardingData }
-      });
-    }
-
     const { data, error } = await supabase
       .from('boarding_status')
       .insert(boardingData)
@@ -86,14 +70,6 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Boarding status updated (mock mode)',
-        data: { id, ...updates }
-      });
-    }
 
     const { data, error } = await supabase
       .from('boarding_status')
@@ -121,14 +97,6 @@ router.post('/passenger/:passengerId', async (req: Request, res: Response, next:
   try {
     const { passengerId } = req.params;
     const { boardedBy, gate } = req.body;
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: 'Passenger boarded (mock mode)',
-        data: { passengerId, boarded: true, boardedAt: new Date().toISOString() }
-      });
-    }
 
     // Créer ou mettre à jour le statut d'embarquement
     const { data, error } = await supabase
@@ -166,14 +134,6 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({
         success: false,
         error: 'boardings must be an array'
-      });
-    }
-
-    if (isMockMode) {
-      return res.json({
-        success: true,
-        message: `${boardings.length} boarding statuses synced (mock mode)`,
-        count: boardings.length
       });
     }
 

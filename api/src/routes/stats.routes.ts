@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { supabase, isMockMode } from '../config/database';
-import { getMockStats } from '../data/mockData';
+import { supabase } from '../config/database';
 
 const router = Router();
 
@@ -12,14 +11,6 @@ router.get('/airport/:airport', async (req: Request, res: Response, next: NextFu
   try {
     const { airport } = req.params;
 
-    // Mode test avec données mockées
-    if (isMockMode) {
-      const stats = getMockStats(airport);
-      return res.json({
-        success: true,
-        data: stats
-      });
-    }
     const today = new Date().toISOString().split('T')[0];
 
     // Récupérer tous les passagers
@@ -38,11 +29,11 @@ router.get('/airport/:airport', async (req: Request, res: Response, next: NextFu
 
     if (bagError) throw bagError;
 
-    // Récupérer les statuts d'embarquement
+    // Récupérer les statuts d'embarquement (via jointure avec passengers)
     const { data: boardingStatuses, error: boardError } = await supabase
       .from('boarding_status')
-      .select('*')
-      .eq('airport_code', airport);
+      .select('*, passengers!inner(airport_code)')
+      .eq('passengers.airport_code', airport);
 
     if (boardError) throw boardError;
 

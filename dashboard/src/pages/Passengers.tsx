@@ -28,13 +28,13 @@ export default function Passengers() {
   const [error, setError] = useState('');
 
   const fetchPassengers = async () => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
     
     try {
       setLoading(true);
       setError('');
       
-      const response = await api.get(`/api/v1/passengers?airport=${user.airportCode}`);
+      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
       setPassengers(response.data.data);
       setFilteredPassengers(response.data.data);
     } catch (err: any) {
@@ -46,7 +46,7 @@ export default function Passengers() {
   };
 
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchPassengers();
     }
   }, [user]);
@@ -89,7 +89,7 @@ export default function Passengers() {
     <div className="space-y-6">
       {/* Header & Filters */}
       <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Liste des passagers - {user?.airportCode}</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Liste des passagers - {user?.airport_code}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -232,12 +232,14 @@ export default function Passengers() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        {new Date(passenger.checkedInAt).toLocaleString('fr-FR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {passenger.checkedInAt && !isNaN(new Date(passenger.checkedInAt).getTime())
+                          ? new Date(passenger.checkedInAt).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'Non disponible'}
                       </div>
                     </td>
                   </tr>

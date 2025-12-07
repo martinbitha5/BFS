@@ -27,7 +27,7 @@ export const exportToExcel = async (
 
   // Créer le workbook
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'BFS Dashboard - Superviseur';
+  workbook.creator = 'Baggage Found Solution - Superviseur';
   workbook.created = new Date();
 
   // Texte de période
@@ -89,7 +89,7 @@ export const exportToExcel = async (
   infoSheet.getCell('A8').value = 'RAPPORT D\'ACTIVITÉ BFS - GESTION DES PASSAGERS ET BAGAGES';
   infoSheet.getCell('A8').font = { bold: true, size: 14, color: { argb: 'FF1F2937' } };
   
-  infoSheet.getCell('A9').value = 'Baggage Flow System - African Transport Systems';
+  infoSheet.getCell('A9').value = 'Baggage Found Solution - African Transport Systems';
   infoSheet.getCell('A9').font = { italic: true, size: 10, color: { argb: 'FF6B7280' } };
   
   infoSheet.getCell('A11').value = 'Aéroport';

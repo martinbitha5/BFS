@@ -36,17 +36,17 @@ export default function BIRS() {
   const [airline, setAirline] = useState('');
 
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchReports();
     }
   }, [user]);
 
   const fetchReports = async () => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
     
     try {
       setLoading(true);
-      const response = await api.get(`/api/v1/birs/reports?airport=${user.airportCode}`);
+      const response = await api.get(`/api/v1/birs/reports?airport=${user.airport_code}`);
       setReports(response.data.data || []);
     } catch (err: any) {
       console.error('Error fetching reports:', err);
@@ -103,7 +103,7 @@ export default function BIRS() {
             pnr,
             weight,
             class: 'Y',
-            route: `${origin}*${user?.airportCode}`
+            route: `${origin}*${user?.airport_code}`
           });
         }
       }
@@ -150,7 +150,7 @@ export default function BIRS() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !user?.airportCode) {
+    if (!selectedFile || !user?.airport_code) {
       setMessage({ type: 'error', text: 'Veuillez sélectionner un fichier' });
       return;
     }
@@ -186,11 +186,11 @@ export default function BIRS() {
           flightNumber,
           flightDate,
           origin,
-          destination: user.airportCode,
+          destination: user.airport_code,
           airline,
           airlineCode: airline.substring(0, 2).toUpperCase(),
-          uploadedBy: user.name,
-          airportCode: user.airportCode,
+          uploadedBy: user.full_name,
+          airportCode: user.airport_code,
           items
         });
 
@@ -226,12 +226,12 @@ export default function BIRS() {
   };
 
   const handleReconcile = async (reportId: string) => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
 
     try {
       setMessage(null);
       const response = await api.post(`/api/v1/birs/reconcile/${reportId}`, {
-        airportCode: user.airportCode
+        airportCode: user.airport_code
       });
 
       if (response.data.success) {

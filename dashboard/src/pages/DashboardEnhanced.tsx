@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, Package, CheckCircle, MapPin, Plane, RefreshCw, AlertTriangle, TrendingUp, Clock, Activity } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Users, Package, CheckCircle, MapPin, Plane, RefreshCw, AlertTriangle, Clock, Activity } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../config/api';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,45 +34,16 @@ export default function DashboardEnhanced() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   const fetchStats = async () => {
-    if (!user?.airportCode) return;
+    if (!user?.airport_code) return;
     
     try {
       setLoading(true);
       setError('');
-      const response = await api.get(`/api/v1/stats/airport/${user.airportCode}`);
+      const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
       setStats(response.data.data);
       
-      // Simuler des activités récentes (en production, ces données viendraient de l'API)
-      setRecentActivities([
-        {
-          id: '1',
-          type: 'boarding',
-          message: '15 passagers embarqués sur le vol AF345',
-          timestamp: new Date(Date.now() - 5 * 60000),
-          status: 'success'
-        },
-        {
-          id: '2',
-          type: 'baggage',
-          message: '3 bagages en retard détectés',
-          timestamp: new Date(Date.now() - 12 * 60000),
-          status: 'warning'
-        },
-        {
-          id: '3',
-          type: 'flight',
-          message: 'Vol BA123 prêt pour l\'embarquement',
-          timestamp: new Date(Date.now() - 20 * 60000),
-          status: 'success'
-        },
-        {
-          id: '4',
-          type: 'baggage',
-          message: '25 bagages enregistrés pour le vol SN456',
-          timestamp: new Date(Date.now() - 35 * 60000),
-          status: 'success'
-        }
-      ]);
+      // Activités récentes réelles (pour l'instant vide - sera implémenté avec un endpoint dédié)
+      setRecentActivities([]);
     } catch (err: any) {
       console.error('Error fetching stats:', err);
       setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
@@ -82,7 +53,7 @@ export default function DashboardEnhanced() {
   };
 
   useEffect(() => {
-    if (user?.airportCode) {
+    if (user?.airport_code) {
       fetchStats();
       // Actualiser toutes les 30 secondes
       const interval = setInterval(fetchStats, 30000);
@@ -90,17 +61,7 @@ export default function DashboardEnhanced() {
     }
   }, [user]);
 
-  // Données pour les graphiques (simulées - en production viendraient de l'API)
-  const trendData = [
-    { name: '08:00', passagers: 45, bagages: 120 },
-    { name: '10:00', passagers: 89, bagages: 245 },
-    { name: '12:00', passagers: 123, bagages: 356 },
-    { name: '14:00', passagers: 95, bagages: 289 },
-    { name: '16:00', passagers: 156, bagages: 432 },
-    { name: '18:00', passagers: 178, bagages: 498 },
-    { name: 'Maintenant', passagers: stats?.todayPassengers || 0, bagages: stats?.todayBaggages || 0 }
-  ];
-
+  // Données réelles pour les graphiques
   const baggageStatusData = stats ? [
     { name: 'Arrivés', value: stats.arrivedBaggages, color: '#10b981' },
     { name: 'En transit', value: stats.inTransitBaggages, color: '#f59e0b' },
@@ -148,7 +109,7 @@ export default function DashboardEnhanced() {
     );
   }
 
-  if (!user?.airportCode) {
+  if (!user?.airport_code) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-gray-600">Aucun aéroport assigné</p>
@@ -169,7 +130,7 @@ export default function DashboardEnhanced() {
       {/* Header avec actions */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Vue d'ensemble - {user?.airportCode}</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Vue d'ensemble - {user?.airport_code}</h2>
           <p className="mt-1 text-sm text-gray-500 flex items-center">
             <Clock className="w-4 h-4 mr-1" />
             Mis à jour automatiquement toutes les 30 secondes
@@ -236,27 +197,8 @@ export default function DashboardEnhanced() {
             </div>
           )}
 
-          {/* Graphiques et analyses */}
+          {/* Graphiques de statut réels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Tendances journalières */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <TrendingUp className="w-5 h-5 text-primary-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">Tendances de la journée</h3>
-              </div>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="passagers" stroke="#3b82f6" strokeWidth={2} name="Passagers" />
-                  <Line type="monotone" dataKey="bagages" stroke="#10b981" strokeWidth={2} name="Bagages" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
             {/* Statut des bagages */}
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center mb-4">
@@ -391,7 +333,7 @@ export default function DashboardEnhanced() {
                     {stats.totalPassengers > 0 ? (stats.totalBaggages / stats.totalPassengers).toFixed(1) : '0'}
                   </p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-purple-600 opacity-20" />
+                <Activity className="w-8 h-8 text-purple-600 opacity-20" />
               </div>
             </div>
           </div>

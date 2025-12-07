@@ -3,7 +3,7 @@
  * Changez USE_MOCK_DATA à false quand Supabase est configuré
  */
 
-export const USE_MOCK_DATA = true; // Mettre à false pour utiliser Supabase
+export const USE_MOCK_DATA = false; // Production: utilise Supabase
 
 export const CONFIG = {
   USE_MOCK_DATA,

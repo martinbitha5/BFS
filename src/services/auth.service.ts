@@ -1,7 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserSession, UserRole } from '../types/user.types';
-import { USE_MOCK_DATA } from '../config';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -15,16 +14,10 @@ class AuthService {
   private supabase: SupabaseClient | null = null;
 
   constructor() {
-    // Ne pas initialiser Supabase si on est en mode mock
-    if (USE_MOCK_DATA) {
-      return;
-    }
-
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
       this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } else {
-      // Utiliser console.debug au lieu de console.warn pour éviter les avertissements en développement
-      console.debug('Supabase credentials not configured - using mock data instead');
+      console.warn('Supabase credentials not configured. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
     }
   }
 
