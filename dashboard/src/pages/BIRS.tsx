@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, XCircle, RefreshCw, Package } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileText, Package, RefreshCw, Upload, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -160,17 +160,28 @@ export default function BIRS() {
       return;
     }
 
-    try {
-      setUploading(true);
-      setMessage(null);
+    setUploading(true);
+    setMessage(null);
+    console.log('[BIRS] Début du traitement du fichier:', selectedFile.name);
 
-      // Lire le contenu du fichier
-      const reader = new FileReader();
-      reader.onload = async (event) => {
+    // Lire le contenu du fichier
+    const reader = new FileReader();
+    
+    reader.onerror = () => {
+      console.error('[BIRS] Erreur lecture fichier:', reader.error);
+      setMessage({ type: 'error', text: 'Erreur lors de la lecture du fichier' });
+      setUploading(false);
+    };
+    
+    reader.onload = async (event) => {
+      try {
         const fileContent = event.target?.result as string;
+        console.log('[BIRS] Fichier lu, taille:', fileContent.length, 'caractères');
         
         // Parser le fichier
+        console.log('[BIRS] Parsing du fichier...');
         const items = await parseFileContent(fileContent);
+        console.log('[BIRS] Bagages détectés:', items.length);
 
         if (items.length === 0) {
           setMessage({ type: 'error', text: 'Aucun bagage détecté dans le fichier' });
@@ -179,6 +190,7 @@ export default function BIRS() {
         }
 
         // Uploader vers l'API
+        console.log('[BIRS] Upload vers API...');
         const response = await api.post('/api/v1/birs/upload', {
           fileName: selectedFile.name,
           fileContent: fileContent.substring(0, 10000), // Limiter la taille
@@ -193,6 +205,8 @@ export default function BIRS() {
           airportCode: user.airport_code,
           items
         });
+
+        console.log('[BIRS] Réponse API:', response.data);
 
         if (response.data.success) {
           setMessage({ 
@@ -209,20 +223,21 @@ export default function BIRS() {
           setAirline('');
           
           // Recharger les rapports
-          fetchReports();
+          await fetchReports();
         }
-      };
+        
+        setUploading(false);
+      } catch (err: any) {
+        console.error('[BIRS] Erreur upload:', err);
+        setMessage({ 
+          type: 'error', 
+          text: err.response?.data?.error || err.message || 'Erreur lors de l\'upload' 
+        });
+        setUploading(false);
+      }
+    };
 
-      reader.readAsText(selectedFile);
-    } catch (err: any) {
-      console.error('Error uploading:', err);
-      setMessage({ 
-        type: 'error', 
-        text: err.response?.data?.error || 'Erreur lors de l\'upload' 
-      });
-    } finally {
-      setUploading(false);
-    }
+    reader.readAsText(selectedFile);
   };
 
   const handleReconcile = async (reportId: string) => {
