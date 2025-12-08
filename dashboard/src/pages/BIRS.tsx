@@ -234,6 +234,9 @@ export default function BIRS() {
     setMessage(null);
     console.log('[BIRS] Début du traitement du fichier:', selectedFile.name);
 
+    // Détecter le type de fichier
+    const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf');
+    
     // Lire le contenu du fichier
     const reader = new FileReader();
     
@@ -245,8 +248,21 @@ export default function BIRS() {
     
     reader.onload = async (event) => {
       try {
-        const fileContent = event.target?.result as string;
-        console.log('[BIRS] Fichier lu, taille:', fileContent.length, 'caractères');
+        let fileContent = '';
+        
+        if (isPdf) {
+          // Pour les PDFs, extraire le texte avec pdf-parse
+          console.log('[BIRS] Extraction du PDF...');
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const pdfData = await pdfParse(new Uint8Array(arrayBuffer));
+          fileContent = pdfData.text;
+          console.log('[BIRS] PDF extrait, texte:', fileContent.length, 'caractères');
+          console.log('[BIRS] Aperçu:', fileContent.substring(0, 500));
+        } else {
+          // Pour les fichiers texte, utiliser directement le contenu
+          fileContent = event.target?.result as string;
+          console.log('[BIRS] Fichier texte lu, taille:', fileContent.length, 'caractères');
+        }
         
         // Parser le fichier
         console.log('[BIRS] Parsing du fichier...');
@@ -307,7 +323,12 @@ export default function BIRS() {
       }
     };
 
-    reader.readAsText(selectedFile);
+    // Lire le fichier selon son type
+    if (isPdf) {
+      reader.readAsArrayBuffer(selectedFile);
+    } else {
+      reader.readAsText(selectedFile);
+    }
   };
 
   const handleReconcile = async (reportId: string) => {
