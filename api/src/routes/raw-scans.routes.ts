@@ -131,7 +131,7 @@ router.post('/', async (req: Request, res: Response) => {
         // Vérifier si le scan existe déjà  
         const { data: existing } = await supabase
             .from('raw_scans')
-            .select('id, scan_count')
+            .select('id, scan_count, status_checkin, status_baggage, status_boarding, status_arrival')
             .eq('raw_data', raw_data)
             .single();
 
