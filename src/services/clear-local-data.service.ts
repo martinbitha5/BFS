@@ -33,15 +33,19 @@ export class ClearLocalDataService {
       await db.execAsync(`DELETE FROM passengers;`);
       console.log('✅ Passagers supprimés');
 
-      // 5. Supprimer toutes les actions d'audit
+      // 5. Supprimer tous les raw scans
+      await db.execAsync(`DELETE FROM raw_scans;`);
+      console.log('✅ Raw scans supprimés');
+
+      // 6. Supprimer toutes les actions d'audit
       await db.execAsync(`DELETE FROM audit_log;`);
       console.log('✅ Logs d\'audit supprimés');
 
-      // 6. Vider la file de synchronisation
+      // 7. Vider la file de synchronisation
       await db.execAsync(`DELETE FROM sync_queue;`);
       console.log('✅ File de synchronisation vidée');
 
-      // 7. Réinitialiser les compteurs auto-increment (SQLite) - optionnel
+      // 8. Réinitialiser les compteurs auto-increment (SQLite) - optionnel
       try {
         await db.execAsync(`DELETE FROM sqlite_sequence;`);
         console.log('✅ Compteurs réinitialisés');
@@ -66,6 +70,7 @@ export class ClearLocalDataService {
     baggages: number;
     internationalBaggages: number;
     boardingStatuses: number;
+    rawScans: number;
     syncQueue: number;
   }> {
     try {
@@ -79,6 +84,7 @@ export class ClearLocalDataService {
         baggages: 0,
         internationalBaggages: 0,
         boardingStatuses: 0,
+        rawScans: 0,
         syncQueue: 0,
       };
 
@@ -105,6 +111,12 @@ export class ClearLocalDataService {
         'SELECT COUNT(*) as count FROM boarding_status'
       );
       stats.boardingStatuses = boardingResult?.count || 0;
+
+      // Compter les raw scans
+      const rawScansResult = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM raw_scans'
+      );
+      stats.rawScans = rawScansResult?.count || 0;
 
       // Compter les items en attente de sync
       const syncResult = await db.getFirstAsync<{ count: number }>(

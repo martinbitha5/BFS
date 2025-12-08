@@ -16,6 +16,8 @@ export { auditService } from './audit.service';
 export { birsService } from './birs.service';
 export { exportService } from './export.service';
 export { parserService } from './parser.service';
+export { rawScanService } from './raw-scan.service';
 export { rushService } from './rush.service';
 export { settingsService } from './settings.service';
+export { syncService } from './sync.service';
 

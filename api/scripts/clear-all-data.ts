@@ -49,18 +49,18 @@ async function clearAllData() {
       .from('international_baggages')
       .select('*', { count: 'exact', head: true });
 
-    const { count: auditCount } = await supabase
-      .from('audit_logs')
+    const { count: rawScansCount } = await supabase
+      .from('raw_scans')
       .select('*', { count: 'exact', head: true });
 
     console.log(`   • Passagers: ${passengersCount || 0}`);
     console.log(`   • Bagages: ${baggagesCount || 0}`);
     console.log(`   • Statuts embarquement: ${boardingCount || 0}`);
     console.log(`   • Bagages internationaux: ${intBaggagesCount || 0}`);
-    console.log(`   • Logs audit: ${auditCount || 0}\n`);
+    console.log(`   • Raw Scans: ${rawScansCount || 0}\n`);
 
     const total = (passengersCount || 0) + (baggagesCount || 0) + (boardingCount || 0) + 
-                  (intBaggagesCount || 0) + (auditCount || 0);
+                  (intBaggagesCount || 0) + (rawScansCount || 0);
 
     if (total === 0) {
       console.log('✅ Aucune donnée à nettoyer. Base déjà vide!\n');
@@ -118,16 +118,16 @@ async function clearAllData() {
       console.log(`   ✅ ${passengersCount || 0} passagers supprimés`);
     }
 
-    // Supprimer les logs d'audit
-    const { error: auditError } = await supabase
-      .from('audit_logs')
+    // Supprimer les raw scans
+    const { error: rawScansError } = await supabase
+      .from('raw_scans')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000');
 
-    if (auditError) {
-      console.error('❌ Erreur logs audit:', auditError);
+    if (rawScansError) {
+      console.error('❌ Erreur raw scans:', rawScansError);
     } else {
-      console.log(`   ✅ ${auditCount || 0} logs audit supprimés`);
+      console.log(`   ✅ ${rawScansCount || 0} raw scans supprimés`);
     }
 
     console.log('\n✨ ========================================');

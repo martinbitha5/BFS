@@ -1,20 +1,22 @@
-import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
-import baggageRoutes from './routes/baggage.routes';
-import passengerRoutes from './routes/passenger.routes';
-import statsRoutes from './routes/stats.routes';
-import flightRoutes from './routes/flight.routes';
-import birsRoutes from './routes/birs.routes';
-import rushRoutes from './routes/rush.routes';
+import { apiKeyAuth } from './middleware/auth.middleware';
+import { errorHandler } from './middleware/error.middleware';
 import airportsRoutes from './routes/airports.routes';
 import authRoutes from './routes/auth.routes';
+import baggageRoutes from './routes/baggage.routes';
+import birsRoutes from './routes/birs.routes';
 import boardingRoutes from './routes/boarding.routes';
 import confirmRoutes from './routes/confirm.routes';
-import { errorHandler } from './middleware/error.middleware';
-import { apiKeyAuth } from './middleware/auth.middleware';
+import exportRoutes from './routes/export.routes';
+import flightRoutes from './routes/flight.routes';
+import passengerRoutes from './routes/passenger.routes';
+import rawScansRoutes from './routes/raw-scans.routes';
+import rushRoutes from './routes/rush.routes';
+import statsRoutes from './routes/stats.routes';
 
 dotenv.config();
 
@@ -24,7 +26,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
+  origin: '*',  // Allow all origins for development
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -45,6 +47,8 @@ app.use('/api/v1/stats', apiKeyAuth, statsRoutes);
 app.use('/api/v1/flights', apiKeyAuth, flightRoutes);
 app.use('/api/v1/birs', apiKeyAuth, birsRoutes);
 app.use('/api/v1/rush', apiKeyAuth, rushRoutes);
+app.use('/api/v1/raw-scans', apiKeyAuth, rawScansRoutes); // ✅ NEW: Raw scans
+app.use('/api/v1/export', apiKeyAuth, exportRoutes); // ✅ NEW: Export with parsing
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
 
 // Error handling

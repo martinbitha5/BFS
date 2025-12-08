@@ -1,19 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, databaseServiceInstance } from '../services';
-import { parserService } from '../services/parser.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { PassengerData } from '../types/passenger.types';
-import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
-import { extractCabinClass, extractTicketNumberWithoutCompanyCode, formatCabinClass, formatFlightDate } from '../utils/ticket.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkin'>;
 
@@ -50,12 +47,10 @@ export default function CheckinScreen({ navigation }: Props) {
       const user = await authServiceInstance.getCurrentUser();
       if (!user) return;
 
-      const today = new Date().toISOString().split('T')[0];
-      const passengers = await databaseServiceInstance.getPassengersByAirport(user.airportCode);
-      const todayScans = passengers.filter(
-        (p) => p.checkedInAt?.startsWith(today) && p.checkedInBy === user.id
-      );
-      setScansToday(todayScans.length);
+      // ✅ Compter les scans check-in d'aujourd'hui depuis raw_scans
+      const { rawScanService } = await import('../services');
+      const stats = await rawScanService.getStats(user.airportCode);
+      setScansToday(stats.checkinCompleted);
     } catch (error) {
       console.error('Error loading scans:', error);
     }
@@ -63,21 +58,21 @@ export default function CheckinScreen({ navigation }: Props) {
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     const now = Date.now();
-    
+
     // Cooldown: ignorer si moins de 2 secondes depuis le dernier scan
     if (now - lastScanTimeRef.current < SCAN_COOLDOWN) {
       return;
     }
-    
+
     if (scanned || processing || !showScanner || lastPassenger) {
       return;
     }
-    
+
     lastScanTimeRef.current = now;
-    
+
     // Jouer le son de scan automatique
     await playScanSound();
-    
+
     setScanned(true);
     setScanning(false);
     setProcessing(true);
@@ -93,122 +88,92 @@ export default function CheckinScreen({ navigation }: Props) {
         return;
       }
 
-      // Parser les données du boarding pass
-      const passengerData: PassengerData = parserService.parse(data);
-      
-      // Passenger data parsed successfully
+      // ✅ NOUVEAU SYSTÈME : Stockage brut sans parsing
+      // Importer le service de scan brut
+      const { rawScanService } = await import('../services');
 
-      // Vérifier que le vol concerne l'aéroport de l'agent
-      if (
-        passengerData.departure !== user.airportCode &&
-        passengerData.arrival !== user.airportCode
-      ) {
+      // Vérifier si ce scan existe déjà avec le statut check-in
+      const existingScan = await rawScanService.findByRawData(data);
+      if (existingScan && existingScan.statusCheckin) {
         await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'wrong_airport');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
+        setToastMessage('⚠️ Déjà scanné au check-in !');
+        setToastType('warning');
         setShowToast(true);
         setProcessing(false);
         setScanned(false);
-        setShowScanner(true);
         return;
       }
 
-      // Vérifier les doublons (par PNR)
-      const existing = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
-      if (existing) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'checkin', 'duplicate');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        setProcessing(false);
-        setScanned(false);
-        setShowScanner(true);
-        return;
-      }
-
-      // Extraire la classe cabine depuis les données
-      const cabinClass = extractCabinClass(passengerData.rawData, passengerData.seatNumber);
-      
-      // Enregistrer le passager
-      const passengerId = await databaseServiceInstance.createPassenger({
-        pnr: passengerData.pnr,
-        fullName: passengerData.fullName,
-        lastName: passengerData.lastName,
-        firstName: passengerData.firstName,
-        flightNumber: passengerData.flightNumber,
-        flightTime: passengerData.flightTime,
-        airline: passengerData.airline,
-        airlineCode: passengerData.companyCode,
-        departure: passengerData.departure,
-        arrival: passengerData.arrival,
-        route: passengerData.route,
-        companyCode: passengerData.companyCode,
-        ticketNumber: passengerData.ticketNumber,
-        seatNumber: passengerData.seatNumber,
-        cabinClass: cabinClass,
-        baggageCount: passengerData.baggageInfo?.count || 0,
-        baggageBaseNumber: passengerData.baggageInfo?.baseNumber,
-        rawData: passengerData.rawData,
-        format: passengerData.format,
-        checkedInAt: new Date().toISOString(),
-        checkedInBy: user.id,
-        synced: false,
+      const result = await rawScanService.createOrUpdateRawScan({
+        rawData: data,
+        scanType: 'boarding_pass',
+        statusField: 'checkin',
+        userId: user.id,
+        airportCode: user.airportCode,
       });
 
       // Enregistrer l'action d'audit
       const { logAudit } = await import('../utils/audit.util');
       await logAudit(
-        'CHECKIN_PASSENGER',
-        'passenger',
-        `Check-in passager: ${passengerData.fullName} (PNR: ${passengerData.pnr}) - Vol: ${passengerData.flightNumber} (${passengerData.departure} → ${passengerData.arrival})`,
-        passengerId
+        'CHECKIN_SCAN',
+        'raw_scan',
+        `Scan check-in ${result.isNew ? 'nouveau' : 'mise à jour statut'} - Scan #${result.scanCount}`,
+        result.id
       );
 
       // Ajouter à la file de synchronisation
       await databaseServiceInstance.addToSyncQueue({
-        tableName: 'passengers',
-        recordId: passengerId,
-        operation: 'insert',
-        data: JSON.stringify({ passengerId, ...passengerData }),
+        tableName: 'raw_scans',
+        recordId: result.id,
+        operation: result.isNew ? 'insert' : 'update',
+        data: JSON.stringify({ rawData: data, scanType: 'boarding_pass' }),
         retryCount: 0,
         userId: user.id,
       });
 
-      setLastPassenger(passengerData);
-      
+      // Créer un objet PassengerData simplifié pour l'affichage
+      // (sans parsing, juste les données brutes)
+      const displayData: PassengerData = {
+        pnr: 'En attente',
+        fullName: 'Données enregistrées',
+        firstName: '',
+        lastName: '',
+        flightNumber: 'En attente',
+        route: 'En attente',
+        departure: 'En attente',
+        arrival: 'En attente',
+        rawData: data,
+        format: 'RAW_STORAGE',
+      };
+
+      setLastPassenger(displayData);
+
       // Jouer le son de succès
       await playSuccessSound();
-      
-      // Obtenir le message selon le rôle
-      const successMsg = getScanResultMessage(user.role as any, 'checkin', true, {
-        passengerName: passengerData.fullName,
-        pnr: passengerData.pnr,
-        flightNumber: passengerData.flightNumber,
-      });
-      
-      setToastMessage(successMsg.message);
-      setToastType(successMsg.type);
+
+      // Message selon si c'est nouveau ou mise à jour
+      const message = result.isNew
+        ? `✅ Check-in enregistré ! (Scan #${result.scanCount})`
+        : `✅ Check-in mis à jour ! (Scan #${result.scanCount})`;
+
+      setToastMessage(message);
+      setToastType('success');
       setShowToast(true);
       loadScansToday();
-      
+
       // Masquer le scanner et afficher l'écran de succès
       setProcessing(false);
       setShowScanner(false);
-      // Garder scanned à true pour empêcher tout nouveau scan automatique
-      // Il sera réinitialisé uniquement quand l'utilisateur clique sur le bouton
+
     } catch (error) {
       console.error('Error processing scan:', error);
       await playErrorSound();
-      const user = await authServiceInstance.getCurrentUser();
-      const errorMsg = getScanErrorMessage(user?.role as any || 'checkin', 'checkin', 'unknown');
-      setToastMessage(error instanceof Error ? error.message : errorMsg.message);
+      setToastMessage(error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement du scan');
       setToastType('error');
       setShowToast(true);
       setProcessing(false);
       setScanned(false);
-      setShowScanner(true); // Remettre le scanner visible en cas d'erreur
+      setShowScanner(true);
     }
   };
 
@@ -247,7 +212,7 @@ export default function CheckinScreen({ navigation }: Props) {
         visible={showToast}
         onHide={() => setShowToast(false)}
       />
-      
+
 
       {processing ? (
         <View style={styles.processingContainer}>
@@ -255,7 +220,7 @@ export default function CheckinScreen({ navigation }: Props) {
           <Text style={[styles.processingText, { color: colors.text.secondary }]}>Traitement en cours...</Text>
         </View>
       ) : !showScanner && lastPassenger ? (
-        <ScrollView 
+        <ScrollView
           style={styles.successContainer}
           contentContainerStyle={[
             styles.successContainerContent,
@@ -264,132 +229,44 @@ export default function CheckinScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}>
           <Card style={styles.successCard}>
             <View style={styles.successHeader}>
-              <Ionicons name="checkmark-circle" size={48} color={colors.success.main} />
-              <Text style={[styles.successTitle, { color: colors.text.primary }]}>Check-in réussi</Text>
+              <Ionicons name="checkmark-circle" size={64} color={colors.success.main} />
+              <Text style={[styles.successTitle, { color: colors.text.primary }]}>Check-in enregistré ✅</Text>
             </View>
             <View style={styles.successInfo}>
-              {/* Résultat étendu avec toutes les informations */}
+              {/* Résultat simplifié */}
               <View style={[styles.resultContainer, { backgroundColor: colors.background.paper, borderColor: colors.border.light }]}>
-                {/* Section: Informations Passager */}
+                {/* Section: Statut */}
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="person" size={20} color={colors.primary.main} />
-                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Passager</Text>
+                  <Ionicons name="cloud-upload" size={24} color={colors.success.main} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Données enregistrées</Text>
                 </View>
-                
-                {/* Nom du Passager */}
+
                 <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nom complet:</Text>
-                  <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.bold }]}>
-                    {lastPassenger.fullName && lastPassenger.fullName !== 'UNKNOWN' 
-                      ? lastPassenger.fullName 
-                      : 'Passager'}
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Statut:</Text>
+                  <Badge label="✅ Enregistré" variant="success" />
+                </View>
+
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Type de scan:</Text>
+                  <Badge label="Boarding Pass" variant="info" />
+                </View>
+
+                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Données capturées:</Text>
+                  <Text style={[styles.resultValue, { color: colors.text.primary }]}>
+                    {lastPassenger.rawData?.length || 0} caractères
                   </Text>
                 </View>
 
-                {/* PNR */}
-                {lastPassenger.pnr && lastPassenger.pnr !== 'UNKNOWN' && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>PNR:</Text>
-                    <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
-                      {lastPassenger.pnr}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Section: Informations Vol */}
-                <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
-                  <Ionicons name="airplane" size={20} color={colors.primary.main} />
-                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Vol</Text>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Parsing:</Text>
+                  <Badge label="Dashboard web" variant="warning" />
                 </View>
-
-                {/* Nom de vol */}
-                {lastPassenger.flightNumber && lastPassenger.flightNumber !== 'UNKNOWN' && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Numéro de vol:</Text>
-                    <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
-                      {lastPassenger.flightNumber}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Route */}
-                {lastPassenger.departure && lastPassenger.departure !== 'UNK' && lastPassenger.arrival && lastPassenger.arrival !== 'UNK' && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Route:</Text>
-                    <View style={styles.routeContainer}>
-                      <Badge label={lastPassenger.departure} variant="info" />
-                      <Ionicons name="arrow-forward" size={16} color={colors.text.secondary} style={{ marginHorizontal: Spacing.xs }} />
-                      <Badge label={lastPassenger.arrival} variant="info" />
-                    </View>
-                  </View>
-                )}
-
-                {/* Date du vol */}
-                {formatFlightDate(lastPassenger.flightTime, lastPassenger.flightDate, lastPassenger.rawData) && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Date du vol:</Text>
-                    <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                      {formatFlightDate(lastPassenger.flightTime, lastPassenger.flightDate, lastPassenger.rawData)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Siège */}
-                {lastPassenger.seatNumber && lastPassenger.seatNumber !== 'UNKNOWN' && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Siège:</Text>
-                    <Text style={[styles.resultValue, { color: colors.text.primary, fontWeight: FontWeights.semibold }]}>
-                      {lastPassenger.seatNumber}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Type (classe cabine) */}
-                {formatCabinClass(extractCabinClass(lastPassenger.rawData, lastPassenger.seatNumber)) && (
-                  <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                    <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Type:</Text>
-                    <Text style={[styles.resultValue, { color: colors.text.primary }]}>
-                      {formatCabinClass(extractCabinClass(lastPassenger.rawData, lastPassenger.seatNumber))}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Section: Informations Billet */}
-                <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
-                  <Ionicons name="ticket" size={20} color={colors.primary.main} />
-                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Billet</Text>
-                </View>
-
-                {/* Numéro de billet */}
-                <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
-                  <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Numéro de billet:</Text>
-                  <Text style={[styles.resultValue, { color: lastPassenger.ticketNumber ? colors.text.primary : colors.text.disabled, fontFamily: 'monospace', letterSpacing: 1 }]}>
-                    {lastPassenger.ticketNumber 
-                      ? (extractTicketNumberWithoutCompanyCode(lastPassenger.ticketNumber, lastPassenger.companyCode) || lastPassenger.ticketNumber)
-                      : 'Non disponible'}
-                  </Text>
-                </View>
-
-                {/* Section: Informations Bagages */}
-                {lastPassenger.baggageInfo && lastPassenger.baggageInfo.count > 0 && (
-                  <>
-                    <View style={[styles.sectionHeader, { marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
-                      <Ionicons name="bag" size={20} color={colors.primary.main} />
-                      <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Informations Bagages</Text>
-                    </View>
-                    <View style={styles.resultRow}>
-                      <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Nombre de bagages:</Text>
-                      <Badge 
-                        label={`${lastPassenger.baggageInfo.count} bagage${lastPassenger.baggageInfo.count > 1 ? 's' : ''}`}
-                        variant="info"
-                      />
-                    </View>
-                  </>
-                )}
               </View>
-              
+
               <Text style={[styles.successText, { color: colors.text.secondary }]}>
-                Le passager a été enregistré avec succès.
+                Les données brutes ont été enregistrées avec succès. {'\n'}
+                Le parsing et l'extraction des informations se feront lors de l'export dans le dashboard web.
               </Text>
             </View>
             <TouchableOpacity

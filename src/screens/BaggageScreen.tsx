@@ -307,6 +307,20 @@ export default function BaggageScreen({ navigation }: Props) {
 
       console.log('Tag RFID extrait:', rfidTag);
 
+      // ✅ Vérifier dans raw_scans si ce bagage a déjà été scanné
+      const { rawScanService } = await import('../services');
+      const existingScan = await rawScanService.findByRawData(data);
+      if (existingScan && existingScan.statusBaggage) {
+        await playErrorSound();
+        setToastMessage('⚠️ Bagage déjà scanné !');
+        setToastType('warning');
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
+      }
+
       // EN MODE TEST: Ne pas vérifier si le bagage existe déjà
       if (!__DEV__) {
         // Vérifier si le bagage existe déjà dans la table normale
@@ -402,6 +416,16 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
               userId: user.id,
             });
 
+            // ✅ Enregistrer dans raw_scans
+            await rawScanService.createOrUpdateRawScan({
+              rawData: data,
+              scanType: 'baggage_tag',
+              statusField: 'baggage',
+              userId: user.id,
+              airportCode: user.airportCode,
+              baggageRfidTag: rfidTag,
+            });
+
             // Recharger les bagages
             updatedBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
           } else {
@@ -426,6 +450,16 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
               `Enregistrement bagage international: ${rfidTag} - ${baggageTagData.passengerName || 'INCONNU'} (PNR: ${baggageTagData.pnr || 'N/A'})`,
               internationalBaggage.id
             );
+
+            // ✅ Enregistrer dans raw_scans
+            await rawScanService.createOrUpdateRawScan({
+              rawData: data,
+              scanType: 'baggage_tag',
+              statusField: 'baggage',
+              userId: user.id,
+              airportCode: user.airportCode,
+              baggageRfidTag: rfidTag,
+            });
 
             console.log('[BAGGAGE SCAN] Bagage international créé:', internationalBaggage.id);
           }

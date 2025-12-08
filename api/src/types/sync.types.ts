@@ -1,6 +1,6 @@
-export type SyncTableName = 'passengers' | 'baggages' | 'boarding_status' | 'raw_scans';
+export type SyncTableName = 'passengers' | 'baggages' | 'boarding_status';
 
-export type SyncOperation = 'CREATE' | 'UPDATE' | 'DELETE' | 'insert' | 'update' | 'delete';
+export type SyncOperation = 'insert' | 'update' | 'delete';
 
 export interface SyncQueueItem {
   id: string;

@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
-import { User } from '../types/user.types';
-import { Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import { useTheme } from '../contexts/ThemeContext';
-import Button from '../components/Button';
-import Card from '../components/Card';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Badge from '../components/Badge';
+import Card from '../components/Card';
 import StatusIndicator from '../components/StatusIndicator';
+import { useTheme } from '../contexts/ThemeContext';
+import { RootStackParamList } from '../navigation/RootStack';
+import { authServiceInstance, databaseServiceInstance, syncService } from '../services';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { User } from '../types/user.types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -42,9 +41,20 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     loadUser();
     loadSyncStatus();
+    
+    // ✅ DÉMARRER LA SYNCHRONISATION AUTOMATIQUE
+    syncService.startAutoSync().catch(error => {
+      console.error('[Home] Erreur démarrage auto-sync:', error);
+    });
+    
     // Vérifier le statut de synchronisation périodiquement
     const interval = setInterval(loadSyncStatus, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      // Arrêter la sync quand on quitte l'écran principal
+      // syncService.stopAutoSync();
+    };
   }, []);
 
   const loadUser = async () => {

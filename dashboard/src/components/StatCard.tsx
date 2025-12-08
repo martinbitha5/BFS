@@ -17,17 +17,22 @@ const colorClasses = {
 
 export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
+    <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 p-3 sm:p-4 md:p-6 cursor-default overflow-hidden relative group">
+      {/* Gradient hover effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      <div className="relative flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 transition-transform duration-200 group-hover:scale-105">
+            {value}
+          </p>
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-500 truncate">{subtitle}</p>
           )}
         </div>
-        <div className={`p-3 rounded-full ${colorClasses[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`p-2 sm:p-3 rounded-full ${colorClasses[color]} transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6 flex-shrink-0 ml-2`}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
         </div>
       </div>
     </div>

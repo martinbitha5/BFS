@@ -1,5 +1,5 @@
+import { Barcode, Download, LayoutDashboard, LogOut, Package, Plane, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Download, LogOut, Plane } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Logo from './Logo';
 
@@ -16,6 +16,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/baggages', label: 'Bagages', icon: Plane },
     { path: '/passengers', label: 'Passagers', icon: Users },
     { path: '/birs', label: 'BIRS International', icon: Package },
+    { path: '/raw-scans', label: 'Scans Bruts', icon: Barcode },
     { path: '/export', label: 'Export', icon: Download },
   ];
 

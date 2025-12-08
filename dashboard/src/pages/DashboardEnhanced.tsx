@@ -1,8 +1,8 @@
+import { Activity, AlertTriangle, Barcode, CheckCircle, Clock, Database, MapPin, Package, Plane, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Users, Package, CheckCircle, MapPin, Plane, RefreshCw, AlertTriangle, Clock, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import api from '../config/api';
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import StatCard from '../components/StatCard';
+import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AirportStats {
@@ -18,6 +18,20 @@ interface AirportStats {
   uniqueFlights: string[];
 }
 
+interface RawScansStats {
+  total: number;
+  by_type: {
+    boarding_pass: number;
+    baggage_tag: number;
+  };
+  by_status: {
+    checkin: number;
+    baggage: number;
+    boarding: number;
+    arrival: number;
+  };
+}
+
 interface RecentActivity {
   id: string;
   type: 'boarding' | 'baggage' | 'flight';
@@ -29,19 +43,29 @@ interface RecentActivity {
 export default function DashboardEnhanced() {
   const { user } = useAuth();
   const [stats, setStats] = useState<AirportStats | null>(null);
+  const [rawScansStats, setRawScansStats] = useState<RawScansStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   const fetchStats = async () => {
     if (!user?.airport_code) return;
-    
+
     try {
       setLoading(true);
       setError('');
       const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
       setStats(response.data.data);
-      
+
+      // Fetch raw scans statistics
+      try {
+        const rawScansResponse = await api.get(`/api/v1/raw-scans/stats?airport=${user.airport_code}`);
+        setRawScansStats(rawScansResponse.data.data);
+      } catch (rawScansErr) {
+        console.error('Error fetching raw scans stats:', rawScansErr);
+        // Continue même si raw scans stats échoue
+      }
+
       // Activités récentes réelles (pour l'instant vide - sera implémenté avec un endpoint dédié)
       setRecentActivities([]);
     } catch (err: any) {
@@ -96,7 +120,7 @@ export default function DashboardEnhanced() {
     if (diff < 1) return 'À l\'instant';
     if (diff < 60) return `Il y a ${diff} min`;
     const hours = Math.floor(diff / 60);
-    if (hours < 24) return `Il y a ${hours}h`;
+    if (hours < 24) return `Il y a ${hours} h`;
     return date.toLocaleDateString('fr-FR');
   };
 
@@ -126,30 +150,36 @@ export default function DashboardEnhanced() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header avec actions */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {/* Header avec actions - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Vue d'ensemble - {user?.airport_code}</h2>
-          <p className="mt-1 text-sm text-gray-500 flex items-center">
-            <Clock className="w-4 h-4 mr-1" />
-            Mis à jour automatiquement toutes les 30 secondes
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <span>Vue d'ensemble</span>
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800">
+              {user?.airport_code}
+            </span>
+          </h2>
+          <p className="mt-1 text-xs sm:text-sm text-gray-500 flex items-center">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            Mis à jour automatiquement toutes les 30s
           </p>
         </div>
         <button
           onClick={fetchStats}
           disabled={loading}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
+          <span className="hidden sm:inline">Actualiser</span>
+          <span className="sm:hidden">Actualiser</span>
         </button>
       </div>
 
       {stats && (
         <>
-          {/* Statistiques principales */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Statistiques principales - Grid responsive */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Passagers"
               value={stats.totalPassengers}
@@ -180,32 +210,113 @@ export default function DashboardEnhanced() {
             />
           </div>
 
-          {/* Alertes importantes */}
-          {stats.notBoardedPassengers > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-              <div className="flex items-start">
-                <AlertTriangle className="w-5 h-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-medium text-yellow-800">
-                    Attention: {stats.notBoardedPassengers} passagers non embarqués
-                  </h3>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Vérifiez les passagers en attente d'embarquement
-                  </p>
+          {/* Raw Scans Statistics - Responsive */}
+          {
+            rawScansStats && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 sm:p-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <div className="flex items-center">
+                      <Database className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" />
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Scans Bruts</h3>
+                    </div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Système anti-doublons
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm text-gray-600 mt-2">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-green-500 mr-1"></span>
+                        Check-in: {rawScansStats.by_status.checkin}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
+                        Bagage: {rawScansStats.by_status.baggage}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-purple-500 mr-1"></span>
+                        Embarquement: {rawScansStats.by_status.boarding}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 mr-1"></span>
+                        Arrivée: {rawScansStats.by_status.arrival}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Total Scans</p>
+                        <p className="text-xl sm:text-2xl font-bold text-purple-600">{rawScansStats.total}</p>
+                      </div>
+                      <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Boarding Pass</p>
+                        <p className="text-xl sm:text-2xl font-bold text-green-600">{rawScansStats.by_type.boarding_pass}</p>
+                      </div>
+                      <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Baggage Tag</p>
+                        <p className="text-xl sm:text-2xl font-bold text-orange-600">{rawScansStats.by_type.baggage_tag}</p>
+                      </div>
+                      <Package className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 opacity-20" />
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Checkpoints</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                          {rawScansStats.by_status.checkin + rawScansStats.by_status.baggage + rawScansStats.by_status.boarding + rawScansStats.by_status.arrival}
+                        </p>
+                      </div>
+                      <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
-          {/* Graphiques de statut réels */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Statut des bagages */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <Package className="w-5 h-5 text-primary-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">Statut des bagages</h3>
+          {/* Alertes importantes - Responsive */}
+          {
+            stats.notBoardedPassengers > 0 && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4 rounded-r-lg animate-fade-in">
+                <div className="flex items-start">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-xs sm:text-sm font-medium text-yellow-800">
+                      ⚠️ {stats.notBoardedPassengers} passagers non embarqués
+                    </h3>
+                    <p className="text-xs sm:text-sm text-yellow-700 mt-1 hidden sm:block">
+                      Vérifiez les passagers en attente d'embarquement
+                    </p>
+                  </div>
+                </div>
               </div>
-              <ResponsiveContainer width="100%" height={250}>
+            )
+          }
+
+          {/* Graphiques de statut réels - Responsive */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Statut des bagages */}
+            <div className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
+              <div className="flex items-center mb-4">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900">Statut des bagages</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
                 <PieChart>
                   <Pie
                     data={baggageStatusData}
@@ -227,12 +338,12 @@ export default function DashboardEnhanced() {
             </div>
 
             {/* Statut des passagers */}
-            <div className="bg-white shadow rounded-lg p-6">
+            <div className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
               <div className="flex items-center mb-4">
-                <Users className="w-5 h-5 text-primary-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">Embarquement</h3>
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900">Embarquement</h3>
               </div>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
                 <BarChart data={passengerStatusData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -248,12 +359,12 @@ export default function DashboardEnhanced() {
             </div>
 
             {/* Activités récentes */}
-            <div className="bg-white shadow rounded-lg p-6">
+            <div className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6 lg:col-span-2">
               <div className="flex items-center mb-4">
-                <Activity className="w-5 h-5 text-primary-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">Activités récentes</h3>
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900">Activités récentes</h3>
               </div>
-              <div className="space-y-3 max-h-[250px] overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 max-h-[200px] sm:max-h-[250px] overflow-y-auto">
                 {recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                     <div className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(activity.status)}`}>
@@ -269,71 +380,73 @@ export default function DashboardEnhanced() {
             </div>
           </div>
 
-          {/* Liste des vols */}
-          {stats.uniqueFlights.length > 0 && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <Plane className="w-5 h-5 mr-2 text-primary-600" />
-                  Vols actifs ({stats.flightsCount})
-                </h3>
-              </div>
-              <div className="px-6 py-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                  {stats.uniqueFlights.map((flight) => (
-                    <div
-                      key={flight}
-                      className="flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-blue-200 transition"
-                    >
-                      <Plane className="w-4 h-4 mr-2" />
-                      {flight}
-                    </div>
-                  ))}
+          {/* Liste des vols - Responsive */}
+          {
+            stats.uniqueFlights.length > 0 && (
+              <div className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <h3 className="text-base sm:text-lg font-medium text-gray-900 flex items-center">
+                    <Plane className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary-600" />
+                    Vols actifs ({stats.flightsCount})
+                  </h3>
+                </div>
+                <div className="px-4 sm:px-6 py-3 sm:py-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                    {stats.uniqueFlights.map((flight) => (
+                      <div
+                        key={flight}
+                        className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:scale-105 transition-all duration-200 cursor-pointer"
+                      >
+                        <Plane className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        {flight}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
-          {/* Statistiques détaillées en footer */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white shadow rounded-lg p-4">
+          {/* Statistiques détaillées en footer - Responsive */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Bagages arrivés</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.arrivedBaggages}</p>
+                  <p className="text-xs text-gray-500">Arrivés</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.arrivedBaggages}</p>
                 </div>
-                <MapPin className="w-8 h-8 text-green-600 opacity-20" />
+                <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white shadow rounded-lg p-4">
+            <div className="bg-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500">En transit</p>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.inTransitBaggages}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.inTransitBaggages}</p>
                 </div>
-                <Package className="w-8 h-8 text-yellow-600 opacity-20" />
+                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white shadow rounded-lg p-4">
+            <div className="bg-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Taux d'embarquement</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-xs text-gray-500">Embarq.</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600">
                     {Math.round((stats.boardedPassengers / (stats.totalPassengers || 1)) * 100)}%
                   </p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-blue-600 opacity-20" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white shadow rounded-lg p-4">
+            <div className="bg-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Moyenne bag/pax</p>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-xs text-gray-500">Moy. bag</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-600">
                     {stats.totalPassengers > 0 ? (stats.totalBaggages / stats.totalPassengers).toFixed(1) : '0'}
                   </p>
                 </div>
-                <Activity className="w-8 h-8 text-purple-600 opacity-20" />
+                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
               </div>
             </div>
           </div>

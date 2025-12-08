@@ -91,6 +91,38 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_airport_code ON audit_log(airport_code);
 
+CREATE TABLE IF NOT EXISTS raw_scans (
+  id TEXT PRIMARY KEY,
+  raw_data TEXT NOT NULL,
+  scan_type TEXT NOT NULL,
+  status_checkin INTEGER DEFAULT 0,
+  status_baggage INTEGER DEFAULT 0,
+  status_boarding INTEGER DEFAULT 0,
+  status_arrival INTEGER DEFAULT 0,
+  checkin_at TEXT,
+  checkin_by TEXT,
+  baggage_at TEXT,
+  baggage_by TEXT,
+  baggage_rfid_tag TEXT,
+  boarding_at TEXT,
+  boarding_by TEXT,
+  arrival_at TEXT,
+  arrival_by TEXT,
+  airport_code TEXT NOT NULL,
+  first_scanned_at TEXT NOT NULL,
+  last_scanned_at TEXT NOT NULL,
+  scan_count INTEGER DEFAULT 1,
+  synced INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_raw_scans_raw_data ON raw_scans(raw_data);
+CREATE INDEX IF NOT EXISTS idx_raw_scans_airport ON raw_scans(airport_code);
+CREATE INDEX IF NOT EXISTS idx_raw_scans_statuses ON raw_scans(status_checkin, status_baggage, status_boarding, status_arrival);
+CREATE INDEX IF NOT EXISTS idx_raw_scans_rfid ON raw_scans(baggage_rfid_tag);
+CREATE INDEX IF NOT EXISTS idx_raw_scans_scan_type ON raw_scans(scan_type);
+
 CREATE TABLE IF NOT EXISTS international_baggages (
   id TEXT PRIMARY KEY,
   rfid_tag TEXT UNIQUE NOT NULL,

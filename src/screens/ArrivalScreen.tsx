@@ -218,6 +218,18 @@ export default function ArrivalScreen({ navigation }: Props) {
         return;
       }
 
+      // ✅ Vérifier dans raw_scans si déjà confirmé à l'arrivée
+      const { rawScanService } = await import('../services');
+      const existingScan = await rawScanService.findByRawData(baggage.rfidTag);
+      if (existingScan && existingScan.statusArrival) {
+        await playErrorSound();
+        setToastMessage('⚠️ Arrivée déjà confirmée !');
+        setToastType('warning');
+        setShowToast(true);
+        setProcessing(false);
+        return;
+      }
+
       // Mettre à jour le statut du bagage
       await databaseServiceInstance.updateBaggageStatus(baggage.id, 'arrived', user.id);
 
@@ -238,6 +250,16 @@ export default function ArrivalScreen({ navigation }: Props) {
         data: JSON.stringify({ id: baggage.id, status: 'arrived' }),
         retryCount: 0,
         userId: user.id,
+      });
+
+      // ✅ Enregistrer dans raw_scans
+      await rawScanService.createOrUpdateRawScan({
+        rawData: baggage.rfidTag,
+        scanType: 'baggage_tag',
+        statusField: 'arrival',
+        userId: user.id,
+        airportCode: user.airportCode,
+        baggageRfidTag: baggage.rfidTag,
       });
 
       // Mettre à jour le statut local

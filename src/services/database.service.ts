@@ -18,7 +18,10 @@ class DatabaseService {
       // Initialiser le service BIRS (import dynamique pour éviter les cycles)
       const { birsDatabaseService } = await import('./birs-database.service');
       birsDatabaseService.initialize(this.db);
-      console.log('Database initialized successfully (with BIRS support)');
+      // Initialiser le service raw-scan
+      const { rawScanService } = await import('./raw-scan.service');
+      rawScanService.initialize(this.db);
+      console.log('Database initialized successfully (with BIRS and RawScan support)');
     } catch (error) {
       console.error('Error initializing database:', error);
       throw error;
@@ -43,7 +46,7 @@ class DatabaseService {
   // Passengers
   async createPassenger(passenger: Omit<Passenger, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const id = `passenger_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -88,7 +91,7 @@ class DatabaseService {
 
   async getPassengerByPnr(pnr: string): Promise<Passenger | null> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const result = await this.db.getFirstAsync<Passenger>(
       'SELECT * FROM passengers WHERE pnr = ?',
       [pnr]
@@ -106,7 +109,7 @@ class DatabaseService {
 
   async getPassengerById(id: string): Promise<Passenger | null> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const result = await this.db.getFirstAsync<Passenger>(
       'SELECT * FROM passengers WHERE id = ?',
       [id]
@@ -124,7 +127,7 @@ class DatabaseService {
 
   async getPassengersByAirport(airportCode: string): Promise<Passenger[]> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const results = await this.db.getAllAsync<Passenger>(
       'SELECT * FROM passengers WHERE departure = ? OR arrival = ? ORDER BY created_at DESC',
       [airportCode, airportCode]
@@ -139,7 +142,7 @@ class DatabaseService {
   // Baggage
   async createBaggage(baggage: Omit<Baggage, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const id = `baggage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -170,7 +173,7 @@ class DatabaseService {
 
   async getBaggageByRfidTag(rfidTag: string): Promise<Baggage | null> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const result = await this.db.getFirstAsync<Baggage>(
       'SELECT * FROM baggages WHERE rfid_tag = ?',
       [rfidTag]
@@ -188,7 +191,7 @@ class DatabaseService {
 
   async getBaggagesByPassengerId(passengerId: string): Promise<Baggage[]> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const results = await this.db.getAllAsync<Baggage>(
       'SELECT * FROM baggages WHERE passenger_id = ? ORDER BY created_at ASC',
       [passengerId]
@@ -204,7 +207,7 @@ class DatabaseService {
   async getBaggagesByPassengerIds(passengerIds: string[]): Promise<Baggage[]> {
     if (!this.db) throw new Error('Database not initialized');
     if (passengerIds.length === 0) return [];
-    
+
     // Create placeholders for IN clause
     const placeholders = passengerIds.map(() => '?').join(',');
     const results = await this.db.getAllAsync<Baggage>(
@@ -220,7 +223,7 @@ class DatabaseService {
 
   async getBaggagesByAirport(airportCode: string): Promise<Baggage[]> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     // Get baggages for passengers that have departure or arrival matching the airport
     const results = await this.db.getAllAsync<Baggage>(
       `SELECT b.* FROM baggages b
@@ -238,7 +241,7 @@ class DatabaseService {
 
   async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived' | 'rush', userId: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const now = new Date().toISOString();
 
     if (status === 'arrived') {
@@ -287,7 +290,7 @@ class DatabaseService {
   // Boarding Status
   async getBoardingStatusByPassengerId(passengerId: string): Promise<BoardingStatus | null> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const result = await this.db.getFirstAsync<BoardingStatus>(
       'SELECT * FROM boarding_status WHERE passenger_id = ?',
       [passengerId]
@@ -308,7 +311,7 @@ class DatabaseService {
   async getBoardingStatusesByPassengerIds(passengerIds: string[]): Promise<BoardingStatus[]> {
     if (!this.db) throw new Error('Database not initialized');
     if (passengerIds.length === 0) return [];
-    
+
     // Create placeholders for IN clause
     const placeholders = passengerIds.map(() => '?').join(',');
     const results = await this.db.getAllAsync<BoardingStatus>(
@@ -325,7 +328,7 @@ class DatabaseService {
 
   async getBoardingStatusesByAirport(airportCode: string): Promise<BoardingStatus[]> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     // Get boarding statuses for passengers that have departure or arrival matching the airport
     const results = await this.db.getAllAsync<BoardingStatus>(
       `SELECT bs.* FROM boarding_status bs
@@ -346,7 +349,7 @@ class DatabaseService {
     status: Omit<BoardingStatus, 'id' | 'createdAt'>
   ): Promise<string> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const existing = await this.db.getFirstAsync<BoardingStatus>(
       'SELECT * FROM boarding_status WHERE passenger_id = ?',
       [status.passengerId]
@@ -393,7 +396,7 @@ class DatabaseService {
   // Sync Queue
   async addToSyncQueue(item: Omit<SyncQueueItem, 'id' | 'createdAt'>): Promise<string> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     const id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -419,24 +422,35 @@ class DatabaseService {
 
   async getPendingSyncItems(limit: number = 50): Promise<SyncQueueItem[]> {
     if (!this.db) throw new Error('Database not initialized');
-    
-    const results = await this.db.getAllAsync<SyncQueueItem>(
+
+    const results = await this.db.getAllAsync<any>(
       'SELECT * FROM sync_queue WHERE retry_count < 5 ORDER BY created_at ASC LIMIT ?',
       [limit]
     );
 
-    return results;
+    // ✅ MAPPER SNAKE_CASE → CAMELCASE
+    return results.map((row: any) => ({
+      id: row.id,
+      tableName: row.table_name,      // snake_case → camelCase
+      recordId: row.record_id,        // snake_case → camelCase
+      operation: row.operation,
+      data: row.data,
+      retryCount: row.retry_count,    // snake_case → camelCase
+      lastError: row.last_error,      // snake_case → camelCase
+      userId: row.user_id,            // snake_case → camelCase
+      createdAt: row.created_at,      // snake_case → camelCase
+    }));
   }
 
   async removeSyncQueueItem(id: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     await this.db.runAsync('DELETE FROM sync_queue WHERE id = ?', [id]);
   }
 
   async updateSyncQueueItem(id: string, retryCount: number, lastError?: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    
+
     await this.db.runAsync(
       'UPDATE sync_queue SET retry_count = ?, last_error = ? WHERE id = ?',
       [retryCount, lastError || null, id]

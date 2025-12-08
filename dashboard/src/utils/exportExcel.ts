@@ -31,14 +31,14 @@ export const exportToExcel = async (
   workbook.created = new Date();
 
   // Texte de période
-  let periodText = startDate && endDate 
+  let periodText = startDate && endDate
     ? `Du ${new Date(startDate).toLocaleDateString('fr-FR')} au ${new Date(endDate).toLocaleDateString('fr-FR')}`
     : 'Toutes les données';
-  
+
   if (flightNumber && flightNumber !== 'all') {
     periodText += ` - Vol: ${flightNumber}`;
   }
-  
+
   if (destination) {
     periodText += ` - Destination: ${destination}`;
   }
@@ -53,7 +53,7 @@ export const exportToExcel = async (
     inTransitBaggages: baggages.filter((b: any) => b.status === 'checked').length,
   };
 
-  const boardingRate = stats.totalPassengers > 0 
+  const boardingRate = stats.totalPassengers > 0
     ? Math.round((stats.boardedPassengers / stats.totalPassengers) * 100)
     : 0;
   const arrivalRate = stats.totalBaggages > 0
@@ -70,7 +70,7 @@ export const exportToExcel = async (
     const response = await fetch('/assets/logo-ats-csi.png');
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
-    
+
     const imageId = workbook.addImage({
       buffer: arrayBuffer,
       extension: 'png',
@@ -88,17 +88,17 @@ export const exportToExcel = async (
   // Informations (commencer après le logo)
   infoSheet.getCell('A8').value = 'RAPPORT D\'ACTIVITÉ BFS - GESTION DES PASSAGERS ET BAGAGES';
   infoSheet.getCell('A8').font = { bold: true, size: 14, color: { argb: 'FF1F2937' } };
-  
+
   infoSheet.getCell('A9').value = 'Baggage Found Solution - African Transport Systems';
   infoSheet.getCell('A9').font = { italic: true, size: 10, color: { argb: 'FF6B7280' } };
-  
+
   infoSheet.getCell('A11').value = 'Aéroport';
   infoSheet.getCell('B11').value = airportCode;
   infoSheet.getCell('B11').font = { bold: true };
-  
+
   infoSheet.getCell('A12').value = 'Date d\'export';
   infoSheet.getCell('B12').value = new Date().toLocaleString('fr-FR');
-  
+
   infoSheet.getCell('A13').value = 'Période analysée';
   infoSheet.getCell('B13').value = periodText;
 
@@ -145,7 +145,7 @@ export const exportToExcel = async (
       'Bagages'
     ];
     passSheet.addRow(passHeaders);
-    
+
     const passHeaderRow = passSheet.getRow(1);
     passHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
     passHeaderRow.fill = {
@@ -181,7 +181,7 @@ export const exportToExcel = async (
     passSheet.getColumn(7).width = 20;  // Enregistrement
     passSheet.getColumn(8).width = 15;  // Statut
     passSheet.getColumn(9).width = 10;  // Bagages
-    
+
     // Bordures et alignement
     passSheet.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
@@ -215,7 +215,7 @@ export const exportToExcel = async (
       'Localisation'
     ];
     bagSheet.addRow(bagHeaders);
-    
+
     const bagHeaderRow = bagSheet.getRow(1);
     bagHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
     bagHeaderRow.fill = {
@@ -227,10 +227,10 @@ export const exportToExcel = async (
     bagHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
     baggages.forEach((b: any) => {
-      const statusLabel = b.status === 'arrived' ? 'Arrivé' 
-        : b.status === 'rush' ? 'RUSH' 
-        : 'En transit';
-      
+      const statusLabel = b.status === 'arrived' ? 'Arrivé'
+        : b.status === 'rush' ? 'RUSH'
+          : 'En transit';
+
       bagSheet.addRow([
         b.tag_number,
         b.passenger_id,
@@ -252,7 +252,7 @@ export const exportToExcel = async (
     bagSheet.getColumn(6).width = 20;  // Enregistré le
     bagSheet.getColumn(7).width = 20;  // Arrivé le
     bagSheet.getColumn(8).width = 15;  // Localisation
-    
+
     // Bordures et alignement
     bagSheet.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
@@ -285,7 +285,7 @@ export const exportToExcel = async (
       'Embarquement'
     ];
     boardSheet.addRow(boardHeaders);
-    
+
     const boardHeaderRow = boardSheet.getRow(1);
     boardHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
     boardHeaderRow.fill = {
@@ -299,7 +299,7 @@ export const exportToExcel = async (
     passengers.forEach((p: any) => {
       const boarded = p.boarding_status?.[0]?.boarded || false;
       const boardedAt = p.boarding_status?.[0]?.boarded_at;
-      
+
       boardSheet.addRow([
         p.pnr,
         p.full_name,
@@ -319,7 +319,7 @@ export const exportToExcel = async (
     boardSheet.getColumn(5).width = 15;  // Statut
     boardSheet.getColumn(6).width = 20;  // Check-in
     boardSheet.getColumn(7).width = 20;  // Embarquement
-    
+
     // Bordures et alignement
     boardSheet.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
@@ -338,15 +338,134 @@ export const exportToExcel = async (
 
   // Générer et sauvegarder le fichier
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { 
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
-  
+
   const dateStr = new Date().toISOString().split('T')[0];
   const dateRange = startDate && endDate ? `_${startDate}_${endDate}` : '';
   const flightSuffix = flightNumber && flightNumber !== 'all' ? `_${flightNumber}` : '';
   const destSuffix = destination ? `_${destination}` : '';
   const fileName = `BFS_Export_${airportCode}_${dateStr}${dateRange}${flightSuffix}${destSuffix}.xlsx`;
+
+  saveAs(blob, fileName);
+};
+
+/**
+ * Export des raw scans avec parsing vers Excel
+ */
+export const exportRawScansToExcel = async (
+  data: any,
+  airportCode: string,
+  startDate?: string,
+  endDate?: string,
+  flight?: string,
+  destination?: string
+) => {
+  const { rawScans = [], rawScansStats } = data;
+
+  if (rawScans.length === 0) {
+    throw new Error('Aucune donnée à exporter');
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Baggage Found Solution - Superviseur';
+  workbook.created = new Date();
+
+  let periodText = startDate && endDate
+    ? `Du ${new Date(startDate).toLocaleDateString('fr-FR')} au ${new Date(endDate).toLocaleDateString('fr-FR')}`
+    : 'Toutes les données';
   
+  // Ajouter les filtres dans le texte
+  const filters = [];
+  if (flight) filters.push(`Vol: ${flight}`);
+  if (destination) filters.push(`Destination: ${destination}`);
+  if (filters.length > 0) {
+    periodText += ` (${filters.join(', ')})`;
+  }
+
+  // Feuille 1: Info
+  const infoSheet = workbook.addWorksheet('Informations', {
+    properties: { tabColor: { argb: 'FF4472C4' } }
+  });
+
+  infoSheet.getCell('A8').value = 'EXPORT RAW SCANS - DONNÉES BRUTES PURES (SANS PARSING)';
+  infoSheet.getCell('A8').font = { bold: true, size: 14 };
+  infoSheet.getCell('A11').value = 'Aéroport';
+  infoSheet.getCell('B11').value = airportCode;
+  infoSheet.getCell('B11').font = { bold: true };
+  infoSheet.getCell('A12').value = 'Date d\'export';
+  infoSheet.getCell('B12').value = new Date().toLocaleString('fr-FR');
+  infoSheet.getCell('A13').value = 'Période analysée';
+  infoSheet.getCell('B13').value = periodText;
+  infoSheet.getCell('A15').value = 'STATISTIQUES';
+  infoSheet.getCell('A15').font = { bold: true, size: 12 };
+  infoSheet.getCell('A16').value = 'Total Scans';
+  infoSheet.getCell('B16').value = rawScansStats.total;
+  infoSheet.getCell('A17').value = 'Boarding Pass';
+  infoSheet.getCell('B17').value = rawScansStats.by_type.boarding_pass;
+  infoSheet.getCell('A18').value = 'Baggage Tag';
+  infoSheet.getCell('B18').value = rawScansStats.by_type.baggage_tag;
+  infoSheet.getCell('A19').value = 'Check-in';
+  infoSheet.getCell('B19').value = rawScansStats.by_status.checkin;
+  infoSheet.getCell('A20').value = 'Bagage';
+  infoSheet.getCell('B20').value = rawScansStats.by_status.baggage;
+  infoSheet.getCell('A21').value = 'Embarquement';
+  infoSheet.getCell('B21').value = rawScansStats.by_status.boarding;
+  infoSheet.getCell('A22').value = 'Arrivée';
+  infoSheet.getCell('B22').value = rawScansStats.by_status.arrival;
+  infoSheet.getColumn('A').width = 35;
+  infoSheet.getColumn('B').width = 30;
+
+  // Feuille 2: Raw Scans - Données brutes pures
+  const scansSheet = workbook.addWorksheet('Raw Scans');
+  scansSheet.addRow(['ID', 'Type', 'Données Brutes (Raw Data)', 'Check-in', 'Bagage', 'Embarquement', 'Arrivée', 'Tag RFID', 'Scan Count', 'Premier Scan', 'Dernier Scan']);
+  rawScans.forEach((scan: any) => {
+    scansSheet.addRow([
+      scan.id,
+      scan.scan_type === 'boarding_pass' ? 'BP' : 'BT',
+      scan.raw_data, // Données brutes exactes
+      scan.status_checkin ? '✅' : '❌',
+      scan.status_baggage ? '✅' : '❌',
+      scan.status_boarding ? '✅' : '❌',
+      scan.status_arrival ? '✅' : '❌',
+      scan.baggage_rfid_tag || '-',
+      scan.scan_count,
+      new Date(scan.first_scanned_at).toLocaleString('fr-FR'),
+      new Date(scan.last_scanned_at).toLocaleString('fr-FR'),
+    ]);
+  });
+  
+  // Ajuster les largeurs de colonnes
+  scansSheet.getColumn(1).width = 25; // ID
+  scansSheet.getColumn(2).width = 8;  // Type
+  scansSheet.getColumn(3).width = 80; // Raw Data (large)
+  scansSheet.getColumn(4).width = 10; // Check-in
+  scansSheet.getColumn(5).width = 10; // Bagage
+  scansSheet.getColumn(6).width = 13; // Embarquement
+  scansSheet.getColumn(7).width = 10; // Arrivée
+  scansSheet.getColumn(8).width = 15; // Tag RFID
+  scansSheet.getColumn(9).width = 10; // Scan Count
+  scansSheet.getColumn(10).width = 18; // Premier Scan
+  scansSheet.getColumn(11).width = 18; // Dernier Scan
+  
+  // Style pour l'en-tête
+  const headerRow = scansSheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4472C4' }
+  };
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  
+  // Wrap text pour la colonne Raw Data
+  scansSheet.getColumn(3).alignment = { wrapText: true, vertical: 'top' };
+
+  // Générer et sauvegarder
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `BFS_RawScans_${airportCode}_${dateStr}.xlsx`;
   saveAs(blob, fileName);
 };

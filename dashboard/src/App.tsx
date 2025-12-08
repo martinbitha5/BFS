@@ -1,14 +1,15 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import DashboardEnhanced from './pages/DashboardEnhanced';
-import Passengers from './pages/Passengers';
-import Baggages from './pages/Baggages';
-import Export from './pages/Export';
-import BIRS from './pages/BIRS';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import Baggages from './pages/Baggages';
+import BIRS from './pages/BIRS';
+import DashboardEnhanced from './pages/DashboardEnhanced';
+import Export from './pages/Export';
+import Login from './pages/Login';
+import Passengers from './pages/Passengers';
+import RawScans from './pages/RawScans';
+import Register from './pages/Register';
 
 function App() {
   return (
@@ -64,6 +65,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Export />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/raw-scans"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RawScans />
                 </Layout>
               </ProtectedRoute>
             }

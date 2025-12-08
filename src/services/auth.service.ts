@@ -1,6 +1,6 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, UserSession, UserRole } from '../types/user.types';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { User, UserRole, UserSession } from '../types/user.types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -8,6 +8,8 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 const STORAGE_KEYS = {
   SESSION: '@bfs:session',
   USER: '@bfs:user',
+  API_URL: '@bfs:api_url',
+  API_KEY: '@bfs:api_key',
 };
 
 class AuthService {
@@ -161,6 +163,18 @@ class AuthService {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(session.user));
+      
+      // ✅ SAUVEGARDER API_URL ET API_KEY POUR LA SYNCHRONISATION
+      // Ces valeurs sont nécessaires pour sync.service.ts
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      const apiKey = process.env.EXPO_PUBLIC_API_KEY || ''; // Vide si non requise
+      
+      await AsyncStorage.setItem(STORAGE_KEYS.API_URL, apiUrl);
+      await AsyncStorage.setItem(STORAGE_KEYS.API_KEY, apiKey);
+      
+      console.log('[Auth] ✅ Session + API config sauvegardées');
+      console.log('[Auth]    API_URL:', apiUrl);
+      console.log('[Auth]    API_KEY:', apiKey ? 'SET' : 'EMPTY (non requise)');
     } catch (error) {
       console.error('Error saving session:', error);
       throw error;

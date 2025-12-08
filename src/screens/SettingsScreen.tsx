@@ -129,7 +129,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const handleClearLocalData = async () => {
     Alert.alert(
       '⚠️ Nettoyer les données locales',
-      'Cette action va supprimer TOUTES les données locales (passagers, bagages, embarquements) stockées sur cet appareil.\n\nLes données déjà synchronisées avec le cloud ne seront pas affectées.\n\nÊtes-vous sûr de vouloir continuer ?',
+      'Cette action va supprimer TOUTES les données locales (passagers, bagages, embarquements, scans bruts) stockées sur cet appareil.\n\nLes données déjà synchronisées avec le cloud ne seront pas affectées.\n\n⚡️ Utile pour repartir à zéro après un nettoyage cloud.\n\nÊtes-vous sûr de vouloir continuer ?',
       [
         {
           text: 'Annuler',
@@ -158,7 +158,7 @@ export default function SettingsScreen({ navigation }: Props) {
               
               Alert.alert(
                 '✅ Nettoyage réussi',
-                'Toutes les données locales ont été supprimées avec succès.\n\nVous pouvez maintenant scanner de nouveaux boarding pass.',
+                'Toutes les données locales ont été supprimées avec succès.\n\n✨ Base de données locale vierge\n📱 Prêt pour de nouveaux scans\n☁️ Données cloud préservées',
                 [{ text: 'OK' }]
               );
             } catch (error) {

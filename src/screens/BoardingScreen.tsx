@@ -98,6 +98,20 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
+      // ✅ Vérifier dans raw_scans si déjà scanné à l'embarquement
+      const { rawScanService } = await import('../services');
+      const existingScan = await rawScanService.findByRawData(data);
+      if (existingScan && existingScan.statusBoarding) {
+        await playErrorSound();
+        setToastMessage('⚠️ Passager déjà embarqué !');
+        setToastType('warning');
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
+      }
+
       // Récupérer ou créer le statut d'embarquement
       let currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
       
@@ -143,6 +157,15 @@ export default function BoardingScreen({ navigation }: Props) {
         data: JSON.stringify({ passengerId: passenger.id, boarded: true }),
         retryCount: 0,
         userId: user.id,
+      });
+
+      // ✅ Enregistrer dans raw_scans
+      await rawScanService.createOrUpdateRawScan({
+        rawData: data,
+        scanType: 'boarding_pass',
+        statusField: 'boarding',
+        userId: user.id,
+        airportCode: user.airportCode,
       });
 
       // Stocker le passager (nom complet depuis checkin) et le statut
