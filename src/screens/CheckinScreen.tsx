@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
+import { authServiceInstance } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { PassengerData } from '../types/passenger.types';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
@@ -121,15 +121,8 @@ export default function CheckinScreen({ navigation }: Props) {
         result.id
       );
 
-      // Ajouter à la file de synchronisation
-      await databaseServiceInstance.addToSyncQueue({
-        tableName: 'raw_scans',
-        recordId: result.id,
-        operation: result.isNew ? 'insert' : 'update',
-        data: JSON.stringify({ rawData: data, scanType: 'boarding_pass' }),
-        retryCount: 0,
-        userId: user.id,
-      });
+      // ✅ La synchronisation est gérée automatiquement par raw-scan.service.ts
+      // Pas besoin d'ajouter manuellement à la sync queue ici
 
       // Créer un objet PassengerData simplifié pour l'affichage
       // (sans parsing, juste les données brutes)
