@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, BaggageCard, Button, Card, PassengerCard, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
@@ -11,7 +11,7 @@ import { authServiceInstance, databaseServiceInstance } from '../services';
 import { birsDatabaseService } from '../services/birs-database.service';
 import { birsService } from '../services/birs.service';
 import { parserService } from '../services/parser.service';
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
 import { Passenger } from '../types/passenger.types';
 import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
@@ -321,35 +321,30 @@ export default function BaggageScreen({ navigation }: Props) {
         return;
       }
 
-      // EN MODE TEST: Ne pas vérifier si le bagage existe déjà
-      if (!__DEV__) {
-        // Vérifier si le bagage existe déjà dans la table normale
-        const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
-        if (existing) {
-          await playErrorSound();
-          setToastMessage(`Bagage déjà scanné: ${rfidTag}`);
-          setToastType('error');
-          setShowToast(true);
-          setProcessing(false);
-          setScanned(false);
-          setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
-          return;
-        }
+      // Vérifier si le bagage existe déjà dans la table normale
+      const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+      if (existing) {
+        await playErrorSound();
+        setToastMessage(`Bagage déjà scanné: ${rfidTag}`);
+        setToastType('error');
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
+        return;
+      }
 
-        // Vérifier si le bagage existe déjà dans la table internationale
-        const existingInternational = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
-        if (existingInternational) {
-          await playErrorSound();
-          setToastMessage(`Bagage international déjà scanné: ${rfidTag}`);
-          setToastType('error');
-          setShowToast(true);
-          setProcessing(false);
-          setScanned(false);
-          setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
-          return;
-        }
-      } else {
-        console.log('[BAGGAGE SCAN] MODE TEST - Vérification "déjà scanné" désactivée');
+      // Vérifier si le bagage existe déjà dans la table internationale
+      const existingInternational = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
+      if (existingInternational) {
+        await playErrorSound();
+        setToastMessage(`Bagage international déjà scanné: ${rfidTag}`);
+        setToastType('error');
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
+        return;
       }
 
       // Afficher les informations extraites
@@ -373,11 +368,9 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
         let updatedBaggages: Baggage[] = [];
         let baggageId: string | undefined;
         
-        // EN MODE TEST: Ne pas enregistrer dans la base de données
-        if (!__DEV__) {
-          // Si le passager existe, créer un bagage normal
-          if (passenger) {
-            console.log('[BAGGAGE SCAN] Passager trouvé - Création bagage normal');
+        // Si le passager existe, créer un bagage normal
+        if (passenger) {
+          console.log('[BAGGAGE SCAN] Passager trouvé - Création bagage normal');
             
             // Vérifier si c'est un tag attendu (format Air Congo)
             const expectedTags = passenger.baggageBaseNumber
@@ -462,11 +455,6 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
             });
 
             console.log('[BAGGAGE SCAN] Bagage international créé:', internationalBaggage.id);
-          }
-        } else {
-          console.log('[BAGGAGE SCAN] MODE TEST - Bagage non enregistré dans la base de données');
-          // En mode test, simuler les bagages existants pour l'affichage
-          updatedBaggages = baggages;
         }
 
         // Jouer le son de succès
@@ -925,245 +913,4 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerCard: {
-    margin: Spacing.md,
-    marginBottom: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: FontSizes.xl,
-    fontWeight: FontWeights.bold,
-    marginBottom: Spacing.xs / 2,
-  },
-  subtitle: {
-    fontSize: FontSizes.sm,
-  },
-  camera: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanArea: {
-    width: 300,
-    height: 200,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderWidth: 3,
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    left: 'auto',
-    borderLeftWidth: 0,
-    borderRightWidth: 3,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    top: 'auto',
-    bottom: 0,
-    left: 0,
-    borderTopWidth: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 0,
-  },
-  bottomRight: {
-    top: 'auto',
-    bottom: 0,
-    right: 0,
-    left: 'auto',
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 3,
-    borderBottomWidth: 3,
-  },
-  instructionCard: {
-    marginTop: Spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderWidth: 0,
-  },
-  instruction: {
-    color: '#fff',
-    fontSize: FontSizes.md,
-    textAlign: 'center',
-    fontWeight: FontWeights.semibold,
-  },
-  processingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  processingText: {
-    marginTop: Spacing.md,
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.medium,
-  },
-  message: {
-    fontSize: FontSizes.md,
-    marginBottom: Spacing.md,
-    textAlign: 'center',
-  },
-  infoContainer: {
-    maxHeight: '50%',
-    padding: Spacing.md,
-  },
-  progressCard: {
-    marginTop: Spacing.md,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  progressTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.semibold,
-  },
-  baggagesList: {
-    marginTop: Spacing.md,
-  },
-  listTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: FontWeights.bold,
-    marginBottom: Spacing.sm,
-  },
-  completeContainer: {
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-  },
-  completeText: {
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.semibold,
-    textAlign: 'center',
-  },
-  torchButton: {
-    position: 'absolute',
-    bottom: Spacing.xxl,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderRadius: BorderRadius.round,
-    width: 64,
-    height: 64,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.4)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  successContainer: {
-    flex: 1,
-  },
-  successContentContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.lg,
-  },
-  successCard: {
-    width: '100%',
-    maxWidth: 400,
-    padding: Spacing.xl,
-  },
-  successHeader: {
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  successTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: FontWeights.bold,
-    marginTop: Spacing.md,
-  },
-  successInfo: {
-    marginBottom: Spacing.xl,
-  },
-  successText: {
-    fontSize: FontSizes.md,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  newScanButton: {
-    marginTop: Spacing.md,
-  },
-  resultContainer: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  resultLabel: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.medium,
-    flex: 1,
-  },
-  resultValue: {
-    fontSize: FontSizes.lg,
-    fontWeight: FontWeights.semibold,
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: Spacing.md,
-    letterSpacing: 0.5,
-  },
-  scanAgainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md + 4,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.lg,
-    marginTop: Spacing.md,
-    gap: Spacing.sm,
-  },
-  scanAgainButtonText: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.semibold,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  sectionTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.bold,
-  },
-  routeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-});
+
