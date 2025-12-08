@@ -1,7 +1,11 @@
 import { AlertCircle, CheckCircle, FileText, Package, RefreshCw, Upload, XCircle } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+
+// Configuration du worker PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface BirsReport {
   id: string;
@@ -251,11 +255,26 @@ export default function BIRS() {
         let fileContent = '';
         
         if (isPdf) {
-          // Pour les PDFs, extraire le texte avec pdf-parse
+          // Pour les PDFs, extraire le texte avec pdfjs-dist
           console.log('[BIRS] Extraction du PDF...');
           const arrayBuffer = event.target?.result as ArrayBuffer;
-          const pdfData = await pdfParse(new Uint8Array(arrayBuffer));
-          fileContent = pdfData.text;
+          
+          // Charger le PDF
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          console.log('[BIRS] PDF chargé, pages:', pdf.numPages);
+          
+          // Extraire le texte de toutes les pages
+          const textParts: string[] = [];
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+            textParts.push(pageText);
+          }
+          
+          fileContent = textParts.join('\n');
           console.log('[BIRS] PDF extrait, texte:', fileContent.length, 'caractères');
           console.log('[BIRS] Aperçu:', fileContent.substring(0, 500));
         } else {
