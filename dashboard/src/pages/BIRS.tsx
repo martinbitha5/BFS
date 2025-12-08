@@ -84,49 +84,118 @@ export default function BIRS() {
     const items: any[] = [];
     const lines = content.split('\n');
 
+    console.log('[BIRS Parser] Total lignes:', lines.length);
+
     if (reportType === 'ethiopian') {
-      // Format Ethiopian: colonnes fixes
+      // Format Ethiopian: Bag_ID  Pax_Surname  PNR  LSeq  Class  PSN  KG  Route  Categories
+      
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line || line.length < 50) continue;
-
-        // Extraction basique (à adapter selon le format réel)
-        const bagId = line.substring(0, 10).trim();
-        const passengerName = line.substring(10, 40).trim();
-        const pnr = line.substring(40, 46).trim();
-        const weight = parseFloat(line.substring(60, 65).trim()) || 0;
-
-        if (bagId && passengerName) {
-          items.push({
-            bagId,
-            passengerName,
-            pnr,
-            weight,
-            class: 'Y',
-            route: `${origin}*${user?.airport_code}`
-          });
-        }
+        
+        // Ignorer les lignes vides ou trop courtes
+        if (!line || line.length < 20) continue;
+        
+        // Ignorer les en-têtes
+        if (line.includes('Bag ID') || line.includes('DEVICE ID') || line.includes('Route:')) continue;
+        
+        // Détecter les lignes de bagages (commencent par un tag de 8+ caractères)
+        const bagIdMatch = line.match(/^([0-9A-Z]{8,15})/);
+        if (!bagIdMatch) continue;
+        
+        const bagId = bagIdMatch[1];
+        
+        // Séparer par espaces multiples (2+)
+        const parts = line.split(/\s{2,}/).map(p => p.trim());
+        
+        // Extraire les informations
+        let passengerName = 'UNKNOWN';
+        let pnr = '';
+        let baggageClass = 'Y';
+        let weight = 0;
+        let route = `${origin}-${user?.airport_code}`;
+        let categories = '';
+        let psn = '';
+        
+        // Parser les colonnes Ethiopian
+        if (parts.length >= 2) passengerName = parts[1];
+        if (parts.length >= 3) pnr = parts[2];
+        if (parts.length >= 5) baggageClass = parts[4];
+        if (parts.length >= 6) psn = parts[5];
+        if (parts.length >= 7) weight = parseFloat(parts[6]) || 0;
+        if (parts.length >= 8) route = parts[7];
+        if (parts.length >= 9) categories = parts[8];
+        
+        const loaded = categories.includes('PRIO') || baggageClass === 'Prio';
+        const received = false;
+        
+        console.log('[BIRS Parser] Bagage Ethiopian:', { bagId, passengerName, pnr, baggageClass, weight, categories });
+        
+        items.push({
+          bagId,
+          passengerName,
+          pnr,
+          seatNumber: psn,
+          class: baggageClass,
+          psn,
+          weight,
+          route,
+          categories,
+          loaded,
+          received
+        });
       }
     } else if (reportType === 'turkish') {
-      // Format Turkish: liste avec tags
+      // Format Turkish: N° TAG | Billet/Expédit | Nom Passager/Destinataire | Poids | Comment | Lié Etat
+      // Exemple: 235430756  ZZZZZZ  TSHRIEMBA  0  LOADED  Received
+      
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue;
-
-        // Rechercher les patterns de tags
-        const tagMatch = line.match(/TAG[0-9]{10}/i) || line.match(/[0-9]{10}/);
-        const nameMatch = line.match(/[A-Z]{2,}\s+[A-Z]+/);
-        const weightMatch = line.match(/(\d+\.?\d*)\s*KG/i);
-
-        if (tagMatch) {
-          items.push({
-            bagId: tagMatch[0],
-            passengerName: nameMatch ? nameMatch[0] : 'UNKNOWN',
-            weight: weightMatch ? parseFloat(weightMatch[1]) : 0,
-            loaded: true,
-            received: false
-          });
-        }
+        
+        // Ignorer les lignes vides ou trop courtes
+        if (!line || line.length < 15) continue;
+        
+        // Ignorer les en-têtes et pages
+        if (line.includes('N° TAG') || line.includes('TURKISH AIRLINES') || 
+            line.includes('Page') || line.includes('Manifeste') ||
+            line.includes('Escale de réception')) continue;
+        
+        // Séparer par espaces multiples (2+)
+        const parts = line.split(/\s{2,}/).map(p => p.trim());
+        
+        // Format Turkish: [TAG, BILLET, NOM, POIDS, COMMENT, ETAT]
+        if (parts.length < 4) continue; // Besoin d'au moins 4 colonnes
+        
+        const bagId = parts[0]; // N° TAG (peut être court ou avec caractères spéciaux)
+        const billet = parts[1] || 'ZZZZZZ'; // Billet/Expédit (souvent ZZZZZZ)
+        const passengerName = parts[2] || 'UNKNOWN'; // Nom Passager
+        const weight = parseFloat(parts[3]) || 0; // Poids
+        const comment = parts[4] || ''; // Comment (LOADED, NOT, etc.)
+        const etat = parts[5] || ''; // Lié Etat (Received)
+        
+        // Déterminer loaded/received
+        const loaded = comment.includes('LOADED') || comment === '0';
+        const received = etat.includes('Received');
+        
+        console.log('[BIRS Parser] Bagage Turkish:', { 
+          bagId, 
+          billet, 
+          passengerName, 
+          weight, 
+          comment, 
+          loaded, 
+          received 
+        });
+        
+        items.push({
+          bagId,
+          passengerName,
+          pnr: billet !== 'ZZZZZZ' ? billet : '',
+          weight,
+          route: `${origin}-${user?.airport_code}`,
+          categories: comment,
+          loaded,
+          received
+        });
       }
     } else {
       // Format générique: CSV-like
@@ -146,6 +215,7 @@ export default function BIRS() {
       }
     }
 
+    console.log('[BIRS Parser] Total bagages parsés:', items.length);
     return items;
   };
 
@@ -190,10 +260,10 @@ export default function BIRS() {
         }
 
         // Uploader vers l'API
-        console.log('[BIRS] Upload vers API...');
+        console.log('[BIRS] Upload vers API avec', items.length, 'bagages...');
         const response = await api.post('/api/v1/birs/upload', {
           fileName: selectedFile.name,
-          fileContent: fileContent.substring(0, 10000), // Limiter la taille
+          fileContent: fileContent, // ✅ Envoyer le fichier complet (pas de limite)
           reportType,
           flightNumber,
           flightDate,
@@ -201,7 +271,7 @@ export default function BIRS() {
           destination: user.airport_code,
           airline,
           airlineCode: airline.substring(0, 2).toUpperCase(),
-          uploadedBy: user.id, // ✅ Envoyer l'ID au lieu du nom
+          uploadedBy: user.id,
           airportCode: user.airport_code,
           items
         });
