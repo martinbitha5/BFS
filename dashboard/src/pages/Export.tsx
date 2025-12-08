@@ -231,6 +231,40 @@ export default function Export() {
       const statsRes = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
       exportData.statistics = statsRes.data.data;
 
+      // Récupérer les rapports BIRS réconciliés
+      try {
+        const birsRes = await api.get(`/api/v1/birs/reports?airport=${user.airport_code}`);
+        const birsReports = birsRes.data.data || [];
+        
+        // Pour chaque rapport, récupérer ses items
+        const birsItems: any[] = [];
+        for (const report of birsReports) {
+          try {
+            const itemsRes = await api.get(`/api/v1/birs/reports/${report.id}/items`);
+            const items = itemsRes.data.data || [];
+            
+            // Ajouter le numéro de vol et la date à chaque item
+            items.forEach((item: any) => {
+              birsItems.push({
+                ...item,
+                flight_number: report.flight_number,
+                flight_date: report.flight_date,
+                airline: report.airline,
+                report_type: report.report_type,
+              });
+            });
+          } catch (err) {
+            console.error(`Erreur récupération items BIRS pour rapport ${report.id}:`, err);
+          }
+        }
+        
+        exportData.birsItems = birsItems;
+        console.log(`✅ ${birsItems.length} bagages BIRS récupérés depuis ${birsReports.length} rapports`);
+      } catch (err) {
+        console.error('Erreur récupération rapports BIRS:', err);
+        exportData.birsItems = [];
+      }
+
       // Filtrer par dates et destination si spécifiées
       if (exportData.passengers) {
         exportData.passengers = exportData.passengers.filter((p: any) => {

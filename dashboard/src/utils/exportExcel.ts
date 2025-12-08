@@ -5,6 +5,7 @@ interface ExportData {
   passengers?: any[];
   baggages?: any[];
   statistics?: any;
+  birsItems?: any[];
 }
 
 /**
@@ -334,6 +335,118 @@ export const exportToExcel = async (
         });
       }
     });
+  }
+
+  // =============================================
+  // FEUILLE 5 : BIRS INTERNATIONAL (BAGAGES ATTENDUS)
+  // =============================================
+  const { birsItems = [] } = data;
+  
+  if (birsItems.length > 0) {
+    const birsSheet = workbook.addWorksheet('BIRS International', {
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
+    });
+
+    // En-têtes
+    birsSheet.addRow([
+      'N° Bagage',
+      'Passager',
+      'PNR',
+      'Vol',
+      'Date',
+      'Compagnie',
+      'Classe',
+      'Poids (KG)',
+      'Route',
+      'Catégories',
+      'Statut',
+      'Tag RFID Scanné'
+    ]);
+
+    // Style des en-têtes
+    birsSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    birsSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0066CC' }
+    };
+    birsSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    birsSheet.getRow(1).height = 25;
+
+    // Données
+    birsItems.forEach((item: any) => {
+      // Déterminer le statut
+      let statut = '❌ NON ARRIVÉ';
+      let rfidTag = '-';
+      
+      if (item.reconciled) {
+        statut = '✅ ARRIVÉ';
+        rfidTag = item.rfid_tag || '-';
+      }
+
+      birsSheet.addRow([
+        item.bag_id || '-',
+        item.passenger_name || '-',
+        item.pnr || '-',
+        item.flight_number || '-',
+        item.flight_date ? new Date(item.flight_date).toLocaleDateString('fr-FR') : '-',
+        item.airline || '-',
+        item.class || '-',
+        item.weight || 0,
+        item.route || '-',
+        item.categories || '-',
+        statut,
+        rfidTag
+      ]);
+    });
+
+    // Largeurs de colonnes
+    birsSheet.getColumn(1).width = 15;  // N° Bagage
+    birsSheet.getColumn(2).width = 25;  // Passager
+    birsSheet.getColumn(3).width = 12;  // PNR
+    birsSheet.getColumn(4).width = 12;  // Vol
+    birsSheet.getColumn(5).width = 12;  // Date
+    birsSheet.getColumn(6).width = 20;  // Compagnie
+    birsSheet.getColumn(7).width = 10;  // Classe
+    birsSheet.getColumn(8).width = 12;  // Poids
+    birsSheet.getColumn(9).width = 15;  // Route
+    birsSheet.getColumn(10).width = 15; // Catégories
+    birsSheet.getColumn(11).width = 18; // Statut
+    birsSheet.getColumn(12).width = 20; // RFID
+
+    // Bordures et alignement
+    birsSheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          
+          // Couleur selon le statut (colonne 11)
+          if (colNumber === 11) {
+            if (cell.value === '✅ ARRIVÉ') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF90EE90' } // Vert clair
+              };
+            } else if (cell.value === '❌ NON ARRIVÉ') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFCCCC' } // Rouge clair
+              };
+            }
+          }
+        });
+      }
+    });
+
+    console.log(`✅ Feuille BIRS ajoutée avec ${birsItems.length} bagages`);
   }
 
   // Générer et sauvegarder le fichier
