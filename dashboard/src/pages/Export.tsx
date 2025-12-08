@@ -2,6 +2,7 @@ import { AlertCircle, Calendar, CheckCircle, FileSpreadsheet, MapPin, Plane } fr
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { parseRawScans } from '../utils/boardingPassParser';
 import { exportRawScansToExcel, exportToExcel } from '../utils/exportExcel';
 
 export default function Export() {
@@ -29,17 +30,24 @@ export default function Export() {
   const fetchFlights = async () => {
     if (!user?.airport_code) return;
     try {
-      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
-      const passengers = response.data.data || [];
-      const uniqueFlights = [...new Set(passengers.map((p: any) => p.flight_number))]
-        .filter((flight: any) => flight)
-        .sort() as string[];
-      setFlights(uniqueFlights);
-      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airport_code}:`, uniqueFlights);
+      // Récupérer les raw scans et les parser
+      const response = await api.get(`/api/v1/raw-scans?airport=${user.airport_code}&limit=1000`);
+      const rawScans = response.data.data || [];
       
-      if (uniqueFlights.length === 0) {
-        console.warn('⚠️  Aucun passager parsé trouvé. Utilisez "Export Données Brutes" pour exporter les raw scans.');
+      if (rawScans.length === 0) {
+        console.warn('⚠️  Aucun raw scan trouvé pour cet aéroport.');
+        setFlights([]);
+        return;
       }
+      
+      // Parser pour extraire les vols
+      const parsedPassengers = parseRawScans(rawScans);
+      const uniqueFlights = [...new Set(parsedPassengers.map(p => p.flightNumber))]
+        .filter((flight: any) => flight && flight !== 'UNKNOWN')
+        .sort() as string[];
+      
+      setFlights(uniqueFlights);
+      console.log(`✅ ${uniqueFlights.length} vols trouvés depuis ${rawScans.length} raw scans:`, uniqueFlights);
     } catch (err) {
       console.error('Error fetching flights:', err);
       setFlights([]);
@@ -49,12 +57,23 @@ export default function Export() {
   const fetchDestinations = async () => {
     if (!user?.airport_code) return;
     try {
-      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
-      const passengers = response.data.data || [];
-      const uniqueDestinations = [...new Set(passengers.map((p: any) => p.arrival))]
-        .filter((dest: any) => dest)
+      // Récupérer les raw scans et les parser
+      const response = await api.get(`/api/v1/raw-scans?airport=${user.airport_code}&limit=1000`);
+      const rawScans = response.data.data || [];
+      
+      if (rawScans.length === 0) {
+        setDestinations([]);
+        return;
+      }
+      
+      // Parser pour extraire les destinations
+      const parsedPassengers = parseRawScans(rawScans);
+      const uniqueDestinations = [...new Set(parsedPassengers.map(p => p.arrival))]
+        .filter((dest: any) => dest && dest !== 'UNKNOWN')
         .sort() as string[];
+      
       setDestinations(uniqueDestinations);
+      console.log(`✅ ${uniqueDestinations.length} destinations trouvées`);
     } catch (err) {
       console.error('Error fetching destinations:', err);
       setDestinations([]);
@@ -136,22 +155,69 @@ export default function Export() {
         return;
       }
 
-      // Récupérer les passagers pour l'export avec parsing
+      // Récupérer les raw scans et les parser pour l'export avec parsing
       if (exportType === 'all' || exportType === 'passengers') {
-        let url = `/api/v1/passengers?airport=${user.airport_code}`;
-        if (selectedFlight !== 'all') url += `&flight=${selectedFlight}`;
-        const passengersRes = await api.get(url);
-        exportData.passengers = passengersRes.data.data;
+        let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
+        
+        // Appliquer les filtres de dates
+        if (dateFilterType === 'specific' && specificDate) {
+          url += `&start_date=${specificDate}&end_date=${specificDate}`;
+        } else {
+          if (startDate) url += `&start_date=${startDate}`;
+          if (endDate) url += `&end_date=${endDate}`;
+        }
+        
+        const rawScansRes = await api.get(url);
+        const rawScans = rawScansRes.data.data || [];
         
         // Vérifier qu'il y a des données
-        if (!exportData.passengers || exportData.passengers.length === 0) {
+        if (rawScans.length === 0) {
           setMessage({
             type: 'error',
-            text: 'Aucun passager parsé trouvé. Utilisez "Export Données Brutes" pour exporter les raw scans.'
+            text: 'Aucun raw scan trouvé pour cet aéroport et cette période.'
           });
           setExporting(false);
           return;
         }
+        
+        // Parser les raw scans pour extraire les informations
+        const parsedPassengers = parseRawScans(rawScans);
+        
+        if (parsedPassengers.length === 0) {
+          setMessage({
+            type: 'error',
+            text: 'Erreur lors du parsing des raw scans. Utilisez "Export Données Brutes".'
+          });
+          setExporting(false);
+          return;
+        }
+        
+        // Transformer en format compatible avec exportToExcel (snake_case)
+        let passengers = parsedPassengers.map((p: any) => ({
+          pnr: p.pnr,
+          full_name: p.fullName,
+          flight_number: p.flightNumber,
+          departure: p.departure,
+          arrival: p.arrival,
+          seat_number: p.seatNumber,
+          checked_in_at: p.checkinAt || new Date().toISOString(),
+          boarding_status: [{ boarded: false }], // Pas d'info boarding dans raw scans
+          baggage_count: 0, // Pas d'info bagages dans raw scans
+          scan_count: p.scanCount,
+        }));
+        
+        // Filtrer par vol si nécessaire
+        if (selectedFlight !== 'all') {
+          passengers = passengers.filter((p: any) => p.flight_number === selectedFlight);
+        }
+        
+        // Filtrer par destination si nécessaire
+        if (selectedDestination !== 'all') {
+          passengers = passengers.filter((p: any) => p.arrival === selectedDestination);
+        }
+        
+        exportData.passengers = passengers;
+        console.log(`✅ ${parsedPassengers.length} raw scans parsés → ${passengers.length} passagers après filtres`);
       }
 
       if (exportType === 'all' || exportType === 'baggages') {
