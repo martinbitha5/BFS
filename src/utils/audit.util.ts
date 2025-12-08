@@ -1,5 +1,5 @@
 import { auditService } from '../services/audit.service';
-import { authServiceInstance } from '../services';
+import { authService } from '../services/auth.service';
 import { AuditAction } from '../types/audit.types';
 
 /**
@@ -12,7 +12,7 @@ export const logAudit = async (
   entityId?: string
 ): Promise<void> => {
   try {
-    const user = await authServiceInstance.getCurrentUser();
+    const user = await authService.getCurrentUser();
     if (user) {
       await auditService.logAction(user.id, user.email, user.airportCode, action, entityType, details, entityId);
     }
