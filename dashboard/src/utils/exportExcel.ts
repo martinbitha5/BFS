@@ -375,13 +375,14 @@ export const exportToExcel = async (
 
     // Données
     birsItems.forEach((item: any) => {
-      // Déterminer le statut
+      // Déterminer le statut (réconcilié = a une date de réconciliation)
       let statut = '❌ NON ARRIVÉ';
       let rfidTag = '-';
       
-      if (item.reconciled) {
+      if (item.reconciled_at) {
         statut = '✅ ARRIVÉ';
-        rfidTag = item.rfid_tag || '-';
+        // Le RFID tag est stocké dans international_baggage, pas directement dans l'item
+        rfidTag = item.rfid_tag || item.bag_id || '-';
       }
 
       birsSheet.addRow([

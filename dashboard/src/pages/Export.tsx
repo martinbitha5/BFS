@@ -236,12 +236,18 @@ export default function Export() {
         const birsRes = await api.get(`/api/v1/birs/reports?airport=${user.airport_code}`);
         const birsReports = birsRes.data.data || [];
         
+        console.log(`[Export] ${birsReports.length} rapports BIRS trouvés`);
+        
         // Pour chaque rapport, récupérer ses items
         const birsItems: any[] = [];
         for (const report of birsReports) {
           try {
-            const itemsRes = await api.get(`/api/v1/birs/reports/${report.id}/items`);
-            const items = itemsRes.data.data || [];
+            // La route /reports/:id renvoie le rapport avec ses items
+            const reportRes = await api.get(`/api/v1/birs/reports/${report.id}`);
+            const reportData = reportRes.data.data;
+            const items = reportData.items || [];
+            
+            console.log(`[Export] Rapport ${report.id}: ${items.length} items`);
             
             // Ajouter le numéro de vol et la date à chaque item
             items.forEach((item: any) => {
