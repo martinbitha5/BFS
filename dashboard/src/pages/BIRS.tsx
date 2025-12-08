@@ -263,15 +263,28 @@ export default function BIRS() {
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           console.log('[BIRS] PDF chargé, pages:', pdf.numPages);
           
-          // Extraire le texte de toutes les pages
+          // Extraire le texte de toutes les pages avec positionnement
           const textParts: string[] = [];
           for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item: any) => item.str)
-              .join(' ');
-            textParts.push(pageText);
+            
+            // Grouper les items par ligne en utilisant leur position Y
+            const lines: { [key: number]: string[] } = {};
+            textContent.items.forEach((item: any) => {
+              const y = Math.round(item.transform[5]); // Position Y
+              if (!lines[y]) lines[y] = [];
+              lines[y].push(item.str);
+            });
+            
+            // Trier par Y décroissant (du haut vers le bas) et joindre
+            const sortedLines = Object.keys(lines)
+              .map(Number)
+              .sort((a, b) => b - a)
+              .map(y => lines[y].join(' ').trim())
+              .filter(line => line.length > 0);
+            
+            textParts.push(sortedLines.join('\n'));
           }
           
           fileContent = textParts.join('\n');
