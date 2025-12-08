@@ -28,6 +28,7 @@ interface ParsedPassenger {
 export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
   try {
     const data = rawScan.raw_data;
+    console.log('🔍 [Parser] Parsing raw data:', data.substring(0, 100) + '...');
     
     // ===== EXTRACTION DU NOM =====
     // Format: M1NOM/PRENOM [LETTRES_OPTIONNELLES]PNR
@@ -39,13 +40,16 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
     // Chercher le pattern M1 ou M2 suivi du nom
     const namePattern = /^M[12]([A-Z\/\s]+?)(?:\s+)?([A-Z]{2,6})?([A-Z]{6})/;
     const nameMatch = data.match(namePattern);
+    console.log('📝 [Parser] Name match:', nameMatch);
     
     if (nameMatch) {
       let namePart = nameMatch[1].trim();
+      console.log('👤 [Parser] Name part extracted:', namePart);
       
       // Extraire le PNR (6 lettres avant ou après le nom)
       // Pattern pour trouver le PNR: 6 lettres consécutives
       const pnrCandidates = data.match(/\b([A-Z]{6})\b/g) || [];
+      console.log('🎫 [Parser] PNR candidates:', pnrCandidates);
       
       // Le PNR est généralement le premier bloc de 6 lettres après le nom
       // Mais certains noms peuvent contenir des lettres qui ressemblent au PNR
@@ -53,6 +57,7 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
         // Vérifier que ce n'est pas un code aéroport (3 lettres répétées)
         if (!candidate.match(/^([A-Z]{3})\1$/)) {
           pnr = candidate;
+          console.log('✅ [Parser] PNR found:', pnr);
           break;
         }
       }
@@ -60,6 +65,7 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
       // Nettoyer le nom (enlever le PNR s'il est collé)
       if (namePart.includes(pnr)) {
         namePart = namePart.replace(pnr, '').trim();
+        console.log('🧹 [Parser] Name cleaned:', namePart);
       }
       
       // Séparer nom/prénom
@@ -68,6 +74,7 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
         lastName = parts[0].trim();
         firstName = parts[1]?.trim() || '';
         fullName = `${lastName} ${firstName}`.trim();
+        console.log('👥 [Parser] Full name:', fullName);
       } else {
         fullName = namePart;
         lastName = namePart;
@@ -83,15 +90,18 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
     // Chercher le pattern: 3 lettres (départ) + 3 lettres (arrivée) + 2 lettres (compagnie)
     const routePattern = /\s([A-Z]{3})([A-Z]{3})([A-Z]{2})\s/;
     const routeMatch = data.match(routePattern);
+    console.log('🛫 [Parser] Route match:', routeMatch);
     
     if (routeMatch) {
       departure = routeMatch[1];
       arrival = routeMatch[2];
       airline = routeMatch[3];
+      console.log(`✈️ [Parser] Route: ${departure} → ${arrival} (${airline})`);
     } else {
       // Fallback: chercher juste 6 lettres consécutives (3+3)
       const simpleRoutePattern = /\s([A-Z]{3})([A-Z]{3})[A-Z]{2}/;
       const simpleMatch = data.match(simpleRoutePattern);
+      console.log('🛫 [Parser] Simple route match:', simpleMatch);
       if (simpleMatch) {
         departure = simpleMatch[1];
         arrival = simpleMatch[2];
@@ -106,8 +116,10 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
       // Chercher les chiffres après la compagnie
       const flightPattern = new RegExp(`${airline}\\s*(\\d{3,4})`);
       const flightMatch = data.match(flightPattern);
+      console.log('✈️ [Parser] Flight match:', flightMatch);
       if (flightMatch) {
         flightNumber = `${airline} ${flightMatch[1]}`;
+        console.log('🎫 [Parser] Flight number:', flightNumber);
       }
     } else {
       // Fallback: chercher 2 lettres + 3-4 chiffres
@@ -143,7 +155,7 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
     const seqMatch = data.match(seqPattern);
     const sequenceNumber = seqMatch ? seqMatch[1] : 'N/A';
     
-    return {
+    const result = {
       fullName,
       firstName,
       lastName,
@@ -159,8 +171,11 @@ export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
       checkinAt: rawScan.checkin_at,
       scanCount: rawScan.scan_count || 1,
     };
+    
+    console.log('✅ [Parser] Result:', { fullName, pnr, flightNumber, departure, arrival });
+    return result;
   } catch (error) {
-    console.error('Erreur lors du parsing:', error);
+    console.error('❌ [Parser] Erreur lors du parsing:', error);
     return null;
   }
 };
