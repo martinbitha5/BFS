@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
-// Configuration du worker PDF.js (utiliser le worker local)
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Configuration du worker PDF.js - utiliser jsdelivr CDN (plus fiable)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface BirsReport {
   id: string;
