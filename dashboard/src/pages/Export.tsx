@@ -30,11 +30,16 @@ export default function Export() {
     if (!user?.airport_code) return;
     try {
       const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
-      const uniqueFlights = [...new Set(response.data.data.map((p: any) => p.flight_number))]
+      const passengers = response.data.data || [];
+      const uniqueFlights = [...new Set(passengers.map((p: any) => p.flight_number))]
         .filter((flight: any) => flight)
         .sort() as string[];
       setFlights(uniqueFlights);
-      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airport_code}: `, uniqueFlights);
+      console.log(`${uniqueFlights.length} vols trouvés pour ${user.airport_code}:`, uniqueFlights);
+      
+      if (uniqueFlights.length === 0) {
+        console.warn('⚠️  Aucun passager parsé trouvé. Utilisez "Export Données Brutes" pour exporter les raw scans.');
+      }
     } catch (err) {
       console.error('Error fetching flights:', err);
       setFlights([]);
@@ -45,7 +50,8 @@ export default function Export() {
     if (!user?.airport_code) return;
     try {
       const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
-      const uniqueDestinations = [...new Set(response.data.data.map((p: any) => p.arrival))]
+      const passengers = response.data.data || [];
+      const uniqueDestinations = [...new Set(passengers.map((p: any) => p.arrival))]
         .filter((dest: any) => dest)
         .sort() as string[];
       setDestinations(uniqueDestinations);
@@ -130,6 +136,23 @@ export default function Export() {
         return;
       }
 
+      // Récupérer les passagers pour l'export avec parsing
+      if (exportType === 'all' || exportType === 'passengers') {
+        let url = `/api/v1/passengers?airport=${user.airport_code}`;
+        if (selectedFlight !== 'all') url += `&flight=${selectedFlight}`;
+        const passengersRes = await api.get(url);
+        exportData.passengers = passengersRes.data.data;
+        
+        // Vérifier qu'il y a des données
+        if (!exportData.passengers || exportData.passengers.length === 0) {
+          setMessage({
+            type: 'error',
+            text: 'Aucun passager parsé trouvé. Utilisez "Export Données Brutes" pour exporter les raw scans.'
+          });
+          setExporting(false);
+          return;
+        }
+      }
 
       if (exportType === 'all' || exportType === 'baggages') {
         let url = `/api/v1/baggage?airport=${user.airport_code}`;

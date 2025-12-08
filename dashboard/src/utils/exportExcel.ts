@@ -389,6 +389,26 @@ export const exportRawScansToExcel = async (
     properties: { tabColor: { argb: 'FF4472C4' } }
   });
 
+  // Charger le logo
+  try {
+    const response = await fetch('/assets/logo-ats-csi.png');
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const imageId = workbook.addImage({
+      buffer: arrayBuffer,
+      extension: 'png',
+    });
+
+    // Ajouter le logo dans la feuille (colonnes A-D, lignes 1-5)
+    infoSheet.addImage(imageId, {
+      tl: { col: 0, row: 0 },
+      ext: { width: 250, height: 120 }
+    });
+  } catch (error) {
+    console.warn('Impossible de charger le logo:', error);
+  }
+
   infoSheet.getCell('A8').value = 'EXPORT RAW SCANS - DONNÉES BRUTES PURES (SANS PARSING)';
   infoSheet.getCell('A8').font = { bold: true, size: 14 };
   infoSheet.getCell('A11').value = 'Aéroport';
