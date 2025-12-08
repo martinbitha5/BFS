@@ -1,6 +1,7 @@
 /**
  * Parser de boarding pass BCBP (Bar Coded Boarding Pass)
  * Extrait les informations des raw scans pour l'export
+ * Basé sur la logique de l'API backend
  */
 
 interface ParsedPassenger {
@@ -22,74 +23,125 @@ interface ParsedPassenger {
 
 /**
  * Parse un raw scan de boarding pass
+ * Format: M1MASIMANGO/ISSIAKA GREOIFLBU FIHMDKET 0080 235Y031J0095 177...
  */
 export const parseBoardingPass = (rawScan: any): ParsedPassenger | null => {
   try {
     const data = rawScan.raw_data;
     
-    // Format BCBP: M1SURNAME/FIRSTNAME PNR FROMTOAA FLIGHTNUMBER...
-    // Exemple: M1MASIMANGO/ISSIAKA GREOIFLBU FIHMDKET 0080...
-    
-    // Extraire le nom (entre M1 et le PNR)
-    const nameMatch = data.match(/^M[12]([A-Z\s\/]+?)(?:\s+)?([A-Z]{1,4})?([A-Z]{6})/);
+    // ===== EXTRACTION DU NOM =====
+    // Format: M1NOM/PRENOM [LETTRES_OPTIONNELLES]PNR
     let fullName = 'UNKNOWN';
     let firstName = '';
     let lastName = '';
     let pnr = 'UNKNOWN';
     
+    // Chercher le pattern M1 ou M2 suivi du nom
+    const namePattern = /^M[12]([A-Z\/\s]+?)(?:\s+)?([A-Z]{2,6})?([A-Z]{6})/;
+    const nameMatch = data.match(namePattern);
+    
     if (nameMatch) {
-      const namePart = nameMatch[1].trim();
-      fullName = namePart.replace(/\//g, ' ');
+      let namePart = nameMatch[1].trim();
       
-      // Séparer nom et prénom (format: NOM/PRENOM)
+      // Extraire le PNR (6 lettres avant ou après le nom)
+      // Pattern pour trouver le PNR: 6 lettres consécutives
+      const pnrCandidates = data.match(/\b([A-Z]{6})\b/g) || [];
+      
+      // Le PNR est généralement le premier bloc de 6 lettres après le nom
+      // Mais certains noms peuvent contenir des lettres qui ressemblent au PNR
+      for (const candidate of pnrCandidates) {
+        // Vérifier que ce n'est pas un code aéroport (3 lettres répétées)
+        if (!candidate.match(/^([A-Z]{3})\1$/)) {
+          pnr = candidate;
+          break;
+        }
+      }
+      
+      // Nettoyer le nom (enlever le PNR s'il est collé)
+      if (namePart.includes(pnr)) {
+        namePart = namePart.replace(pnr, '').trim();
+      }
+      
+      // Séparer nom/prénom
       if (namePart.includes('/')) {
         const parts = namePart.split('/');
         lastName = parts[0].trim();
         firstName = parts[1]?.trim() || '';
-      }
-      
-      // Extraire le PNR (6 lettres majuscules)
-      const pnrMatch = data.match(/([A-Z]{6})(?:\s+|\w{3})/);
-      if (pnrMatch) {
-        pnr = pnrMatch[1];
+        fullName = `${lastName} ${firstName}`.trim();
+      } else {
+        fullName = namePart;
+        lastName = namePart;
       }
     }
     
-    // Extraire les codes aéroport (FROMTO - 6 caractères)
-    const routeMatch = data.match(/([A-Z]{3})([A-Z]{3})/);
+    // ===== EXTRACTION DE LA ROUTE (DÉPART/ARRIVÉE) =====
+    // Format: FIHMDKET où FIH=départ, MDK=arrivée, ET=compagnie
     let departure = 'UNKNOWN';
     let arrival = 'UNKNOWN';
+    let airline = '';
+    
+    // Chercher le pattern: 3 lettres (départ) + 3 lettres (arrivée) + 2 lettres (compagnie)
+    const routePattern = /\s([A-Z]{3})([A-Z]{3})([A-Z]{2})\s/;
+    const routeMatch = data.match(routePattern);
     
     if (routeMatch) {
       departure = routeMatch[1];
       arrival = routeMatch[2];
+      airline = routeMatch[3];
+    } else {
+      // Fallback: chercher juste 6 lettres consécutives (3+3)
+      const simpleRoutePattern = /\s([A-Z]{3})([A-Z]{3})[A-Z]{2}/;
+      const simpleMatch = data.match(simpleRoutePattern);
+      if (simpleMatch) {
+        departure = simpleMatch[1];
+        arrival = simpleMatch[2];
+      }
     }
     
-    // Extraire le numéro de vol (généralement après la route)
-    const flightMatch = data.match(/([A-Z]{2})\s*(\d{3,4})/);
+    // ===== EXTRACTION DU NUMÉRO DE VOL =====
+    // Format: ET 0080 (compagnie + 4 chiffres)
     let flightNumber = 'UNKNOWN';
     
-    if (flightMatch) {
-      flightNumber = `${flightMatch[1]} ${flightMatch[2]}`;
+    if (airline) {
+      // Chercher les chiffres après la compagnie
+      const flightPattern = new RegExp(`${airline}\\s*(\\d{3,4})`);
+      const flightMatch = data.match(flightPattern);
+      if (flightMatch) {
+        flightNumber = `${airline} ${flightMatch[1]}`;
+      }
+    } else {
+      // Fallback: chercher 2 lettres + 3-4 chiffres
+      const genericFlightPattern = /\s([A-Z]{2})\s*(\d{3,4})/;
+      const genericMatch = data.match(genericFlightPattern);
+      if (genericMatch) {
+        flightNumber = `${genericMatch[1]} ${genericMatch[2]}`;
+      }
     }
     
-    // Extraire le siège (format: 12A, 23B, etc.)
-    const seatMatch = data.match(/\s(\d{1,3}[A-Z])\s/);
+    // ===== EXTRACTION DU SIÈGE =====
+    // Format: 031J (3 chiffres + lettre)
+    const seatPattern = /\s(\d{3}[A-Z])\s/;
+    const seatMatch = data.match(seatPattern);
     const seatNumber = seatMatch ? seatMatch[1] : 'N/A';
     
-    // Extraire le numéro de séquence
-    const seqMatch = data.match(/\d{4}[A-Z]\d{3}[A-Z]/);
-    const sequenceNumber = seqMatch ? seqMatch[0] : 'N/A';
-    
-    // Date d'embarquement (si disponible dans les données)
-    const dateMatch = data.match(/(\d{3})/); // Julian date
+    // ===== DATE D'EMBARQUEMENT =====
+    // Format Julian: jour 235 de l'année = 23 août
+    const julianPattern = /\s(\d{3})[A-Z]/;
+    const julianMatch = data.match(julianPattern);
     let boardingDate = 'N/A';
-    if (dateMatch) {
-      const julianDate = parseInt(dateMatch[1]);
+    
+    if (julianMatch) {
+      const julianDay = parseInt(julianMatch[1]);
       const year = new Date().getFullYear();
-      const date = new Date(year, 0, julianDate);
+      const date = new Date(year, 0); // 1er janvier
+      date.setDate(julianDay);
       boardingDate = date.toLocaleDateString('fr-FR');
     }
+    
+    // ===== NUMÉRO DE SÉQUENCE =====
+    const seqPattern = /(\d{4})/;
+    const seqMatch = data.match(seqPattern);
+    const sequenceNumber = seqMatch ? seqMatch[1] : 'N/A';
     
     return {
       fullName,
