@@ -201,7 +201,7 @@ export default function BIRS() {
           destination: user.airport_code,
           airline,
           airlineCode: airline.substring(0, 2).toUpperCase(),
-          uploadedBy: user.full_name,
+          uploadedBy: user.id, // ✅ Envoyer l'ID au lieu du nom
           airportCode: user.airport_code,
           items
         });
