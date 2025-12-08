@@ -751,6 +751,9 @@ class ParserService {
     
     console.log('[PARSER] Extraction nom Ethiopian, données:', rawData.substring(0, 50) + '...', 'PNR fourni:', pnrFromParser);
     
+    // Déclarer la variable name pour éviter les erreurs
+    let name = '';
+    
     // PRIORITÉ 1: Utiliser le PNR trouvé pour extraire le nom complet même si collé
     // C'est la méthode la plus fiable car on connaît déjà le PNR
     if (pnrFromParser && pnrFromParser.length === 6 && pnrFromParser !== 'UNKNOWN') {

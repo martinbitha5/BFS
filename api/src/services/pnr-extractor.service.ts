@@ -335,9 +335,12 @@ class PnrExtractorService {
       if (airportCodes.includes(pnr)) continue;
       
       // Ignorer si dans une longue séquence (probablement du nom)
+      const position = match.index || 0;
+      const before = rawData.substring(Math.max(0, position - 10), position);
+      const after = rawData.substring(position + 6, Math.min(rawData.length, position + 16));
       const context = rawData.substring(
-        Math.max(0, (match.index || 0) - 10),
-        Math.min(rawData.length, (match.index || 0) + 16)
+        Math.max(0, position - 10),
+        Math.min(rawData.length, position + 16)
       );
       if (context.match(/^[A-Z]{20,}/)) continue;
       
@@ -345,7 +348,7 @@ class PnrExtractorService {
         pnr,
         confidence: 30,
         pattern: 'Generic 6-letter',
-        position: match.index || 0,
+        position,
         context: { before, after },
       });
     }
