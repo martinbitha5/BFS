@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, BaggageCard, Button, Card, PassengerCard, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
@@ -913,4 +913,174 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
   );
 }
 
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  message: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    marginVertical: Spacing.md,
+  },
+  processingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  processingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.md,
+  },
+  successContainer: {
+    flex: 1,
+  },
+  successContentContainer: {
+    padding: Spacing.lg,
+  },
+  successCard: {
+    marginBottom: Spacing.lg,
+  },
+  successHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    gap: Spacing.md,
+  },
+  successTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+  },
+  successInfo: {
+    gap: Spacing.md,
+  },
+  resultContainer: {
+    padding: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  resultLabel: {
+    fontSize: FontSizes.sm,
+    flex: 1,
+  },
+  resultValue: {
+    fontSize: FontSizes.sm,
+    flex: 2,
+    textAlign: 'right',
+  },
+  listTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    marginBottom: Spacing.md,
+  },
+  successText: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    marginVertical: Spacing.sm,
+  },
+  scanAgainButton: {
+    marginTop: Spacing.md,
+    marginHorizontal: Spacing.lg,
+  },
+  scanAgainButtonText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  camera: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'space-between',
+  },
+  scanArea: {
+    width: 300,
+    height: 200,
+    position: 'relative',
+    alignSelf: 'center',
+    marginTop: 100,
+  },
+  corner: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderWidth: 3,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  instructionCard: {
+    marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+  },
+  instruction: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+  },
+  torchButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    padding: Spacing.md,
+    borderRadius: 50,
+  },
+  infoContainer: {
+    padding: Spacing.lg,
+  },
+  progressCard: {
+    marginTop: Spacing.md,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  progressTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  completeContainer: {
+    alignItems: 'center',
+    marginTop: Spacing.md,
+  },
+  completeText: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  baggagesList: {
+    marginTop: Spacing.md,
+  },
+});
