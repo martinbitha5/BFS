@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Baggages from './pages/Baggages';
 import BIRS from './pages/BIRS';
 import DashboardEnhanced from './pages/DashboardEnhanced';
+import DebugParser from './pages/DebugParser';
 import Export from './pages/Export';
 import Login from './pages/Login';
 import Passengers from './pages/Passengers';
