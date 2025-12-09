@@ -1,0 +1,1 @@
+export const KNOWN_AIRPORT_CODES = ['FIH', 'FBM', 'LAD', 'ADD', 'JNB', 'BZV', 'KGL', 'EBB', 'NBO', 'DAR', 'EBB', 'DOD', 'LOS', 'ACC', 'BKO', 'ABJ', 'COO', 'LBV', 'DLA', 'RUN', 'GYE', 'CPT', 'CAI', 'MBA', 'TNR', 'KIN'];

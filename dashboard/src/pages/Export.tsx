@@ -2,7 +2,39 @@ import { AlertCircle, Calendar, CheckCircle, FileSpreadsheet, MapPin, Plane } fr
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { parserService } from '../services/parser.service';
 import { exportRawScansToExcel, exportToExcel } from '../utils/exportExcel';
+
+// Helper function pour parser les raw scans avec le parser sophistiqué
+const parseRawScans = (rawScans: any[]) => {
+  return rawScans
+    .filter((scan: any) => scan.scan_type === 'boarding_pass')
+    .map((scan: any) => {
+      try {
+        const parsed = parserService.parse(scan.raw_data);
+        return {
+          pnr: parsed.pnr || 'UNKNOWN',
+          fullName: parsed.fullName || 'UNKNOWN',
+          firstName: parsed.firstName || '',
+          lastName: parsed.lastName || '',
+          flightNumber: parsed.flightNumber || 'UNKNOWN',
+          departure: parsed.departure || 'UNK',
+          arrival: parsed.arrival || 'UNK',
+          seatNumber: parsed.seatNumber || 'N/A',
+          flightTime: parsed.flightTime,
+          flightDate: parsed.flightDate,
+          airline: parsed.airline || 'Unknown',
+          baggageCount: parsed.baggageInfo?.count || 0,
+          scanCount: scan.scan_count || 1,
+          checkinAt: scan.first_scanned_at || new Date().toISOString(),
+        };
+      } catch (error) {
+        console.error('❌ Erreur parsing raw scan:', error);
+        return null;
+      }
+    })
+    .filter((p: any) => p !== null);
+};
 
 export default function Export() {
   const { user } = useAuth();
@@ -154,9 +186,9 @@ export default function Export() {
         return;
       }
 
-      // Récupérer les raw scans PARSÉS directement depuis l'API
+      // Récupérer les raw scans et les PARSER localement dans le dashboard web (intelligent!)
       if (exportType === 'all' || exportType === 'passengers') {
-        let url = `/api/v1/raw-scans/parsed?airport=${user.airport_code}`;
+        let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
         
         // Appliquer les filtres de dates
         if (dateFilterType === 'specific' && specificDate) {
@@ -166,34 +198,66 @@ export default function Export() {
           if (endDate) url += `&end_date=${endDate}`;
         }
         
-        const parsedRes = await api.get(url);
-        const parsedPassengers = parsedRes.data.data || [];
+        const rawScansRes = await api.get(url);
+        const rawScans = rawScansRes.data.data || [];
         
-        console.log(`✅ ${parsedPassengers.length} passagers parsés par l'API`);
+        console.log(`📥 ${rawScans.length} raw scans récupérés`);
         
         // Vérifier qu'il y a des données
-        if (parsedPassengers.length === 0) {
+        if (rawScans.length === 0) {
           setMessage({
             type: 'error',
-            text: 'Aucun passager trouvé pour cet aéroport et cette période.'
+            text: 'Aucun raw scan trouvé pour cet aéroport et cette période.'
           });
           setExporting(false);
           return;
         }
         
-        // Les données sont déjà parsées et au bon format !
-        let passengers = parsedPassengers.map((p: any) => ({
-          pnr: p.pnr,
-          full_name: p.full_name,
-          flight_number: p.flight_number,
-          departure: p.departure,
-          arrival: p.arrival,
-          seat_number: p.seat_number,
-          checked_in_at: p.first_scanned_at || new Date().toISOString(),
-          boarding_status: [{ boarded: p.status_boarding || false }],
-          baggage_count: p.baggage_count || 0,
-          scan_count: p.scan_count || 1,
-        }));
+        // PARSING SOPHISTIQUÉ DANS LE WEB ! 🚀
+        console.log('🧠 Parsing sophistiqué dans le dashboard web...');
+        const parsedPassengers = rawScans
+          .filter((scan: any) => scan.scan_type === 'boarding_pass')
+          .map((scan: any) => {
+            try {
+              const parsed = parserService.parse(scan.raw_data);
+              
+              return {
+                pnr: parsed.pnr || 'UNKNOWN',
+                full_name: parsed.fullName || 'UNKNOWN',
+                first_name: parsed.firstName || '',
+                last_name: parsed.lastName || '',
+                flight_number: parsed.flightNumber || 'UNKNOWN',
+                departure: parsed.departure || 'UNK',
+                arrival: parsed.arrival || 'UNK',
+                seat_number: parsed.seatNumber || 'N/A',
+                flight_time: parsed.flightTime,
+                flight_date: parsed.flightDate,
+                airline: parsed.airline || 'Unknown',
+                baggage_count: parsed.baggageInfo?.count || 0,
+                scan_count: scan.scan_count || 1,
+                checked_in_at: scan.first_scanned_at || new Date().toISOString(),
+                boarding_status: [{ boarded: scan.status_boarding || false }],
+              };
+            } catch (error) {
+              console.error('❌ Erreur parsing:', error);
+              return null;
+            }
+          })
+          .filter((p: any) => p !== null);
+        
+        console.log(`✅ ${parsedPassengers.length} passagers parsés avec succès dans le web!`);
+        
+        if (parsedPassengers.length === 0) {
+          setMessage({
+            type: 'error',
+            text: 'Erreur lors du parsing des raw scans.'
+          });
+          setExporting(false);
+          return;
+        }
+        
+        // Transformer en format exportData
+        let passengers = parsedPassengers;
         
         // Filtrer par vol si nécessaire
         if (selectedFlight !== 'all') {
