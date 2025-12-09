@@ -7,12 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
-import { parserService } from '../services/parser.service';
+import { authServiceInstance } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger } from '../types/passenger.types';
-import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
+import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Boarding'>;
@@ -59,25 +58,12 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // Parser le boarding pass
-      const passengerData = parserService.parse(data);
-
-      // Logs de débogage pour voir ce qui est parsé
-      console.log('[BOARDING] Données brutes scannées:', data);
-      console.log('[BOARDING] Données parsées:', {
-        pnr: passengerData.pnr,
-        fullName: passengerData.fullName,
-        flightNumber: passengerData.flightNumber,
-        route: passengerData.route,
-        departure: passengerData.departure,
-        arrival: passengerData.arrival,
-        userAirportCode: user.airportCode,
-      });
-
-      // Vérifier que le passager est enregistré
-      const passenger = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+      // ✅ NOUVEAU SYSTÈME: Chercher dans raw_scans par raw_data (pas de parsing)
+      const { rawScanService } = await import('../services');
+      const existingScan = await rawScanService.findByRawData(data);
       
-      if (!passenger) {
+      // Vérifier que le scan existe (check-in effectué)
+      if (!existingScan || !existingScan.statusCheckin) {
         await playErrorSound();
         const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'not_checked_in');
         setToastMessage(errorMsg.message);
@@ -87,21 +73,8 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // Vérifier que le vol concerne l'aéroport de l'agent
-      if (passenger.departure !== user.airportCode) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'wrong_airport');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        resetScanner();
-        return;
-      }
-
-      // ✅ Vérifier dans raw_scans si déjà scanné à l'embarquement
-      const { rawScanService } = await import('../services');
-      const existingScan = await rawScanService.findByRawData(data);
-      if (existingScan && existingScan.statusBoarding) {
+      // Vérifier si déjà embarqué
+      if (existingScan.statusBoarding) {
         await playErrorSound();
         setToastMessage('⚠️ Passager déjà embarqué !');
         setToastType('warning');
@@ -112,55 +85,8 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // Récupérer ou créer le statut d'embarquement
-      let currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
-      
-      // Vérifier si déjà embarqué
-      if (currentBoardingStatus?.boarded) {
-        await playErrorSound();
-        const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'already_processed');
-        setToastMessage(errorMsg.message);
-        setToastType(errorMsg.type);
-        setShowToast(true);
-        setProcessing(false);
-        setScanned(false);
-        setShowScanner(true);
-        return;
-      }
-
-      // Marquer comme embarqué
-      await databaseServiceInstance.createOrUpdateBoardingStatus({
-        passengerId: passenger.id,
-        boarded: true,
-        boardedAt: new Date().toISOString(),
-        boardedBy: user.id,
-        synced: false,
-      });
-
-      // Récupérer le statut mis à jour
-      currentBoardingStatus = await databaseServiceInstance.getBoardingStatusByPassengerId(passenger.id);
-
-      // Enregistrer l'action d'audit
-      const { logAudit } = await import('../utils/audit.util');
-      await logAudit(
-        'BOARD_PASSENGER',
-        'boarding',
-        `Embarquement passager: ${passenger.fullName} (PNR: ${passenger.pnr}) - Vol: ${passenger.flightNumber}`,
-        passenger.id
-      );
-
-      // Ajouter à la file de synchronisation
-      await databaseServiceInstance.addToSyncQueue({
-        tableName: 'boarding_status',
-        recordId: passenger.id,
-        operation: 'update',
-        data: JSON.stringify({ passengerId: passenger.id, boarded: true }),
-        retryCount: 0,
-        userId: user.id,
-      });
-
-      // ✅ Enregistrer dans raw_scans
-      await rawScanService.createOrUpdateRawScan({
+      // ✅ Mettre à jour le statut boarding dans raw_scans
+      const result = await rawScanService.createOrUpdateRawScan({
         rawData: data,
         scanType: 'boarding_pass',
         statusField: 'boarding',
@@ -168,22 +94,56 @@ export default function BoardingScreen({ navigation }: Props) {
         airportCode: user.airportCode,
       });
 
-      // Stocker le passager (nom complet depuis checkin) et le statut
-      setLastPassenger(passenger);
-      setBoardingStatus(currentBoardingStatus);
+      // Enregistrer l'action d'audit
+      const { logAudit } = await import('../utils/audit.util');
+      await logAudit(
+        'BOARD_PASSENGER',
+        'boarding',
+        `Embarquement confirmé - Scan #${result.scanCount}`,
+        result.id
+      );
+
+      // Créer un objet Passenger simplifié pour l'affichage (sans parsing détaillé)
+      const displayPassenger: Passenger = {
+        id: existingScan.id,
+        pnr: 'En attente parsing web',
+        fullName: 'Passager embarqué',
+        firstName: '',
+        lastName: '',
+        flightNumber: 'Voir dashboard',
+        route: `${user.airportCode}-...`,
+        departure: user.airportCode,
+        arrival: 'En attente',
+        baggageCount: 0,
+        checkedInAt: (existingScan.checkinAt || new Date().toISOString()) as string,
+        checkedInBy: (existingScan.checkinBy || user.id) as string,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        synced: false,
+      };
+
+      // Créer un statut boarding simplifié
+      const boardingStatus: BoardingStatus = {
+        id: result.id,
+        passengerId: existingScan.id,
+        boarded: true,
+        boardedAt: new Date().toISOString(),
+        boardedBy: user.id,
+        synced: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Stocker pour affichage
+      setLastPassenger(displayPassenger);
+      setBoardingStatus(boardingStatus);
       
       // Jouer le son de succès
       await playSuccessSound();
       
-      // Obtenir le message selon le rôle
-      const successMsg = getScanResultMessage(user.role as any, 'boarding', true, {
-        passengerName: passenger.fullName,
-        pnr: passenger.pnr,
-        flightNumber: passenger.flightNumber,
-      });
+      const successMessage = `✅ Embarquement confirmé ! (Scan #${result.scanCount})`;
       
-      setToastMessage(successMsg.message);
-      setToastType(successMsg.type);
+      setToastMessage(successMessage);
+      setToastType('success');
       setShowToast(true);
       
       // Masquer le scanner et afficher le résultat en plein écran
@@ -351,10 +311,9 @@ export default function BoardingScreen({ navigation }: Props) {
             handleBarCodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
-            // Support maximal des types de codes-barres pour boarding pass
-            // PDF417 est le standard IATA pour les boarding pass
-            // Ajout d'autres formats pour compatibilité maximale
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
+            // Support MAXIMAL de TOUS les formats pour accepter n'importe quel boarding pass
+            // Production: accepte tous les formats possibles (PDF417, QR, Aztec, DataMatrix, Code128, Code39, etc.)
+            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
           }}
           onCameraReady={() => {
             console.log('Caméra prête pour le scan');

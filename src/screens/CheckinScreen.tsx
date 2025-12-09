@@ -115,8 +115,8 @@ export default function CheckinScreen({ navigation }: Props) {
       // Enregistrer l'action d'audit
       const { logAudit } = await import('../utils/audit.util');
       await logAudit(
-        'CHECKIN_SCAN',
-        'raw_scan',
+        'CHECKIN_PASSENGER',
+        'passenger',
         `Scan check-in ${result.isNew ? 'nouveau' : 'mise à jour statut'} - Scan #${result.scanCount}`,
         result.id
       );
@@ -286,10 +286,9 @@ export default function CheckinScreen({ navigation }: Props) {
             handleBarCodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
-            // Support maximal des types de codes-barres pour boarding pass
-            // PDF417 est le standard IATA pour les boarding pass
-            // Ajout d'autres formats pour compatibilité maximale
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
+            // Support MAXIMAL de TOUS les formats pour accepter n'importe quel boarding pass
+            // Production: accepte tous les formats possibles (PDF417, QR, Aztec, DataMatrix, Code128, Code39, etc.)
+            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
           }}
           onCameraReady={() => {
             console.log('Caméra prête pour le scan');
