@@ -165,31 +165,52 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 function parseSimpleBoardingPass(rawData: string): any {
   try {
-    // Format attendu : "M3EYAKOI/BALA MARIE ELECTRIE FEIMBA0J GB52 3YRPK1ANSU 2780BEJP9AI1 SU"
-    // Ou autre format avec PNR visible
+    // Format IATA : M1NOM/PRENOM PNRORIGDESTCOMPAGNIE VOLDATE...
+    // Exemple: M1MASIMANGO/ISSIAKA GREOIFLBU FIHMDKET 0080 235Y031J0095...
     
-    // Essayer d'extraire le PNR (6 caractères alphanumériques)
-    const pnrMatch = rawData.match(/\b([A-Z0-9]{6})\b/);
+    if (!rawData || !rawData.startsWith('M')) {
+      console.log('[PARSE] Format non reconnu (ne commence pas par M)');
+      return null;
+    }
+
+    // Extraire le nom (entre M1/M2/M3 et le premier espace)
+    const nameMatch = rawData.match(/M[123]([A-Z\/\s]+?)\s+([A-Z0-9]{6,})/);
+    let fullName = 'UNKNOWN';
+    let restOfData = rawData;
+
+    if (nameMatch) {
+      fullName = nameMatch[1].replace(/\//g, ' ').trim();
+      restOfData = rawData.substring(nameMatch[0].length);
+    }
+
+    // Extraire le PNR (6 caractères alphanumériques après le nom)
+    // Dans l'exemple: GREOIFLBU (mais généralement c'est 6 caractères)
+    const pnrMatch = rawData.match(/[A-Z\/\s]+\s+([A-Z0-9]{6})\s/);
     const pnr = pnrMatch ? pnrMatch[1] : null;
 
-    // Essayer d'extraire le nom (généralement au début après M1/M2/M3)
-    const nameMatch = rawData.match(/M[123]([A-Z\s/]+)\s/);
-    const fullName = nameMatch ? nameMatch[1].replace(/\//g, ' ').trim() : 'UNKNOWN';
+    // Extraire origine et destination (3 lettres majuscules consécutives)
+    const routeMatch = rawData.match(/([A-Z]{3})([A-Z]{3})/);
+    const departure = routeMatch ? routeMatch[1] : null;
+    const arrival = routeMatch ? routeMatch[2] : null;
 
-    // Essayer d'extraire le numéro de vol (2 lettres + 2-4 chiffres)
-    const flightMatch = rawData.match(/\b([A-Z]{2}\d{2,4})\b/);
-    const flightNumber = flightMatch ? flightMatch[1] : null;
+    // Extraire le numéro de vol (code compagnie + numéro)
+    // Dans l'exemple: ET 0080
+    const flightMatch = rawData.match(/([A-Z]{2})\s*(\d{3,4})/);
+    const flightNumber = flightMatch ? `${flightMatch[1]}${flightMatch[2]}` : null;
 
-    // Essayer d'extraire les codes aéroports (3 lettres majuscules)
-    const airportMatches = rawData.match(/\b([A-Z]{3})\b/g);
-    const airports = airportMatches || [];
+    console.log(`[PARSE BP] Nom: ${fullName}, PNR: ${pnr}, Vol: ${flightNumber}, ${departure}-${arrival}`);
+
+    if (!pnr) {
+      console.log('[PARSE] ⚠️  PNR non trouvé, scan ignoré');
+      return null;
+    }
 
     return {
       pnr,
       fullName,
-      flightNumber,
-      departure: airports[0] || null,
-      arrival: airports[1] || null,
+      flightNumber: flightNumber || 'UNKNOWN',
+      departure: departure || null,
+      arrival: arrival || null,
       seatNumber: null,
       baggageCount: 0,
       rawData
