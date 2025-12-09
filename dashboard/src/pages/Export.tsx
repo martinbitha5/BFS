@@ -2,7 +2,6 @@ import { AlertCircle, Calendar, CheckCircle, FileSpreadsheet, MapPin, Plane } fr
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import { parseRawScans } from '../utils/boardingPassParser';
 import { exportRawScansToExcel, exportToExcel } from '../utils/exportExcel';
 
 export default function Export() {
@@ -155,9 +154,9 @@ export default function Export() {
         return;
       }
 
-      // Récupérer les raw scans et les parser pour l'export avec parsing
+      // Récupérer les raw scans PARSÉS directement depuis l'API
       if (exportType === 'all' || exportType === 'passengers') {
-        let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
+        let url = `/api/v1/raw-scans/parsed?airport=${user.airport_code}`;
         
         // Appliquer les filtres de dates
         if (dateFilterType === 'specific' && specificDate) {
@@ -167,43 +166,33 @@ export default function Export() {
           if (endDate) url += `&end_date=${endDate}`;
         }
         
-        const rawScansRes = await api.get(url);
-        const rawScans = rawScansRes.data.data || [];
+        const parsedRes = await api.get(url);
+        const parsedPassengers = parsedRes.data.data || [];
+        
+        console.log(`✅ ${parsedPassengers.length} passagers parsés par l'API`);
         
         // Vérifier qu'il y a des données
-        if (rawScans.length === 0) {
-          setMessage({
-            type: 'error',
-            text: 'Aucun raw scan trouvé pour cet aéroport et cette période.'
-          });
-          setExporting(false);
-          return;
-        }
-        
-        // Parser les raw scans pour extraire les informations
-        const parsedPassengers = parseRawScans(rawScans);
-        
         if (parsedPassengers.length === 0) {
           setMessage({
             type: 'error',
-            text: 'Erreur lors du parsing des raw scans. Utilisez "Export Données Brutes".'
+            text: 'Aucun passager trouvé pour cet aéroport et cette période.'
           });
           setExporting(false);
           return;
         }
         
-        // Transformer en format compatible avec exportToExcel (snake_case)
+        // Les données sont déjà parsées et au bon format !
         let passengers = parsedPassengers.map((p: any) => ({
           pnr: p.pnr,
-          full_name: p.fullName,
-          flight_number: p.flightNumber,
+          full_name: p.full_name,
+          flight_number: p.flight_number,
           departure: p.departure,
           arrival: p.arrival,
-          seat_number: p.seatNumber,
-          checked_in_at: p.checkinAt || new Date().toISOString(),
-          boarding_status: [{ boarded: false }], // Pas d'info boarding dans raw scans
-          baggage_count: 0, // Pas d'info bagages dans raw scans
-          scan_count: p.scanCount,
+          seat_number: p.seat_number,
+          checked_in_at: p.first_scanned_at || new Date().toISOString(),
+          boarding_status: [{ boarded: p.status_boarding || false }],
+          baggage_count: p.baggage_count || 0,
+          scan_count: p.scan_count || 1,
         }));
         
         // Filtrer par vol si nécessaire
