@@ -13,7 +13,8 @@
     "test:birs": "tsx test/birs-system-test.ts",
     "test:birs-demo": "tsx test/birs-demo-test.ts",
     "test:birs-real": "tsx test/test-real-birs-formats.ts",
-    "test": "jest"
+    "test": "jest",
+    "clear-db": "node scripts/clear-database.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

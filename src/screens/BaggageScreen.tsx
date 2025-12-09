@@ -952,8 +952,11 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
   },
   instruction: {
-    fontSize: FontSizes.md,
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
     textAlign: 'center',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   torchButton: {
     position: 'absolute',
