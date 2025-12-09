@@ -77,7 +77,13 @@ export const exportToExcel = async (
 
   // Charger le logo
   try {
+    console.log('[EXPORT STANDARD] Chargement du logo...');
     const response = await fetch('/assets/logo-ats-csi.png');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
 
@@ -91,8 +97,10 @@ export const exportToExcel = async (
       tl: { col: 0, row: 0 },
       ext: { width: 250, height: 120 }
     });
+    
+    console.log('[EXPORT STANDARD] ✅ Logo ajouté');
   } catch (error) {
-    console.warn('Impossible de charger le logo:', error);
+    console.error('[EXPORT STANDARD] ❌ Erreur logo:', error);
   }
 
   // Informations (commencer après le logo)
@@ -520,7 +528,13 @@ export const exportRawScansToExcel = async (
 
   // Charger le logo
   try {
+    console.log('[EXPORT RAW SCANS] Chargement du logo...');
     const response = await fetch('/assets/logo-ats-csi.png');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
 
@@ -534,8 +548,10 @@ export const exportRawScansToExcel = async (
       tl: { col: 0, row: 0 },
       ext: { width: 250, height: 120 }
     });
+    
+    console.log('[EXPORT RAW SCANS] ✅ Logo ajouté');
   } catch (error) {
-    console.warn('Impossible de charger le logo:', error);
+    console.error('[EXPORT RAW SCANS] ❌ Erreur logo:', error);
   }
 
   infoSheet.getCell('A8').value = 'EXPORT RAW SCANS - DONNÉES BRUTES PURES (SANS PARSING)';

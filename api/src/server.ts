@@ -48,6 +48,7 @@ app.use('/api/v1/flights', apiKeyAuth, flightRoutes);
 app.use('/api/v1/birs', apiKeyAuth, birsRoutes);
 app.use('/api/v1/rush', apiKeyAuth, rushRoutes);
 app.use('/api/v1/raw-scans', apiKeyAuth, rawScansRoutes); // ✅ NEW: Raw scans
+app.use('/api/v1/sync-raw-scans', apiKeyAuth, syncRawScansRoutes); // ✅ NEW: Sync raw scans to create passengers/baggages
 app.use('/api/v1/export', apiKeyAuth, exportRoutes); // ✅ NEW: Export with parsing
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
 
