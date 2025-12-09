@@ -47,6 +47,8 @@ export default function DashboardEnhanced() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   const fetchStats = async () => {
     if (!user?.airport_code) return;
@@ -73,6 +75,31 @@ export default function DashboardEnhanced() {
       setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncRawScans = async () => {
+    if (!user?.airport_code) return;
+    
+    try {
+      setSyncing(true);
+      setSyncMessage('');
+      setError('');
+      
+      const response = await api.post('/api/v1/sync-raw-scans', {
+        airport_code: user.airport_code
+      });
+      
+      const { stats: syncStats } = response.data;
+      setSyncMessage(`✅ Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
+      
+      // Recharger les stats après sync
+      await fetchStats();
+    } catch (err: any) {
+      console.error('Error syncing raw scans:', err);
+      setError(err.response?.data?.error || 'Erreur lors de la synchronisation');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -165,16 +192,40 @@ export default function DashboardEnhanced() {
             Mis à jour automatiquement toutes les 30s
           </p>
         </div>
-        <button
-          onClick={fetchStats}
-          disabled={loading}
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Actualiser</span>
-          <span className="sm:hidden">Actualiser</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={syncRawScans}
+            disabled={syncing}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Synchroniser Raw Scans</span>
+            <span className="sm:hidden">Sync</span>
+          </button>
+          <button
+            onClick={fetchStats}
+            disabled={loading}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Actualiser</span>
+            <span className="sm:hidden">Actualiser</span>
+          </button>
+        </div>
       </div>
+
+      {/* Messages de synchronisation */}
+      {syncMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-green-800">{syncMessage}</p>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       {stats && (
         <>
