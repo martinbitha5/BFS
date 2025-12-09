@@ -161,80 +161,8 @@ export default function BaggageScreen({ navigation }: Props) {
       return;
     }
 
-    // Si pas de passager, traiter comme bagage international
-    if (!passenger) {
-      console.log('[BAGGAGE SCAN] Passager non trouvé - Traitement comme bagage international');
-      // Continue le flux normalement, la logique internationale sera gérée plus bas
-    }
-
-    // En mode debug sans passager, afficher les informations extraites du tag
-    if (!passenger && __DEV__) {
-      console.log('');
-      console.log('==================================================');
-      console.log('   MODE TEST - SCAN BAGAGE SANS PASSAGER');
-      console.log('==================================================');
-      console.log('DONNÉES BRUTES SCANNÉES:');
-      console.log(data);
-      console.log('─────────────────────────────────────────────────────');
-      
-      await playScanSound();
-      
-      setScanned(true);
-      setProcessing(true);
-      
-      try {
-        const cleanedData = data.trim();
-        const baggageTagData = parserService.parseBaggageTag(cleanedData);
-        let rfidTag = baggageTagData.rfidTag.trim();
-        
-        if (!rfidTag || rfidTag === 'UNKNOWN' || rfidTag.length === 0) {
-          rfidTag = cleanedData;
-        }
-        
-        console.log('');
-        console.log('═══════════════════════════════════════════════════');
-        console.log('INFORMATIONS EXTRAITES DU TAG BAGAGE');
-        console.log('═══════════════════════════════════════════════════');
-        console.log('Nom complet      :', baggageTagData.passengerName || 'NON EXTRAIT');
-        console.log('Origine         :', baggageTagData.origin || 'NON EXTRAIT');
-        console.log('Destination      :', baggageTagData.destination || 'NON EXTRAIT');
-        console.log('Nombre bagages   :', baggageTagData.baggageCount || 'NON EXTRAIT');
-        console.log('Bagage n°        :', baggageTagData.baggageSequence ? `${baggageTagData.baggageSequence}/${baggageTagData.baggageCount}` : 'NON EXTRAIT');
-        console.log('Vol              :', baggageTagData.flightNumber || 'NON EXTRAIT');
-        console.log('Date vol         :', baggageTagData.flightDate || 'NON EXTRAIT');
-        console.log('PNR             :', baggageTagData.pnr || 'NON EXTRAIT');
-        console.log('Tag RFID        :', rfidTag);
-        console.log('═══════════════════════════════════════════════════');
-        console.log('');
-        
-        // Stocker les informations extraites
-        setScannedTagInfo(baggageTagData);
-        setLastScannedRfidTag(rfidTag);
-        setScannedBaggagesCount(1);
-        
-        // Masquer le scanner et afficher l'écran de succès
-        setProcessing(false);
-        setShowScanner(false);
-        
-        await playSuccessSound();
-        setToastMessage(`Tag RFID scanné: ${rfidTag}`);
-        setToastType('success');
-        setShowToast(true);
-      } catch (error) {
-        console.error('[BAGGAGE] Erreur:', error);
-        await playErrorSound();
-        setToastMessage(`Erreur: ${error instanceof Error ? error.message : 'Inconnue'}`);
-        setToastType('error');
-        setShowToast(true);
-        setProcessing(false);
-        setScanned(false);
-        setShowScanner(true);
-      }
-      return;
-    }
-
     console.log('[BAGGAGE SCAN] Tag RFID scanné:', data);
-    console.log('[BAGGAGE SCAN] État avant traitement:', { scanned, processing, hasPassenger: !!passenger });
+    console.log('[BAGGAGE SCAN] Passager:', passenger ? passenger.fullName : 'Aucun (bagage international)');
     
     // Jouer le son de scan automatique
     await playScanSound();
@@ -765,52 +693,25 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
           facing="back"
           enableTorch={torchEnabled}
           onBarcodeScanned={(event) => {
-            // IMPORTANT: Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
-            if (scanned || processing || lastScannedRfidTag) {
-              console.log('[BAGGAGE SCAN] Scan ignoré - déjà en traitement ou résultat affiché', { 
-                scanned, 
-                processing, 
-                lastScannedRfidTag 
-              });
+            // Guard: Ignorer si déjà en cours ou si même tag
+            if (scanned || processing || event.data === lastScannedRfidTag) {
               return;
             }
             
-            console.log('[BAGGAGE SCAN] onBarcodeScanned DÉCLENCHÉ', { 
-              data: event.data, 
-              type: event.type,
-              scanMode,
-              hasPassenger: !!passenger,
-              cameraReady,
-              scanned,
-              processing,
-              showScanner,
-              lastScannedRfidTag,
-              rawEvent: JSON.stringify(event)
-            });
-            
-            // Vérifier si les données sont valides
+            // Vérifier données valides
             if (!event || !event.data || event.data.trim().length === 0) {
-              console.warn('[BAGGAGE SCAN] Données vides ou événement invalide');
               return;
             }
             
-            console.log('[BAGGAGE SCAN] Données valides, traitement...');
+            // Détection automatique tag bagage
+            const isBaggageTagType = ['interleaved2of5', 'itf14', 'code128', 'code39', 'ean13', 'ean8', 'aztec'].includes(event.type?.toLowerCase() || '');
+            const isBaggageTagData = /^\d{4,}$/.test(event.data.trim());
             
-            // En mode debug, détecter automatiquement si c'est une étiquette de bagage (Interleaved2of5, ITF14, etc.)
-            // et permettre le scan direct même en mode boarding_pass
-            const isBaggageTagType = ['interleaved2of5', 'itf14', 'code128', 'code39', 'ean13', 'ean8'].includes(event.type?.toLowerCase() || '');
-            const isBaggageTagData = /^\d{4,}$/.test(event.data.trim()); // Nombre de 4+ chiffres
-            
-            if (scanMode === 'boarding_pass' && (isBaggageTagType || isBaggageTagData) && __DEV__) {
-              console.log('[BAGGAGE SCAN] MODE DEBUG - Détection automatique d\'étiquette de bagage');
-              console.log('[BAGGAGE SCAN] Type détecté:', event.type, 'Données:', event.data);
-              console.log('[BAGGAGE SCAN] → Appel handleRfidScanned (mode debug)');
+            if (scanMode === 'boarding_pass' && (isBaggageTagType || isBaggageTagData)) {
               handleRfidScanned(event);
             } else if (scanMode === 'boarding_pass') {
-              console.log('[BAGGAGE SCAN] → Appel handleBoardingPassScanned');
               handleBoardingPassScanned(event);
             } else {
-              console.log('[BAGGAGE SCAN] → Appel handleRfidScanned');
               handleRfidScanned(event);
             }
           }}

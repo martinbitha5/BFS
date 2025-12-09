@@ -2954,23 +2954,6 @@ class ParserService {
       }
     }
 
-    console.log('');
-    console.log('┌─────────────────────────────────────────────────┐');
-    console.log('│  PARSER - ANALYSE DU TAG BAGAGE                 │');
-    console.log('├─────────────────────────────────────────────────┤');
-    console.log('│  Données brutes:', rawData.substring(0, 50) + '...');
-    console.log('├─────────────────────────────────────────────────┤');
-    console.log('│  Nom          :', result.passengerName || 'X');
-    console.log('│  Origine      :', result.origin || 'X');
-    console.log('│  Destination  :', result.destination || 'X');
-    console.log('│  Nb bagages   :', result.baggageCount || 'X');
-    console.log('│  Bagage n°    :', result.baggageSequence || 'X');
-    console.log('│  Vol          :', result.flightNumber || 'X');
-    console.log('│  Date         :', result.flightDate || 'X');
-    console.log('│  PNR          :', result.pnr || 'X');
-    console.log('│  Tag RFID     :', result.rfidTag);
-    console.log('└─────────────────────────────────────────────────┘');
-    console.log('');
     return result;
   }
 
