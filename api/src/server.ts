@@ -17,6 +17,7 @@ import passengerRoutes from './routes/passenger.routes';
 import rawScansRoutes from './routes/raw-scans.routes';
 import rushRoutes from './routes/rush.routes';
 import statsRoutes from './routes/stats.routes';
+import syncRawScansRoutes from './routes/sync-raw-scans.routes';
 
 dotenv.config();
 
