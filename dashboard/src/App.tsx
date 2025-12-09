@@ -79,6 +79,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/debug-parser"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <DebugParser />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </Router>
