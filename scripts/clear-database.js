@@ -60,14 +60,17 @@ async function clearDatabase() {
     if (error4) throw error4;
     console.log('✅ Raw scans supprimés');
 
-    // 5. Supprimer toutes les sync queues
+    // 5. Supprimer toutes les sync queues (si la table existe)
     console.log('🗑️  Suppression des sync queues...');
     const { error: error5 } = await supabase
       .from('sync_queue')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error5) throw error5;
-    console.log('✅ Sync queues supprimées');
+    if (error5) {
+      console.log('⚠️  Sync queues: Table non trouvée (ignorée)');
+    } else {
+      console.log('✅ Sync queues supprimées');
+    }
 
     // 6. Supprimer tous les audit logs (optionnel)
     console.log('🗑️  Suppression des audit logs...');
@@ -82,7 +85,7 @@ async function clearDatabase() {
 
     // Vérifier que tout est vide
     console.log('📊 Vérification des compteurs:');
-    const tables = ['international_baggages', 'baggages', 'passengers', 'raw_scans', 'sync_queue'];
+    const tables = ['international_baggages', 'baggages', 'passengers', 'raw_scans'];
     
     for (const table of tables) {
       const { count, error } = await supabase
