@@ -14,11 +14,11 @@ DELETE FROM passengers;
 -- 4. Supprimer tous les raw scans
 DELETE FROM raw_scans;
 
--- 5. Supprimer toutes les sync queues
-DELETE FROM sync_queue;
+-- 5. Supprimer toutes les sync queues (TABLE N'EXISTE PAS - COMMENTÉE)
+-- DELETE FROM sync_queue;
 
--- 6. Supprimer tous les audit logs (optionnel)
-DELETE FROM audit_logs;
+-- 6. Supprimer tous les audit logs (TABLE N'EXISTE PAS - COMMENTÉE)
+-- DELETE FROM audit_logs;
 
 -- 7. Réinitialiser les compteurs si nécessaire
 -- (Optionnel, seulement si vous voulez réinitialiser les séquences)
@@ -30,8 +30,4 @@ SELECT 'baggages', COUNT(*) FROM baggages
 UNION ALL
 SELECT 'passengers', COUNT(*) FROM passengers
 UNION ALL
-SELECT 'raw_scans', COUNT(*) FROM raw_scans
-UNION ALL
-SELECT 'sync_queue', COUNT(*) FROM sync_queue
-UNION ALL
-SELECT 'audit_logs', COUNT(*) FROM audit_logs;
+SELECT 'raw_scans', COUNT(*) FROM raw_scans;
