@@ -221,6 +221,16 @@ export default function Export() {
             try {
               const parsed = parserService.parse(scan.raw_data);
               
+              // Logs détaillés pour chaque passager
+              const passengerLog = {
+                nom: parsed.fullName,
+                pnr: parsed.pnr,
+                vol: parsed.flightNumber,
+                route: `${parsed.departure}→${parsed.arrival}`,
+                format: parsed.format,
+              };
+              console.log('👤 Passager:', passengerLog);
+              
               return {
                 pnr: parsed.pnr || 'UNKNOWN',
                 full_name: parsed.fullName || 'UNKNOWN',
@@ -233,19 +243,31 @@ export default function Export() {
                 flight_time: parsed.flightTime,
                 flight_date: parsed.flightDate,
                 airline: parsed.airline || 'Unknown',
+                company_code: parsed.companyCode,
                 baggage_count: parsed.baggageInfo?.count || 0,
+                baggage_tags: parsed.baggageInfo?.expectedTags || [],
                 scan_count: scan.scan_count || 1,
                 checked_in_at: scan.first_scanned_at || new Date().toISOString(),
                 boarding_status: [{ boarded: scan.status_boarding || false }],
+                // Raw data pour debug si nécessaire
+                raw_data: scan.raw_data,
               };
             } catch (error) {
-              console.error('❌ Erreur parsing:', error);
+              console.error('❌ Erreur parsing raw scan:', error);
+              console.error('   Raw data:', scan.raw_data?.substring(0, 100));
               return null;
             }
           })
           .filter((p: any) => p !== null);
         
         console.log(`✅ ${parsedPassengers.length} passagers parsés avec succès dans le web!`);
+        console.log('📊 Répartition par route:', 
+          parsedPassengers.reduce((acc: any, p: any) => {
+            const route = `${p.departure}→${p.arrival}`;
+            acc[route] = (acc[route] || 0) + 1;
+            return acc;
+          }, {})
+        );
         
         if (parsedPassengers.length === 0) {
           setMessage({
