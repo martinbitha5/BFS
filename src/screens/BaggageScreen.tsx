@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, BaggageCard, Button, Card, PassengerCard, Toast } from '../components';
@@ -39,6 +39,9 @@ export default function BaggageScreen({ navigation }: Props) {
   const [lastScannedRfidTag, setLastScannedRfidTag] = useState<string | null>(null);
   const [scannedBaggagesCount, setScannedBaggagesCount] = useState(0); // Compteur pour mode test
   const [scannedTagInfo, setScannedTagInfo] = useState<any>(null); // Informations extraites du tag RFID
+  
+  // Ref pour bloquer les scans multiples (mise à jour synchrone)
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     if (passenger) {
@@ -79,6 +82,7 @@ export default function BaggageScreen({ navigation }: Props) {
       if (!user) {
         await playErrorSound();
         Alert.alert('Erreur', 'Utilisateur non connecté');
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -97,6 +101,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage(errorMsg.message);
         setToastType(errorMsg.type);
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -111,6 +116,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage(errorMsg.message);
         setToastType(errorMsg.type);
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -121,6 +127,7 @@ export default function BaggageScreen({ navigation }: Props) {
       setScanMode('rfid');
       setShowScanner(true); // S'assurer que le scanner reste visible pour scanner les bagages
       setScanned(false); // Réinitialiser pour permettre le scan immédiat
+      isProcessingRef.current = false; // Débloquer pour scan bagage
       setProcessing(false); // Réinitialiser pour permettre le scan immédiat
       setScannedBaggagesCount(0); // Réinitialiser le compteur
       
@@ -138,10 +145,12 @@ export default function BaggageScreen({ navigation }: Props) {
       setToastMessage('Erreur lors du parsing du boarding pass');
       setToastType('error');
       setShowToast(true);
+      isProcessingRef.current = false;
       setProcessing(false);
       setScanned(false);
       setShowScanner(true);
     } finally {
+      isProcessingRef.current = false;
       setProcessing(false);
     }
   };
@@ -167,6 +176,7 @@ export default function BaggageScreen({ navigation }: Props) {
     // Jouer le son de scan automatique
     await playScanSound();
     
+    isProcessingRef.current = true; // Bloquer AVANT les setState
     setScanned(true);
     setProcessing(true);
     
@@ -177,6 +187,7 @@ export default function BaggageScreen({ navigation }: Props) {
       if (!user) {
         await playErrorSound();
         Alert.alert('Erreur', 'Utilisateur non connecté');
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -191,6 +202,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage('Données de scan vides');
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -227,6 +239,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage('Impossible d\'extraire le tag RFID du scan');
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -243,6 +256,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage('⚠️ Bagage déjà scanné !');
         setToastType('warning');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -256,6 +270,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage(`Bagage déjà scanné: ${rfidTag}`);
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
@@ -269,6 +284,7 @@ export default function BaggageScreen({ navigation }: Props) {
         setToastMessage(`Bagage international déjà scanné: ${rfidTag}`);
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true); // Remettre le scanner visible pour permettre un nouveau scan
@@ -450,6 +466,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
         setToastMessage(`Erreur lors de l'enregistrement: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true); // Remettre le scanner visible en cas d'erreur
@@ -461,6 +478,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
       setToastMessage(error instanceof Error ? error.message : errorMsg.message);
       setToastType('error');
       setShowToast(true);
+      isProcessingRef.current = false;
       setProcessing(false);
       setScanned(false);
       setShowScanner(true); // Remettre le scanner visible en cas d'erreur
@@ -479,6 +497,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
   const resetScanner = () => {
     console.log('[BAGGAGE SCAN] resetScanner appelé');
     // Réinitialiser processing immédiatement pour permettre de nouveaux scans
+    isProcessingRef.current = false;
     setProcessing(false);
     // Réinitialiser scanned après un court délai pour éviter les scans multiples rapides
     setTimeout(() => {
@@ -495,6 +514,18 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
     setScanMode('boarding_pass');
     setShowScanner(true);
     setLastScannedRfidTag(null);
+    setScannedBaggagesCount(0);
+  };
+
+  const handleScanAgain = () => {
+    isProcessingRef.current = false; // Débloquer pour nouveau scan
+    setScanned(false);
+    setProcessing(false);
+    setLastScannedRfidTag(null);
+    setShowScanner(true);
+    setPassenger(null);
+    setBaggages([]);
+    setScannedTagInfo(null);
     setScannedBaggagesCount(0);
   };
 
@@ -671,6 +702,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
                 setLastScannedRfidTag(null);
                 setScannedTagInfo(null);
                 setScanned(false);
+                isProcessingRef.current = false;
                 setProcessing(false);
                 setShowScanner(true);
                 // Recharger les bagages pour mettre à jour le compteur
@@ -693,10 +725,13 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
           facing="back"
           enableTorch={torchEnabled}
           onBarcodeScanned={(event) => {
-            // Guard: Ignorer si déjà en cours ou si même tag
-            if (scanned || processing || event.data === lastScannedRfidTag) {
+            // Guard: Ignorer si déjà en cours (utilise ref pour update synchrone)
+            if (isProcessingRef.current || event.data === lastScannedRfidTag) {
               return;
             }
+            
+            // Bloquer immédiatement les autres scans
+            isProcessingRef.current = true;
             
             // Vérifier données valides
             if (!event || !event.data || event.data.trim().length === 0) {
