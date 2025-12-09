@@ -176,16 +176,23 @@ export default function BIRS() {
         const comment = parts[4] || ''; // Comment (LOADED, NOT, etc.)
         const etat = parts[5] || ''; // Lié Etat (Received)
         
-        // Déterminer loaded/received
+        // Déterminer loaded/received et classe
         const loaded = comment.includes('LOADED') || comment === '0';
         const received = etat.includes('Received');
+        
+        // Déterminer la classe (Economy par défaut, sauf si poids > 20kg = possible First)
+        let baggageClass = 'Economy';
+        if (weight > 20) {
+          baggageClass = 'Economy'; // Turkish Airlines permet jusqu'à 30kg en Economy
+        }
         
         console.log('[BIRS Parser] Bagage Turkish:', { 
           bagId, 
           billet, 
           passengerName, 
           weight, 
-          comment, 
+          comment,
+          baggageClass,
           loaded, 
           received 
         });
@@ -194,6 +201,7 @@ export default function BIRS() {
           bagId,
           passengerName,
           pnr: billet !== 'ZZZZZZ' ? billet : '',
+          class: baggageClass,
           weight,
           route: `${origin}-${user?.airport_code}`,
           categories: comment,

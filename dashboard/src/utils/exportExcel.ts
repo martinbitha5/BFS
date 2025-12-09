@@ -45,6 +45,8 @@ export const exportToExcel = async (
   }
 
   // Calculer les statistiques filtrées
+  const { birsItems = [] } = data;
+  
   const stats = {
     totalPassengers: passengers.length,
     totalBaggages: baggages.length,
@@ -52,6 +54,10 @@ export const exportToExcel = async (
     notBoardedPassengers: passengers.filter((p: any) => !p.boarding_status?.[0]?.boarded).length,
     arrivedBaggages: baggages.filter((b: any) => b.status === 'arrived').length,
     inTransitBaggages: baggages.filter((b: any) => b.status === 'checked').length,
+    // Statistiques BIRS
+    totalBirsItems: birsItems.length,
+    arrivedBirsItems: birsItems.filter((item: any) => item.reconciled_at).length,
+    notArrivedBirsItems: birsItems.filter((item: any) => !item.reconciled_at).length,
   };
 
   const boardingRate = stats.totalPassengers > 0
@@ -59,6 +65,9 @@ export const exportToExcel = async (
     : 0;
   const arrivalRate = stats.totalBaggages > 0
     ? Math.round((stats.arrivedBaggages / stats.totalBaggages) * 100)
+    : 0;
+  const birsArrivalRate = stats.totalBirsItems > 0
+    ? Math.round((stats.arrivedBirsItems / stats.totalBirsItems) * 100)
     : 0;
 
   // ===== FEUILLE 1: INFORMATIONS AVEC LOGO =====
@@ -111,10 +120,16 @@ export const exportToExcel = async (
     ['Passagers Embarqués', stats.boardedPassengers],
     ['Passagers Non Embarqués', stats.notBoardedPassengers],
     ['Taux d\'Embarquement', `${boardingRate}%`],
+    ['', ''], // Ligne vide
     ['Total Bagages', stats.totalBaggages],
     ['Bagages Arrivés', stats.arrivedBaggages],
     ['Bagages En Transit', stats.inTransitBaggages],
     ['Taux d\'Arrivée des Bagages', `${arrivalRate}%`],
+    ['', ''], // Ligne vide
+    ['BIRS - Total Bagages Internationaux', stats.totalBirsItems],
+    ['BIRS - Bagages Arrivés', stats.arrivedBirsItems],
+    ['BIRS - Bagages Non Arrivés', stats.notArrivedBirsItems],
+    ['BIRS - Taux d\'Arrivée', `${birsArrivalRate}%`],
   ];
 
   statsData.forEach((row, index) => {
@@ -340,7 +355,7 @@ export const exportToExcel = async (
   // =============================================
   // FEUILLE 5 : BIRS INTERNATIONAL (BAGAGES ATTENDUS)
   // =============================================
-  const { birsItems = [] } = data;
+  // birsItems est déjà extrait au début de la fonction
   
   if (birsItems.length > 0) {
     const birsSheet = workbook.addWorksheet('BIRS International', {
