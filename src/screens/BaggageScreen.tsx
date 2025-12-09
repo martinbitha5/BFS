@@ -131,7 +131,6 @@ export default function BaggageScreen({ navigation }: Props) {
       setProcessing(false); // Réinitialiser pour permettre le scan immédiat
       setScannedBaggagesCount(0); // Réinitialiser le compteur
       
-      console.log('[BAGGAGE SCAN] Mode changé vers RFID, scanner prêt');
       
       // Jouer le son de succès
       await playSuccessSound();
@@ -156,31 +155,16 @@ export default function BaggageScreen({ navigation }: Props) {
   };
 
   const handleRfidScanned = async ({ data }: { data: string }) => {
-    // Log pour déboguer
-    console.log('[BAGGAGE SCAN] handleRfidScanned appelé', { 
-      data, 
-      scanned, 
-      processing, 
-      hasPassenger: !!passenger,
-      scanMode 
-    });
-
     if (scanned || processing) {
-      console.log('[BAGGAGE SCAN] Scan ignoré - déjà en cours de traitement', { scanned, processing });
       return;
     }
 
-    console.log('[BAGGAGE SCAN] Tag RFID scanné:', data);
-    console.log('[BAGGAGE SCAN] Passager:', passenger ? passenger.fullName : 'Aucun (bagage international)');
-    
     // Jouer le son de scan automatique
     await playScanSound();
     
     isProcessingRef.current = true; // Bloquer AVANT les setState
     setScanned(true);
     setProcessing(true);
-    
-    console.log('[BAGGAGE SCAN] État après setScanned/setProcessing:', { scanned: true, processing: true });
 
     try {
       const user = await authServiceInstance.getCurrentUser();
@@ -219,11 +203,9 @@ export default function BaggageScreen({ navigation }: Props) {
         
         // Si le parsing n'a pas extrait de tag RFID valide, utiliser les données brutes
         if (!rfidTag || rfidTag === 'UNKNOWN' || rfidTag.length === 0) {
-          console.log('Tag RFID non extrait par le parser, utilisation des données brutes');
           rfidTag = cleanedData;
         }
       } catch (parseError) {
-        console.error('Erreur lors du parsing de l\'étiquette:', parseError);
         // En cas d'erreur de parsing, utiliser les données brutes comme tag RFID
         rfidTag = cleanedData;
         baggageTagData = {
@@ -246,7 +228,6 @@ export default function BaggageScreen({ navigation }: Props) {
         return;
       }
 
-      console.log('Tag RFID extrait:', rfidTag);
 
       // ✅ Vérifier dans raw_scans si ce bagage a déjà été scanné
       const { rawScanService } = await import('../services');
@@ -301,20 +282,18 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
       `.trim();
 
       // Afficher les informations dans un toast
-      console.log('[BAGGAGE SCAN] Affichage du toast avec tag RFID:', rfidTag);
       setToastMessage(`Tag RFID extrait: ${rfidTag}\nEnregistrement en cours...`);
       setToastType('success');
       setShowToast(true);
 
       // Enregistrer automatiquement le bagage
-      console.log('[BAGGAGE SCAN] Début de l\'enregistrement automatique...');
       try {
         let updatedBaggages: Baggage[] = [];
         let baggageId: string | undefined;
         
         // Si le passager existe, créer un bagage normal
         if (passenger) {
-          console.log('[BAGGAGE SCAN] Passager trouvé - Création bagage normal');
+          console.log('Passager trouvé - Création bagage normal');
             
             // Vérifier si c'est un tag attendu (format Air Congo)
             const expectedTags = passenger.baggageBaseNumber
@@ -367,8 +346,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
             updatedBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
           } else {
             // Si le passager n'existe pas, créer un bagage international
-            console.log('[BAGGAGE SCAN] Passager non trouvé - Création bagage INTERNATIONAL');
-            
+                  
             const internationalBaggage = await birsService.createInternationalBaggage(
               rfidTag,
               user.id,
@@ -398,7 +376,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
               baggageRfidTag: rfidTag,
             });
 
-            console.log('[BAGGAGE SCAN] Bagage international créé:', internationalBaggage.id);
+            console.log('Bagage international créé:', internationalBaggage.id);
         }
 
         // Jouer le son de succès
@@ -423,8 +401,7 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
         
         // Mettre à jour le toast avec le message de succès
         if (__DEV__) {
-          console.log('[BAGGAGE SCAN] MODE TEST - Scan simulé (non enregistré)');
-          console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
+            console.log('[BAGGAGE SCAN] Tag RFID:', rfidTag);
         } else {
           if (passenger) {
             console.log('[BAGGAGE SCAN] Enregistrement réussi dans la base de données');
@@ -445,6 +422,10 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
         // Stocker le tag RFID scanné pour l'afficher dans l'écran de succès
         setLastScannedRfidTag(rfidTag);
         
+        // CRUCIAL: Débloquer le processing pour afficher l'écran de succès
+        isProcessingRef.current = false;
+        setProcessing(false);
+        
         // Ensuite masquer le scanner et afficher l'écran de succès
         // Le résultat restera affiché jusqu'à ce que l'utilisateur clique sur "Scanner à nouveau"
         setShowScanner(false);
@@ -452,14 +433,6 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
         // IMPORTANT: Garder scanned à true pour empêcher tout nouveau scan automatique
         // Il sera réinitialisé uniquement quand l'utilisateur clique sur le bouton
         
-        console.log('[BAGGAGE SCAN] ÉTATS MIS À JOUR:', { 
-          showScanner: false, 
-          processing: false, 
-          scanned: true,
-          lastScannedRfidTag: rfidTag,
-          type: passenger ? 'NORMAL' : 'INTERNATIONAL'
-        });
-        console.log('[BAGGAGE SCAN] Écran de succès devrait maintenant être visible');
         // Le résultat reste affiché jusqu'à ce que l'utilisateur clique sur "Scanner à nouveau"
       } catch (error) {
         await playErrorSound();
@@ -495,13 +468,11 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
   };
 
   const resetScanner = () => {
-    console.log('[BAGGAGE SCAN] resetScanner appelé');
     // Réinitialiser processing immédiatement pour permettre de nouveaux scans
     isProcessingRef.current = false;
     setProcessing(false);
     // Réinitialiser scanned après un court délai pour éviter les scans multiples rapides
     setTimeout(() => {
-      console.log('[BAGGAGE SCAN] Réinitialisation de scanned à false');
       setScanned(false);
     }, 1500);
     // S'assurer que le scanner est visible
@@ -697,7 +668,6 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
             <TouchableOpacity
               style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
               onPress={() => {
-                console.log('[BAGGAGE SCAN] Bouton "Scanner à nouveau" cliqué');
                 // Réinitialiser tous les états pour permettre un nouveau scan
                 setLastScannedRfidTag(null);
                 setScannedTagInfo(null);
@@ -709,7 +679,6 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
                 if (passenger) {
                   loadBaggages();
                 }
-                console.log('[BAGGAGE SCAN] Scanner réactivé - Prêt pour un nouveau scan');
               }}
               activeOpacity={0.8}>
               <Ionicons name="barcode-outline" size={24} color={colors.primary.contrast} />
