@@ -1,7 +1,11 @@
 export type BaggageStatus = 
-  | 'checked'   // Enregistré au check-in
-  | 'arrived'   // Arrivé à destination
-  | 'rush';     // Soute pleine - À réacheminer sur le prochain vol
+  | 'checked'    // Enregistré au check-in
+  | 'loaded'     // Chargé dans l'avion
+  | 'in_transit' // En transit
+  | 'arrived'    // Arrivé à destination
+  | 'delivered'  // Livré au passager
+  | 'rush'       // Soute pleine - À réacheminer sur le prochain vol
+  | 'lost';      // Bagage perdu
 
 export interface Baggage {
   id: string;

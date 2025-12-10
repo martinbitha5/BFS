@@ -47,6 +47,8 @@ CREATE TABLE passengers (
   departure TEXT NOT NULL,
   arrival TEXT NOT NULL,
   airport_code TEXT NOT NULL,
+  baggage_count INTEGER DEFAULT 0,
+  baggage_base_number TEXT,
   checked_in BOOLEAN DEFAULT false,
   checked_in_at TIMESTAMP WITH TIME ZONE,
   checked_in_by UUID REFERENCES users(id),
