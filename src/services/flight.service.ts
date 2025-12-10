@@ -69,31 +69,45 @@ class FlightService {
       const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
       const apiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
 
-      if (!apiUrl || !apiKey) {
-        console.warn('[FlightService] API URL ou API Key non configurée');
+      console.log('[FlightService] 🔍 Config API:', {
+        apiUrl: apiUrl || 'NON CONFIGURÉ',
+        apiKey: apiKey ? 'SET' : 'NON SET',
+        airport: airportCode,
+        date
+      });
+
+      if (!apiUrl) {
+        console.warn('[FlightService] ⚠️ API URL non configurée - Re-login requis !');
         return [];
       }
 
-      const response = await fetch(
-        `${apiUrl}/api/v1/flights?airport=${airportCode}&date=${date}`,
-        {
-          headers: {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const url = `${apiUrl}/api/v1/flights?airport=${airportCode}&date=${date}`;
+      console.log('[FlightService] 📡 Appel API:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'x-api-key': apiKey || '',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('[FlightService] 📥 Réponse API:', response.status, response.statusText);
 
       if (!response.ok) {
         if (response.status === 404) {
-          // Pas de vols programmés pour cette date
+          console.log('[FlightService] ℹ️ Aucun vol programmé pour cette date');
           return [];
         }
+        const errorText = await response.text();
+        console.error('[FlightService] ❌ Erreur HTTP:', response.status, errorText);
         throw new Error(`HTTP ${response.status}`);
       }
 
       const result = await response.json();
       const flights = result.data || [];
+
+      console.log('[FlightService] ✅ Vols programmés reçus:', flights.length);
+      console.log('[FlightService] 📋 Données:', JSON.stringify(flights, null, 2));
 
       return flights.map((f: any) => ({
         flightNumber: f.flightNumber,
@@ -107,7 +121,7 @@ class FlightService {
         source: 'scheduled' as const,
       }));
     } catch (error) {
-      console.error('[FlightService] Erreur API scheduled flights:', error);
+      console.error('[FlightService] ❌ Erreur API scheduled flights:', error);
       return [];
     }
   }
