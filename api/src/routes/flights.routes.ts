@@ -3,6 +3,28 @@ import { supabase } from '../config/database';
 
 const router = Router();
 
+// Helper: Transformer snake_case → camelCase
+function toCamelCase(data: any) {
+  if (!data) return data;
+  if (Array.isArray(data)) return data.map(toCamelCase);
+  
+  return {
+    id: data.id,
+    flightNumber: data.flight_number,
+    airline: data.airline,
+    airlineCode: data.airline_code,
+    departure: data.departure,
+    arrival: data.arrival,
+    scheduledDate: data.scheduled_date,
+    scheduledTime: data.scheduled_time,
+    airportCode: data.airport_code,
+    status: data.status,
+    createdAt: data.created_at,
+    createdBy: data.created_by,
+    updatedAt: data.updated_at
+  };
+}
+
 /**
  * GET /api/v1/flights
  * Liste de tous les vols avec filtres optionnels
@@ -34,7 +56,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     res.json({
       success: true,
       count: data?.length || 0,
-      data: data || []
+      data: toCamelCase(data || [])
     });
   } catch (error) {
     next(error);
@@ -67,7 +89,7 @@ router.get('/:id', async (req, res, next) => {
 
     res.json({
       success: true,
-      data
+      data: toCamelCase(data)
     });
   } catch (error) {
     next(error);
@@ -81,18 +103,35 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const flightData = req.body;
+    
+    // Transformer camelCase → snake_case
+    const dbData = {
+      flight_number: flightData.flightNumber,
+      airline: flightData.airline,
+      airline_code: flightData.airlineCode,
+      departure: flightData.departure,
+      arrival: flightData.arrival,
+      scheduled_date: flightData.scheduledDate,
+      scheduled_time: flightData.scheduledTime || null,
+      airport_code: flightData.airportCode || 'FIH',
+      status: flightData.status || 'scheduled',
+      created_by: (req as any).user?.id || null
+    };
 
     const { data, error } = await supabase
       .from('flight_schedule')
-      .insert(flightData)
+      .insert(dbData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error:', error);
+      throw error;
+    }
 
     res.status(201).json({
       success: true,
-      data
+      data: toCamelCase(data)
     });
   } catch (error) {
     next(error);
@@ -107,10 +146,22 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    
+    // Transformer camelCase → snake_case
+    const dbUpdates: any = {};
+    if (updates.flightNumber) dbUpdates.flight_number = updates.flightNumber;
+    if (updates.airline) dbUpdates.airline = updates.airline;
+    if (updates.airlineCode) dbUpdates.airline_code = updates.airlineCode;
+    if (updates.departure) dbUpdates.departure = updates.departure;
+    if (updates.arrival) dbUpdates.arrival = updates.arrival;
+    if (updates.scheduledDate) dbUpdates.scheduled_date = updates.scheduledDate;
+    if (updates.scheduledTime !== undefined) dbUpdates.scheduled_time = updates.scheduledTime;
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.airportCode) dbUpdates.airport_code = updates.airportCode;
 
     const { data, error } = await supabase
       .from('flight_schedule')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
@@ -119,7 +170,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     res.json({
       success: true,
-      data
+      data: toCamelCase(data)
     });
   } catch (error) {
     next(error);
@@ -173,7 +224,7 @@ router.get('/available/:airportCode', async (req, res, next) => {
     res.json({
       success: true,
       count: data?.length || 0,
-      data: data || []
+      data: toCamelCase(data || [])
     });
   } catch (error) {
     next(error);
