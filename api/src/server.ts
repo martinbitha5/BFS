@@ -12,7 +12,7 @@ import birsRoutes from './routes/birs.routes';
 import boardingRoutes from './routes/boarding.routes';
 import confirmRoutes from './routes/confirm.routes';
 import exportRoutes from './routes/export.routes';
-import flightRoutes from './routes/flight.routes';
+import flightRoutes from './routes/flights.routes';
 import passengerRoutes from './routes/passenger.routes';
 import rawScansRoutes from './routes/raw-scans.routes';
 import rushRoutes from './routes/rush.routes';
