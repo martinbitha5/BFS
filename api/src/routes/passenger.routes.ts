@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 
 const router = Router();
@@ -26,10 +26,26 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
+    // Transformer les données pour le dashboard (snake_case -> camelCase)
+    const transformedData = data?.map(passenger => ({
+      id: passenger.id,
+      fullName: passenger.full_name,
+      pnr: passenger.pnr,
+      flightNumber: passenger.flight_number,
+      departure: passenger.departure,
+      arrival: passenger.arrival,
+      seatNumber: passenger.seat_number,
+      baggageCount: passenger.baggage_count || 0,
+      checkedInAt: passenger.checked_in_at,
+      airportCode: passenger.airport_code,
+      baggages: passenger.baggages || [],
+      boarding_status: passenger.boarding_status || []
+    }));
+
     res.json({
       success: true,
-      count: data?.length || 0,
-      data: data || []
+      count: transformedData?.length || 0,
+      data: transformedData || []
     });
   } catch (error) {
     next(error);

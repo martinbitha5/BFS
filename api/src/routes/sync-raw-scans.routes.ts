@@ -68,7 +68,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
             if (!existing) {
               // Créer le passager
-              const { error: passError } = await supabase
+              const { data: newPassenger, error: passError } = await supabase
                 .from('passengers')
                 .insert({
                   full_name: parsed.fullName || 'UNKNOWN',
@@ -80,11 +80,34 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
                   baggage_count: parsed.baggageCount || 0,
                   checked_in_at: scan.checkin_at || scan.created_at,
                   airport_code: airport_code
-                });
+                })
+                .select()
+                .single();
 
-              if (!passError) {
+              if (!passError && newPassenger) {
                 passengersCreated++;
-                console.log(`[SYNC] ✅ Passager créé: ${parsed.pnr}`);
+                console.log(`[SYNC] ✅ Passager créé: ${parsed.pnr} (${parsed.fullName})`);
+
+                // Créer des bagages si baggageCount > 0
+                if (parsed.baggageCount > 0) {
+                  for (let i = 1; i <= parsed.baggageCount; i++) {
+                    const { error: bagError } = await supabase
+                      .from('baggages')
+                      .insert({
+                        passenger_id: newPassenger.id,
+                        tag_number: `${parsed.pnr}-BAG${i}`,
+                        status: 'checked_in',
+                        flight_number: parsed.flightNumber,
+                        airport_code: airport_code,
+                        scanned_at: scan.checkin_at || scan.created_at
+                      });
+
+                    if (!bagError) {
+                      baggagesCreated++;
+                      console.log(`[SYNC] ✅ Bagage ${i}/${parsed.baggageCount} créé pour ${parsed.pnr}`);
+                    }
+                  }
+                }
               } else {
                 console.error(`[SYNC] ❌ Erreur création passager ${parsed.pnr}:`, passError);
                 errors++;
@@ -111,28 +134,69 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
           if (!existingNational && !existingIntl) {
             // Parser le tag bagage pour extraire les infos
             const baggageParsed = parseSimpleBaggageTag(scan.raw_data);
+            
+            // Extraire le PNR du tag s'il est disponible
+            const pnrFromTag = baggageParsed?.pnr || extractPNRFromTag(scan.baggage_rfid_tag);
 
-            // Créer un bagage international par défaut
-            const { error: bagError } = await supabase
-              .from('international_baggages')
-              .insert({
-                rfid_tag: scan.baggage_rfid_tag,
-                status: 'scanned',
-                passenger_name: baggageParsed?.passengerName,
-                pnr: baggageParsed?.pnr,
-                flight_number: baggageParsed?.flightNumber,
-                origin: baggageParsed?.origin || airport_code,
-                scanned_at: scan.baggage_at || scan.created_at,
-                airport_code: airport_code,
-                remarks: 'Auto-créé depuis raw_scans'
-              });
+            // Chercher si un passager avec ce PNR existe
+            let passengerId = null;
+            if (pnrFromTag) {
+              const { data: passenger } = await supabase
+                .from('passengers')
+                .select('id, flight_number')
+                .eq('pnr', pnrFromTag)
+                .eq('airport_code', airport_code)
+                .single();
+              
+              if (passenger) {
+                passengerId = passenger.id;
+                console.log(`[SYNC] 🔗 Passager trouvé pour bagage ${scan.baggage_rfid_tag}: PNR ${pnrFromTag}`);
+              }
+            }
 
-            if (!bagError) {
-              baggagesCreated++;
-              console.log(`[SYNC] ✅ Bagage créé: ${scan.baggage_rfid_tag}`);
+            if (passengerId) {
+              // Créer un bagage national lié au passager
+              const { error: bagError } = await supabase
+                .from('baggages')
+                .insert({
+                  passenger_id: passengerId,
+                  tag_number: scan.baggage_rfid_tag,
+                  status: 'arrived',
+                  flight_number: baggageParsed?.flightNumber,
+                  airport_code: airport_code,
+                  scanned_at: scan.baggage_at || scan.created_at
+                });
+
+              if (!bagError) {
+                baggagesCreated++;
+                console.log(`[SYNC] ✅ Bagage national créé: ${scan.baggage_rfid_tag} (lié au passager)`);
+              } else {
+                console.error(`[SYNC] ❌ Erreur création bagage national ${scan.baggage_rfid_tag}:`, bagError);
+                errors++;
+              }
             } else {
-              console.error(`[SYNC] ❌ Erreur création bagage ${scan.baggage_rfid_tag}:`, bagError);
-              errors++;
+              // Créer un bagage international (passager non trouvé)
+              const { error: bagError } = await supabase
+                .from('international_baggages')
+                .insert({
+                  rfid_tag: scan.baggage_rfid_tag,
+                  status: 'scanned',
+                  passenger_name: baggageParsed?.passengerName,
+                  pnr: pnrFromTag,
+                  flight_number: baggageParsed?.flightNumber,
+                  origin: baggageParsed?.origin || airport_code,
+                  scanned_at: scan.baggage_at || scan.created_at,
+                  airport_code: airport_code,
+                  remarks: 'Auto-créé depuis raw_scans - passager non trouvé'
+                });
+
+              if (!bagError) {
+                baggagesCreated++;
+                console.log(`[SYNC] ✅ Bagage international créé: ${scan.baggage_rfid_tag}`);
+              } else {
+                console.error(`[SYNC] ❌ Erreur création bagage international ${scan.baggage_rfid_tag}:`, bagError);
+                errors++;
+              }
             }
           }
         }
@@ -162,6 +226,29 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ===== PARSERS SIMPLES =====
+
+/**
+ * Extrait le PNR depuis un tag RFID de bagage
+ * Format attendu: PNR (6 lettres) suivi de chiffres
+ * Exemple: ABCDEF123456 → ABCDEF
+ */
+function extractPNRFromTag(tag: string): string | null {
+  if (!tag || tag.length < 6) return null;
+  
+  // Chercher 6 lettres consécutives au début
+  const pnrMatch = tag.match(/^([A-Z]{6})/);
+  if (pnrMatch) {
+    return pnrMatch[1];
+  }
+  
+  // Chercher 6 caractères alphanumériques
+  const alphaMatch = tag.match(/^([A-Z0-9]{6})/);
+  if (alphaMatch) {
+    return alphaMatch[1];
+  }
+  
+  return null;
+}
 
 function parseSimpleBoardingPass(rawData: string): any {
   try {
