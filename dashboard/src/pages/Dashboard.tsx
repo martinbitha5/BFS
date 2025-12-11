@@ -188,7 +188,7 @@ export default function Dashboard() {
 
           {/* Flights List */}
           {stats.uniqueFlights.length > 0 && (
-            <div className="bg-white/75 backdrop-blur-lg shadow rounded-lg">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200/50">
                 <h3 className="text-lg font-medium text-white">
                   Vols ({stats.flightsCount})

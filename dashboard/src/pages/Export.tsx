@@ -420,7 +420,7 @@ export default function Export() {
           <FileSpreadsheet className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" />
           Exporter les données
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-white/70">
           Exporter les données brutes (raw scans) ou traitées avec filtres avancés
         </p>
       </div>
@@ -445,7 +445,7 @@ export default function Export() {
         </div>
 
         {/* Type de filtre de date */}
-        <div className="bg-white/90 backdrop-blur-lg rounded-lg p-4">
+        <div className="bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-4">
           <label className="block text-sm font-medium text-white/85 mb-3">
             <Calendar className="w-4 h-4 inline mr-1" />
             Type de période
@@ -480,7 +480,7 @@ export default function Export() {
           <div>
             <label className="block text-sm font-medium text-white/85 mb-2">
               <Plane className="w-4 h-4 inline mr-1" />
-              Vol {flights.length > 0 && <span className="text-xs text-gray-500">({flights.length} disponibles)</span>}
+              Vol {flights.length > 0 && <span className="text-xs text-white/70">({flights.length} disponibles)</span>}
             </label>
             <select
               value={selectedFlight}
@@ -495,7 +495,7 @@ export default function Export() {
               ))}
             </select>
             {flights.length === 0 && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-white/70">
                 Aucun vol enregistré pour le moment
               </p>
             )}
@@ -505,7 +505,7 @@ export default function Export() {
           <div>
             <label className="block text-sm font-medium text-white/85 mb-2">
               <MapPin className="w-4 h-4 inline mr-1" />
-              Route de destination {destinations.length > 0 && <span className="text-xs text-gray-500">({destinations.length})</span>}
+              Route de destination {destinations.length > 0 && <span className="text-xs text-white/70">({destinations.length})</span>}
             </label>
             <select
               value={selectedDestination}
@@ -519,7 +519,7 @@ export default function Export() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-white/70">
               {exportType === 'raw_scans' ? 'Départ ou arrivée' : 'Aéroport d\'arrivée'}
             </p>
           </div>
@@ -538,7 +538,7 @@ export default function Export() {
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 placeholder="Sélectionner un jour"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-white/70">
                 Export des données pour cette date uniquement
               </p>
             </div>
@@ -675,7 +675,7 @@ export default function Export() {
               handleExportFile();
             }}
             disabled={exporting || !user?.airport_code || exportType === 'raw_scans'}
-            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
+            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-black/25 backdrop-blur-md border border-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
             {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Standard'}

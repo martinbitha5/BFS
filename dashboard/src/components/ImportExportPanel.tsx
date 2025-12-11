@@ -235,7 +235,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
       )}
 
       {/* Instructions */}
-      <div className="mt-6 p-4 bg-white/90 backdrop-blur-lg rounded-lg border border-gray-200">
+      <div className="mt-6 p-4 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg border border-gray-200">
         <h4 className="font-semibold text-white/90 mb-2">Instructions</h4>
         <ul className="space-y-1 text-sm text-gray-600">
           <li>• <strong>Export:</strong> Télécharge les données au format CSV</li>
@@ -252,13 +252,13 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
           Voir les formats CSV attendus
         </summary>
         <div className="mt-3 space-y-4 text-xs">
-          <div className="bg-white/90 backdrop-blur-lg p-3 rounded border border-gray-200">
+          <div className="bg-black/25 backdrop-blur-md border border-white/20 p-3 rounded border border-gray-200">
             <p className="font-semibold text-white/90 mb-1">Passagers:</p>
             <code className="text-gray-600">
               PNR,Nom Complet,Prénom,Nom,Vol,Compagnie,Départ,Arrivée,Heure,Siège,Bagages
             </code>
           </div>
-          <div className="bg-white/90 backdrop-blur-lg p-3 rounded border border-gray-200">
+          <div className="bg-black/25 backdrop-blur-md border border-white/20 p-3 rounded border border-gray-200">
             <p className="font-semibold text-white/90 mb-1">Bagages:</p>
             <code className="text-gray-600">
               RFID Tag,Passager ID,Statut,Type,Poids (kg)

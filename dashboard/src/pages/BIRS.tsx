@@ -155,41 +155,41 @@ export default function BIRS() {
 
         {loading ? (
           <div className="text-center py-8">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400" />
-            <p className="text-gray-500 mt-2">Chargement...</p>
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-white/60" />
+            <p className="text-white/70 mt-2">Chargement...</p>
           </div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-white/70">
             <FileText className="w-12 h-12 mx-auto text-gray-300 mb-2" />
             <p>Aucun rapport uploadé</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-white/90 backdrop-blur-lg">
+              <thead className="bg-black/25 backdrop-blur-md border border-white/20">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vol</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compagnie</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Route</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bagages</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Vol</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Compagnie</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Route</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Bagages</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Statut</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
                 {reports.map((report) => (
-                  <tr key={report.id} className="hover:bg-white/90 backdrop-blur-lg">
+                  <tr key={report.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                       {report.flight_number}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                       {new Date(report.flight_date).toLocaleDateString('fr-FR')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                       {report.airline}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                       {report.origin} → {report.destination}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white">

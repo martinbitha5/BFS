@@ -107,7 +107,7 @@ export default function BaggageTracker() {
             <div className="border-t border-gray-200 pt-6">
               <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <dt className="text-sm font-medium text-white/70 flex items-center">
                     <Package className="w-4 h-4 mr-2" />
                     Numéro de tag
                   </dt>
@@ -115,7 +115,7 @@ export default function BaggageTracker() {
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <dt className="text-sm font-medium text-white/70 flex items-center">
                     <Plane className="w-4 h-4 mr-2" />
                     Vol
                   </dt>
@@ -123,7 +123,7 @@ export default function BaggageTracker() {
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <dt className="text-sm font-medium text-white/70 flex items-center">
                     <Clock className="w-4 h-4 mr-2" />
                     Enregistré le
                   </dt>
@@ -134,7 +134,7 @@ export default function BaggageTracker() {
 
                 {baggage.arrivedAt && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <dt className="text-sm font-medium text-white/70 flex items-center">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Arrivé le
                     </dt>
@@ -145,7 +145,7 @@ export default function BaggageTracker() {
                 )}
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <dt className="text-sm font-medium text-white/70 flex items-center">
                     <MapPin className="w-4 h-4 mr-2" />
                     Localisation actuelle
                   </dt>
@@ -153,7 +153,7 @@ export default function BaggageTracker() {
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Poids</dt>
+                  <dt className="text-sm font-medium text-white/70">Poids</dt>
                   <dd className="mt-1 text-sm text-white">{baggage.weight} kg</dd>
                 </div>
               </dl>
@@ -165,17 +165,17 @@ export default function BaggageTracker() {
                 <h3 className="text-lg font-medium text-white mb-4">Informations passager</h3>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Nom</dt>
+                    <dt className="text-sm font-medium text-white/70">Nom</dt>
                     <dd className="mt-1 text-sm text-white">{baggage.passenger.name}</dd>
                   </div>
 
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">PNR</dt>
+                    <dt className="text-sm font-medium text-white/70">PNR</dt>
                     <dd className="mt-1 text-sm text-white font-mono">{baggage.passenger.pnr}</dd>
                   </div>
 
                   <div className="sm:col-span-2">
-                    <dt className="text-sm font-medium text-gray-500">Itinéraire</dt>
+                    <dt className="text-sm font-medium text-white/70">Itinéraire</dt>
                     <dd className="mt-1 text-sm text-white">{baggage.passenger.route}</dd>
                   </div>
                 </dl>

@@ -136,7 +136,7 @@ export default function FlightManagement() {
           {/* Recherche */}
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Rechercher un vol..."
@@ -186,31 +186,31 @@ export default function FlightManagement() {
       ) : (
         <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-lg">
+            <thead className="bg-black/25 backdrop-blur-md border border-white/20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Vol
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Compagnie
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Route
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Heure
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
               {filteredFlights.map((flight) => (
-                <tr key={flight.id} className="hover:bg-white/90 backdrop-blur-lg transition-colors">
+                <tr key={flight.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -218,7 +218,7 @@ export default function FlightManagement() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">{flight.flightNumber}</div>
-                        <div className="text-sm text-gray-500">{flight.airlineCode}</div>
+                        <div className="text-sm text-white/70">{flight.airlineCode}</div>
                       </div>
                     </div>
                   </td>
@@ -228,7 +228,7 @@ export default function FlightManagement() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm font-medium text-white">
                       <span>{flight.departure}</span>
-                      <span className="text-gray-400">→</span>
+                      <span className="text-white/60">→</span>
                       <span>{flight.arrival}</span>
                     </div>
                   </td>

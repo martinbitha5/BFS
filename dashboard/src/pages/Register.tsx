@@ -203,7 +203,7 @@ export default function Register() {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="flex items-start">
             <Plane className="w-5 h-5 text-primary-600 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-white/70">
               Ce compte vous permettra de gérer les opérations de bagages et de passagers pour votre aéroport.
             </p>
           </div>

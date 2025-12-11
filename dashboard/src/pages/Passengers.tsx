@@ -144,7 +144,7 @@ export default function Passengers() {
               Rechercher
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
               <input
                 type="text"
                 value={searchTerm}
@@ -177,7 +177,7 @@ export default function Passengers() {
             </button>
             <button
               onClick={fetchPassengers}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-black/25 backdrop-blur-md border border-white/20"
             >
               Actualiser
             </button>
@@ -202,33 +202,33 @@ export default function Passengers() {
         </div>
       ) : filteredPassengers.length === 0 ? (
         <div className="text-center py-12">
-          <Users className="mx-auto h-12 w-12 text-gray-400" />
+          <Users className="mx-auto h-12 w-12 text-white/60" />
           <h3 className="mt-2 text-sm font-medium text-white">Aucun passager</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-white/70">
             Aucun passager trouvé pour les critères sélectionnés
           </p>
         </div>
       ) : (
         <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-lg">
+            <thead className="bg-black/25 backdrop-blur-md border border-white/20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Passager
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Vol
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Route
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Bagages
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Enregistré
                 </th>
               </tr>
@@ -239,19 +239,19 @@ export default function Passengers() {
                 const { arrivedCount, totalCount } = getBaggageStatus(passenger);
 
                 return (
-                  <tr key={passenger.id} className="hover:bg-white/90 backdrop-blur-lg">
+                  <tr key={passenger.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="font-medium text-white">{passenger.fullName}</div>
-                        <div className="text-sm text-gray-500 font-mono">PNR: {passenger.pnr}</div>
+                        <div className="text-sm text-white/70 font-mono">PNR: {passenger.pnr}</div>
                         {passenger.seatNumber && (
-                          <div className="text-sm text-gray-500">Siège: {passenger.seatNumber}</div>
+                          <div className="text-sm text-white/70">Siège: {passenger.seatNumber}</div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-white">
-                        <Plane className="w-4 h-4 mr-2 text-gray-400" />
+                        <Plane className="w-4 h-4 mr-2 text-white/60" />
                         {passenger.flightNumber}
                       </div>
                     </td>
@@ -260,7 +260,7 @@ export default function Passengers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm">
-                        <Package className="w-4 h-4 mr-2 text-gray-400" />
+                        <Package className="w-4 h-4 mr-2 text-white/60" />
                         <span className={arrivedCount === totalCount && totalCount > 0 ? 'text-green-600' : 'text-white'}>
                           {arrivedCount}/{totalCount}
                         </span>
@@ -279,9 +279,9 @@ export default function Passengers() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        <Calendar className="w-4 h-4 mr-2 text-white/60" />
                         {passenger.checkedInAt && !isNaN(new Date(passenger.checkedInAt).getTime())
                           ? new Date(passenger.checkedInAt).toLocaleString('fr-FR', {
                               day: '2-digit',

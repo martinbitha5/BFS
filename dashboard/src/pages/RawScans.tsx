@@ -120,7 +120,7 @@ export default function RawScans() {
             <Barcode className="w-6 h-6 sm:w-8 sm:h-8" />
             Scans Bruts (Raw Data)
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-white/70">
             Données brutes pures sans parsing ni transformation
           </p>
         </div>
@@ -140,16 +140,16 @@ export default function RawScans() {
           <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-xs text-white/70">Total</p>
                 <p className="text-xl sm:text-2xl font-bold text-white">{stats.total}</p>
               </div>
-              <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 opacity-20" />
+              <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-white/60 opacity-20" />
             </div>
           </div>
           <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Check-in</p>
+                <p className="text-xs text-white/70">Check-in</p>
                 <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.by_status.checkin}</p>
               </div>
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
@@ -158,7 +158,7 @@ export default function RawScans() {
           <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Embarqu.</p>
+                <p className="text-xs text-white/70">Embarqu.</p>
                 <p className="text-xl sm:text-2xl font-bold text-purple-600">{stats.by_status.boarding}</p>
               </div>
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
@@ -167,7 +167,7 @@ export default function RawScans() {
           <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">BP</p>
+                <p className="text-xs text-white/70">BP</p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.by_type.boarding_pass}</p>
               </div>
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
@@ -176,7 +176,7 @@ export default function RawScans() {
           <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">BT</p>
+                <p className="text-xs text-white/70">BT</p>
                 <p className="text-xl sm:text-2xl font-bold text-orange-600">{stats.by_type.baggage_tag}</p>
               </div>
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 opacity-20" />
@@ -212,28 +212,28 @@ export default function RawScans() {
       <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-lg">
+            <thead className="bg-black/25 backdrop-blur-md border border-white/20">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Données Brutes
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Checkpoints
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider hidden sm:table-cell">
                   Scans
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider hidden md:table-cell">
                   Dates
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
               {scans.map((scan) => (
-                <tr key={scan.id} className="hover:bg-white/90 backdrop-blur-lg transition-colors">
+                <tr key={scan.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20 transition-colors">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                       scan.scan_type === 'boarding_pass'
@@ -262,12 +262,12 @@ export default function RawScans() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-white/70 hidden sm:table-cell">
                     {scan.scan_count}x
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs text-gray-500 hidden md:table-cell">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs text-white/70 hidden md:table-cell">
                     <div>{new Date(scan.first_scanned_at).toLocaleDateString('fr-FR')}</div>
-                    <div className="text-gray-400">{new Date(scan.last_scanned_at).toLocaleTimeString('fr-FR')}</div>
+                    <div className="text-white/60">{new Date(scan.last_scanned_at).toLocaleTimeString('fr-FR')}</div>
                   </td>
                 </tr>
               ))}
@@ -278,9 +278,9 @@ export default function RawScans() {
 
       {scans.length === 0 && !loading && (
         <div className="text-center py-12">
-          <Barcode className="mx-auto h-12 w-12 text-gray-400" />
+          <Barcode className="mx-auto h-12 w-12 text-white/60" />
           <h3 className="mt-2 text-sm font-medium text-white">Aucun scan brut trouvé</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-white/70">
             Les données brutes apparaissent ici après le scan depuis l'app mobile
           </p>
         </div>

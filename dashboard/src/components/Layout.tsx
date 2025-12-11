@@ -77,7 +77,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="p-4 border-t border-white/20 bg-black/20">
             <div className="mb-3">
               <p className="text-sm font-semibold text-white truncate">{user.full_name}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+              <p className="text-xs text-white/60 truncate">{user.email}</p>
             </div>
             <button
               onClick={logout}

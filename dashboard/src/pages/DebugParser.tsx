@@ -54,7 +54,7 @@ export default function DebugParser() {
                 <div className="text-sm font-mono truncate">
                   {scan.raw_data.substring(0, 80)}...
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-white/70 mt-1">
                   Scanné: {new Date(scan.first_scanned_at).toLocaleString('fr-FR')}
                 </div>
               </div>

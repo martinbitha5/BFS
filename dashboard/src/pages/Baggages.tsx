@@ -184,12 +184,12 @@ export default function Baggages() {
             </div>
             <p className="text-white font-medium">{getBaggagePassenger(baggage)}</p>
             {isNational && (baggage as Baggage).passengers?.pnr && (
-              <p className="text-sm text-gray-500 font-mono">
+              <p className="text-sm text-white/70 font-mono">
                 PNR: {(baggage as Baggage).passengers.pnr}
               </p>
             )}
             {!isNational && (baggage as InternationalBaggage).pnr && (
-              <p className="text-sm text-gray-500 font-mono">
+              <p className="text-sm text-white/70 font-mono">
                 PNR: {(baggage as InternationalBaggage).pnr}
               </p>
             )}
@@ -235,7 +235,7 @@ export default function Baggages() {
               )}
             </>
           )}
-          <div className="flex items-center text-gray-500">
+          <div className="flex items-center text-white/70">
             <Clock className="w-4 h-4 mr-2" />
             {isNational 
               ? ((baggage as Baggage).checkedAt && !isNaN(new Date((baggage as Baggage).checkedAt).getTime())
@@ -274,7 +274,7 @@ export default function Baggages() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-white">Gestion des bagages - {user?.airport_code}</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-white/70">
           Suivi des bagages nationaux, internationaux et RUSH
         </p>
       </div>
@@ -303,7 +303,7 @@ export default function Baggages() {
               Rechercher
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
               <input
                 type="text"
                 value={searchTerm}
@@ -321,7 +321,7 @@ export default function Baggages() {
           </p>
           <button
             onClick={fetchBaggages}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-black/25 backdrop-blur-md border border-white/20"
           >
             Actualiser
           </button>
@@ -339,9 +339,9 @@ export default function Baggages() {
         </div>
       ) : filteredBaggages.length === 0 ? (
         <div className="text-center py-12">
-          <Package className="mx-auto h-12 w-12 text-gray-400" />
+          <Package className="mx-auto h-12 w-12 text-white/60" />
           <h3 className="mt-2 text-sm font-medium text-white">Aucun bagage</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-white/70">
             Aucun bagage trouvé pour les critères sélectionnés
           </p>
         </div>
@@ -415,7 +415,7 @@ export default function Baggages() {
                   setNextFlight('');
                   setRushRemarks('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-white/85 hover:bg-white/90 backdrop-blur-lg"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-white/85 hover:bg-black/25 backdrop-blur-md border border-white/20"
               >
                 Annuler
               </button>

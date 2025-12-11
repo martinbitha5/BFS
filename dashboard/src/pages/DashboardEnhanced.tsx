@@ -187,7 +187,7 @@ export default function DashboardEnhanced() {
               {user?.airport_code}
             </span>
           </h2>
-          <p className="mt-1 text-xs sm:text-sm text-gray-500 flex items-center">
+          <p className="mt-1 text-xs sm:text-sm text-white/70 flex items-center">
             <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             Mis à jour automatiquement toutes les 30s
           </p>
@@ -300,7 +300,7 @@ export default function DashboardEnhanced() {
                   <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Total Scans</p>
+                        <p className="text-xs text-white/70 mb-1">Total Scans</p>
                         <p className="text-xl sm:text-2xl font-bold text-purple-600">{rawScansStats.total}</p>
                       </div>
                       <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
@@ -309,7 +309,7 @@ export default function DashboardEnhanced() {
                   <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Boarding Pass</p>
+                        <p className="text-xs text-white/70 mb-1">Boarding Pass</p>
                         <p className="text-xl sm:text-2xl font-bold text-green-600">{rawScansStats.by_type.boarding_pass}</p>
                       </div>
                       <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
@@ -318,7 +318,7 @@ export default function DashboardEnhanced() {
                   <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Baggage Tag</p>
+                        <p className="text-xs text-white/70 mb-1">Baggage Tag</p>
                         <p className="text-xl sm:text-2xl font-bold text-orange-600">{rawScansStats.by_type.baggage_tag}</p>
                       </div>
                       <Package className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 opacity-20" />
@@ -327,7 +327,7 @@ export default function DashboardEnhanced() {
                   <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Checkpoints</p>
+                        <p className="text-xs text-white/70 mb-1">Checkpoints</p>
                         <p className="text-xl sm:text-2xl font-bold text-blue-600">
                           {rawScansStats.by_status.checkin + rawScansStats.by_status.baggage + rawScansStats.by_status.boarding + rawScansStats.by_status.arrival}
                         </p>
@@ -417,13 +417,13 @@ export default function DashboardEnhanced() {
               </div>
               <div className="space-y-2 sm:space-y-3 max-h-[200px] sm:max-h-[250px] overflow-y-auto">
                 {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-white/90 backdrop-blur-lg rounded-lg hover:bg-white/85 backdrop-blur-lg transition">
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg hover:bg-white/85 backdrop-blur-lg transition">
                     <div className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(activity.status)}`}>
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white">{activity.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatTimestamp(activity.timestamp)}</p>
+                      <p className="text-xs text-white/70 mt-1">{formatTimestamp(activity.timestamp)}</p>
                     </div>
                   </div>
                 ))}
@@ -463,7 +463,7 @@ export default function DashboardEnhanced() {
             <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Arrivés</p>
+                  <p className="text-xs text-white/70">Arrivés</p>
                   <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.arrivedBaggages}</p>
                 </div>
                 <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
@@ -472,7 +472,7 @@ export default function DashboardEnhanced() {
             <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">En transit</p>
+                  <p className="text-xs text-white/70">En transit</p>
                   <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.inTransitBaggages}</p>
                 </div>
                 <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 opacity-20" />
@@ -481,7 +481,7 @@ export default function DashboardEnhanced() {
             <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Embarq.</p>
+                  <p className="text-xs text-white/70">Embarq.</p>
                   <p className="text-xl sm:text-2xl font-bold text-blue-600">
                     {Math.round((stats.boardedPassengers / (stats.totalPassengers || 1)) * 100)}%
                   </p>
@@ -492,7 +492,7 @@ export default function DashboardEnhanced() {
             <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-500">Moy. bag</p>
+                  <p className="text-xs text-white/70">Moy. bag</p>
                   <p className="text-xl sm:text-2xl font-bold text-purple-600">
                     {stats.totalPassengers > 0 ? (stats.totalBaggages / stats.totalPassengers).toFixed(1) : '0'}
                   </p>
