@@ -46,7 +46,7 @@ export default function Signup() {
       style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
     >
       {/* Overlay sombre pour améliorer la lisibilité */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-black/50"></div>
       
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">

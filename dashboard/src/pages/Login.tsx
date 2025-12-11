@@ -32,7 +32,7 @@ export default function Login() {
       style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
     >
       {/* Overlay sombre pour améliorer la lisibilité */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-black/50"></div>
       
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
         {/* Logo et titre */}
