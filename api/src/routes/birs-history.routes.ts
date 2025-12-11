@@ -20,7 +20,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     // Récupérer les rapports BIRS pour cette compagnie
     const { data: reports, error } = await supabase
-      .from('birs_international')
+      .from('birs_reports')
       .select('*')
       .eq('airline_code', airline_code)
       .order('uploaded_at', { ascending: false });

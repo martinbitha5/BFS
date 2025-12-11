@@ -86,8 +86,8 @@ export default function History() {
       <div className="max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Historique des rapports</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-white mb-2">Historique des rapports</h1>
+            <p className="text-white/90">
               Consultez l'historique de vos uploads BIRS (lecture seule)
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function History() {
           <button
             onClick={fetchReports}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center space-x-2 px-4 py-2 bg-white/95 backdrop-blur-sm text-primary-600 rounded-lg hover:bg-white disabled:opacity-50 transition-colors shadow-lg"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Actualiser</span>
@@ -110,18 +110,18 @@ export default function History() {
 
         {loading && !error ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
           </div>
         ) : reports.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun rapport</h3>
             <p className="text-gray-500">Vous n'avez pas encore uploadé de fichiers BIRS</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Vol
@@ -143,9 +143,9 @@ export default function History() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white/50 divide-y divide-gray-200">
                 {reports.map((report) => (
-                  <tr key={report.id} className="hover:bg-gray-50">
+                  <tr key={report.id} className="hover:bg-white/70 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{report.flight_number}</div>
                     </td>

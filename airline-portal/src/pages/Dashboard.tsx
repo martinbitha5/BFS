@@ -70,12 +70,12 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="max-w-4xl">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload BIRS</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Upload BIRS</h1>
+        <p className="text-white/90 mb-8">
           Téléchargez vos fichiers BIRS (Baggage Irregularity Report System)
         </p>
 
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow p-8">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
             <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             

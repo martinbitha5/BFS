@@ -23,9 +23,15 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div 
+      className="flex h-screen relative bg-cover bg-center"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      {/* Overlay sombre */}
+      <div className="absolute inset-0 bg-black/40"></div>
+      
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
+      <div className="w-64 bg-white/95 backdrop-blur-sm shadow-lg relative z-10">
         <div className="p-4 border-b">
           <div className="flex items-center space-x-2">
             <Plane className="w-8 h-8 text-primary-600" />
@@ -75,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto relative z-10">
         <div className="p-8">
           {children}
         </div>
