@@ -134,8 +134,8 @@ export default function DashboardEnhanced() {
 
   const getActivityColor = (status: string) => {
     switch (status) {
-      case 'success': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
+      case 'success': return 'text-green-600 bg-green-900/40 backdrop-blur-sm';
+      case 'warning': return 'text-yellow-300 bg-yellow-900/40 backdrop-blur-sm';
       case 'error': return 'text-red-600 bg-red-100';
       default: return 'text-white/80 bg-white/85 backdrop-blur-lg';
     }
@@ -271,7 +271,7 @@ export default function DashboardEnhanced() {
                       <Database className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" />
                       <h3 className="text-base sm:text-lg font-semibold text-white">Scans Bruts</h3>
                     </div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/40 backdrop-blur-sm text-green-800">
                       Système anti-doublons
                     </span>
                   </div>
@@ -282,7 +282,7 @@ export default function DashboardEnhanced() {
                         Check-in: {rawScansStats.by_status.checkin}
                       </span>
                       <span className="flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
+                        <span className="w-2 h-2 rounded-full bg-black/25 backdrop-blur-md0 mr-1"></span>
                         Bagage: {rawScansStats.by_status.baggage}
                       </span>
                       <span className="flex items-center">
@@ -328,11 +328,11 @@ export default function DashboardEnhanced() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-white/70 mb-1">Checkpoints</p>
-                        <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                        <p className="text-xl sm:text-2xl font-bold text-blue-300">
                           {rawScansStats.by_status.checkin + rawScansStats.by_status.baggage + rawScansStats.by_status.boarding + rawScansStats.by_status.arrival}
                         </p>
                       </div>
-                      <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
+                      <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-300 opacity-20" />
                     </div>
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export default function DashboardEnhanced() {
           {/* Alertes importantes - Responsive */}
           {
             stats.notBoardedPassengers > 0 && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4 rounded-r-lg animate-fade-in">
+              <div className="bg-black/25 backdrop-blur-md border-l-4 border-yellow-400 p-3 sm:p-4 rounded-r-lg animate-fade-in">
                 <div className="flex items-start">
                   <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
@@ -473,20 +473,20 @@ export default function DashboardEnhanced() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">En transit</p>
-                  <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.inTransitBaggages}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-yellow-300">{stats.inTransitBaggages}</p>
                 </div>
-                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 opacity-20" />
+                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-300 opacity-20" />
               </div>
             </div>
             <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">Embarq.</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                  <p className="text-xl sm:text-2xl font-bold text-blue-300">
                     {Math.round((stats.boardedPassengers / (stats.totalPassengers || 1)) * 100)}%
                   </p>
                 </div>
-                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
+                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-300 opacity-20" />
               </div>
             </div>
             <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">

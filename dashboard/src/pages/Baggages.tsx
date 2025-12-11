@@ -40,11 +40,11 @@ type BaggageType = 'all' | 'national' | 'international' | 'rush';
 
 const statusConfig = {
   checked: { label: 'Enregistré', color: 'bg-blue-100 text-blue-800', icon: Package },
-  arrived: { label: 'Arrivé', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+  arrived: { label: 'Arrivé', color: 'bg-green-900/40 backdrop-blur-sm text-green-800', icon: CheckCircle },
   rush: { label: 'RUSH', color: 'bg-red-100 text-red-800', icon: AlertCircle },
   scanned: { label: 'Scanné', color: 'bg-purple-100 text-purple-800', icon: Package },
-  reconciled: { label: 'Réconcilié', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  unmatched: { label: 'Non matché', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
+  reconciled: { label: 'Réconcilié', color: 'bg-green-900/40 backdrop-blur-sm text-green-800', icon: CheckCircle },
+  unmatched: { label: 'Non matché', color: 'bg-yellow-900/40 backdrop-blur-sm text-yellow-800', icon: AlertCircle },
   pending: { label: 'En attente', color: 'bg-white/85 backdrop-blur-lg text-white/90', icon: Clock },
 };
 

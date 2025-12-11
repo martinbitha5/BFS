@@ -47,7 +47,7 @@ export default function DebugParser() {
               <div
                 key={idx}
                 onClick={() => handleSelectScan(scan)}
-                className={`p-3 border rounded cursor-pointer hover:bg-blue-50 ${
+                className={`p-3 border rounded cursor-pointer hover:bg-black/25 backdrop-blur-md ${
                   selectedScan === scan ? 'bg-blue-100 border-blue-500' : ''
                 }`}
               >

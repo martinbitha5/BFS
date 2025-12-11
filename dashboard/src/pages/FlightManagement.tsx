@@ -214,7 +214,7 @@ export default function FlightManagement() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Plane className="h-5 w-5 text-blue-600" />
+                        <Plane className="h-5 w-5 text-blue-300" />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">{flight.flightNumber}</div>
@@ -238,8 +238,8 @@ export default function FlightManagement() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                      flight.status === 'boarding' ? 'bg-yellow-100 text-yellow-800' :
-                      flight.status === 'departed' ? 'bg-green-100 text-green-800' :
+                      flight.status === 'boarding' ? 'bg-yellow-900/40 backdrop-blur-sm text-yellow-800' :
+                      flight.status === 'departed' ? 'bg-green-900/40 backdrop-blur-sm text-green-800' :
                       flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-lg text-white/90' :
                       'bg-red-100 text-red-800'
                     }`}>
@@ -254,7 +254,7 @@ export default function FlightManagement() {
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => handleEdit(flight)}
-                        className="text-blue-600 hover:text-blue-900 transition-colors p-1 hover:bg-blue-50 rounded"
+                        className="text-blue-300 hover:text-blue-900 transition-colors p-1 hover:bg-black/25 backdrop-blur-md rounded"
                         title="Modifier"
                       >
                         <Edit className="w-4 h-4" />

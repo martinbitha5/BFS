@@ -87,7 +87,7 @@ export default function RawScans() {
 
   const getStatusBadges = (scan: RawScan) => {
     const badges = [];
-    if (scan.status_checkin) badges.push({ label: 'Check-in', color: 'bg-green-100 text-green-800' });
+    if (scan.status_checkin) badges.push({ label: 'Check-in', color: 'bg-green-900/40 backdrop-blur-sm text-green-800' });
     if (scan.status_baggage) badges.push({ label: 'Bagage', color: 'bg-blue-100 text-blue-800' });
     if (scan.status_boarding) badges.push({ label: 'Embarquement', color: 'bg-purple-100 text-purple-800' });
     if (scan.status_arrival) badges.push({ label: 'Arrivée', color: 'bg-orange-100 text-orange-800' });
@@ -168,9 +168,9 @@ export default function RawScans() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">BP</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.by_type.boarding_pass}</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-300">{stats.by_type.boarding_pass}</p>
               </div>
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-300 opacity-20" />
             </div>
           </div>
           <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">

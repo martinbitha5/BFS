@@ -599,7 +599,7 @@ export default function Export() {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="text-lg font-semibold text-white">Données Brutes (Raw Scans)</h3>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/40 backdrop-blur-sm text-green-800">
                 Recommandé 🎯
               </span>
             </div>
@@ -684,10 +684,10 @@ export default function Export() {
       </div>
 
       {/* Info - Différences entre les deux systèmes */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-black/25 backdrop-blur-md border border-blue-200 rounded-lg p-4">
         <div className="flex">
           <div className="flex-shrink-0">
-            <AlertCircle className="w-5 h-5 text-blue-600" />
+            <AlertCircle className="w-5 h-5 text-blue-300" />
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800 mb-2">

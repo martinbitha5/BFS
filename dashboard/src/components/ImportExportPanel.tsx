@@ -148,7 +148,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
 
       {/* Résultat d'import détaillé */}
       {importResult && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-6 p-4 bg-black/25 backdrop-blur-md border border-blue-200 rounded-lg">
           <h3 className="font-semibold text-blue-900 mb-2">Résultat de l'import</h3>
           <div className="space-y-1 text-sm text-blue-800">
             <p>Importés: {importResult.imported}</p>
@@ -184,7 +184,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
             <div key={dataType} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <Icon className="w-6 h-6 text-blue-600" />
+                  <Icon className="w-6 h-6 text-blue-300" />
                   <h3 className="text-lg font-semibold text-white/90">{label}</h3>
                 </div>
               </div>
@@ -228,7 +228,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
 
       {/* Indicateur de chargement */}
       {loading && (
-        <div className="mt-6 flex items-center justify-center gap-2 text-blue-600">
+        <div className="mt-6 flex items-center justify-center gap-2 text-blue-300">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
           <span>Traitement en cours...</span>
         </div>

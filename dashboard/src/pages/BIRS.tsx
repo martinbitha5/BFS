@@ -76,7 +76,7 @@ export default function BIRS() {
 
   const getStatusBadge = (report: BirsReport) => {
     if (!report.processed_at) {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">En attente</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-900/40 backdrop-blur-sm text-yellow-800">En attente</span>;
     }
     
     const rate = report.total_baggages > 0 
@@ -84,7 +84,7 @@ export default function BIRS() {
       : 0;
 
     if (rate >= 90) {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Excellent ({rate.toFixed(0)}%)</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-900/40 backdrop-blur-sm text-green-800">Excellent ({rate.toFixed(0)}%)</span>;
     } else if (rate >= 70) {
       return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Bon ({rate.toFixed(0)}%)</span>;
     } else {
@@ -124,9 +124,9 @@ export default function BIRS() {
       )}
 
       {/* Info message - Seules les compagnies peuvent uploader */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+      <div className="bg-black/25 backdrop-blur-md border border-yellow-200 rounded-lg p-6">
         <div className="flex">
-          <AlertCircle className="w-6 h-6 text-yellow-600 mr-3 flex-shrink-0" />
+          <AlertCircle className="w-6 h-6 text-yellow-300 mr-3 flex-shrink-0" />
           <div>
             <h3 className="text-sm font-medium text-yellow-800 mb-1">
               📋 Mode lecture seule
@@ -234,7 +234,7 @@ export default function BIRS() {
       </div>
 
       {/* Aide */}
-      <div className="bg-blue-50 rounded-lg p-6">
+      <div className="bg-black/25 backdrop-blur-md rounded-lg p-6">
         <h3 className="text-sm font-medium text-blue-800 mb-2">
           <AlertCircle className="w-4 h-4 inline mr-1" />
           À propos de la réconciliation BIRS

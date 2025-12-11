@@ -268,12 +268,12 @@ export default function Passengers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {boarded ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/40 backdrop-blur-sm text-green-800">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Embarqué
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-900/40 backdrop-blur-sm text-yellow-800">
                           <XCircle className="w-3 h-3 mr-1" />
                           Non embarqué
                         </span>
