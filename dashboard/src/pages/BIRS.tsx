@@ -1,11 +1,7 @@
-import { AlertCircle, CheckCircle, FileText, Package, RefreshCw, Upload, XCircle } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
+import { AlertCircle, CheckCircle, FileText, Package, RefreshCw, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-
-// Configuration du worker PDF.js - utiliser jsdelivr CDN (plus fiable)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface BirsReport {
   id: string;
@@ -27,17 +23,7 @@ export default function BIRS() {
   const { user } = useAuth();
   const [reports, setReports] = useState<BirsReport[]>([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string>('');
-  
-  // Formulaire d'upload
-  const [reportType, setReportType] = useState<'ethiopian' | 'turkish' | 'generic'>('ethiopian');
-  const [flightNumber, setFlightNumber] = useState('');
-  const [flightDate, setFlightDate] = useState('');
-  const [origin, setOrigin] = useState('');
-  const [airline, setAirline] = useState('');
 
   useEffect(() => {
     if (user?.airport_code) {
@@ -50,6 +36,7 @@ export default function BIRS() {
     
     try {
       setLoading(true);
+      // Récupérer les rapports uploadés par les compagnies aériennes
       const response = await api.get(`/api/v1/birs/reports?airport=${user.airport_code}`);
       setReports(response.data.data || []);
     } catch (err: any) {
@@ -60,316 +47,6 @@ export default function BIRS() {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFile(file);
-    
-    // Déterminer le type de fichier
-    const extension = file.name.toLowerCase().split('.').pop();
-    
-    if (extension === 'pdf') {
-      setFilePreview('Fichier PDF détecté. Le contenu sera extrait lors du traitement.');
-    } else if (extension === 'xlsx' || extension === 'xls') {
-      setFilePreview('Fichier Excel détecté. Les données seront extraites lors du traitement.');
-    } else {
-      // Pour TXT et CSV, afficher un aperçu
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        setFilePreview(content.substring(0, 500)); // Aperçu des 500 premiers caractères
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const parseFileContent = async (content: string): Promise<any[]> => {
-    const items: any[] = [];
-    const lines = content.split('\n');
-
-    console.log('[BIRS Parser] Total lignes:', lines.length);
-
-    if (reportType === 'ethiopian') {
-      // Format Ethiopian: Bag_ID  Pax_Surname  PNR  LSeq  Class  PSN  KG  Route  Categories
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Ignorer les lignes vides ou trop courtes
-        if (!line || line.length < 20) continue;
-        
-        // Ignorer les en-têtes
-        if (line.includes('Bag ID') || line.includes('DEVICE ID') || line.includes('Route:')) continue;
-        
-        // Détecter les lignes de bagages (commencent par un tag de 8+ caractères)
-        const bagIdMatch = line.match(/^([0-9A-Z]{8,15})/);
-        if (!bagIdMatch) continue;
-        
-        const bagId = bagIdMatch[1];
-        
-        // Séparer par espaces multiples (2+)
-        const parts = line.split(/\s{2,}/).map(p => p.trim());
-        
-        // Extraire les informations
-        let passengerName = 'UNKNOWN';
-        let pnr = '';
-        let baggageClass = 'Y';
-        let weight = 0;
-        let route = `${origin}-${user?.airport_code}`;
-        let categories = '';
-        let psn = '';
-        
-        // Parser les colonnes Ethiopian
-        if (parts.length >= 2) passengerName = parts[1];
-        if (parts.length >= 3) pnr = parts[2];
-        if (parts.length >= 5) baggageClass = parts[4];
-        if (parts.length >= 6) psn = parts[5];
-        if (parts.length >= 7) weight = parseFloat(parts[6]) || 0;
-        if (parts.length >= 8) route = parts[7];
-        if (parts.length >= 9) categories = parts[8];
-        
-        const loaded = categories.includes('PRIO') || baggageClass === 'Prio';
-        const received = false;
-        
-        console.log('[BIRS Parser] Bagage Ethiopian:', { bagId, passengerName, pnr, baggageClass, weight, categories });
-        
-        items.push({
-          bagId,
-          passengerName,
-          pnr,
-          seatNumber: psn,
-          class: baggageClass,
-          psn,
-          weight,
-          route,
-          categories,
-          loaded,
-          received
-        });
-      }
-    } else if (reportType === 'turkish') {
-      // Format Turkish: N° TAG | Billet/Expédit | Nom Passager/Destinataire | Poids | Comment | Lié Etat
-      // Exemple: 235430756  ZZZZZZ  TSHRIEMBA  0  LOADED  Received
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Ignorer les lignes vides ou trop courtes
-        if (!line || line.length < 15) continue;
-        
-        // Ignorer les en-têtes et pages
-        if (line.includes('N° TAG') || line.includes('TURKISH AIRLINES') || 
-            line.includes('Page') || line.includes('Manifeste') ||
-            line.includes('Escale de réception')) continue;
-        
-        // Séparer par espaces multiples (2+)
-        const parts = line.split(/\s{2,}/).map(p => p.trim());
-        
-        // Format Turkish: [TAG, BILLET, NOM, POIDS, COMMENT, ETAT]
-        if (parts.length < 4) continue; // Besoin d'au moins 4 colonnes
-        
-        const bagId = parts[0]; // N° TAG (peut être court ou avec caractères spéciaux)
-        const billet = parts[1] || 'ZZZZZZ'; // Billet/Expédit (souvent ZZZZZZ)
-        const passengerName = parts[2] || 'UNKNOWN'; // Nom Passager
-        const weight = parseFloat(parts[3]) || 0; // Poids
-        const comment = parts[4] || ''; // Comment (LOADED, NOT, etc.)
-        const etat = parts[5] || ''; // Lié Etat (Received)
-        
-        // Déterminer loaded/received et classe
-        const loaded = comment.includes('LOADED') || comment === '0';
-        const received = etat.includes('Received');
-        
-        // Déterminer la classe (Economy par défaut, sauf si poids > 20kg = possible First)
-        let baggageClass = 'Economy';
-        if (weight > 20) {
-          baggageClass = 'Economy'; // Turkish Airlines permet jusqu'à 30kg en Economy
-        }
-        
-        console.log('[BIRS Parser] Bagage Turkish:', { 
-          bagId, 
-          billet, 
-          passengerName, 
-          weight, 
-          comment,
-          baggageClass,
-          loaded, 
-          received 
-        });
-        
-        items.push({
-          bagId,
-          passengerName,
-          pnr: billet !== 'ZZZZZZ' ? billet : '',
-          class: baggageClass,
-          weight,
-          route: `${origin}-${user?.airport_code}`,
-          categories: comment,
-          loaded,
-          received
-        });
-      }
-    } else {
-      // Format générique: CSV-like
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const parts = line.split(/[,;\t]/);
-        if (parts.length >= 3) {
-          items.push({
-            bagId: parts[0].trim(),
-            passengerName: parts[1].trim(),
-            pnr: parts[2]?.trim(),
-            weight: parseFloat(parts[3]) || 0
-          });
-        }
-      }
-    }
-
-    console.log('[BIRS Parser] Total bagages parsés:', items.length);
-    return items;
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile || !user?.airport_code) {
-      setMessage({ type: 'error', text: 'Veuillez sélectionner un fichier' });
-      return;
-    }
-
-    if (!flightNumber || !flightDate || !origin || !airline) {
-      setMessage({ type: 'error', text: 'Veuillez remplir tous les champs obligatoires' });
-      return;
-    }
-
-    setUploading(true);
-    setMessage(null);
-    console.log('[BIRS] Début du traitement du fichier:', selectedFile.name);
-
-    // Détecter le type de fichier
-    const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf');
-    
-    // Lire le contenu du fichier
-    const reader = new FileReader();
-    
-    reader.onerror = () => {
-      console.error('[BIRS] Erreur lecture fichier:', reader.error);
-      setMessage({ type: 'error', text: 'Erreur lors de la lecture du fichier' });
-      setUploading(false);
-    };
-    
-    reader.onload = async (event) => {
-      try {
-        let fileContent = '';
-        
-        if (isPdf) {
-          // Pour les PDFs, extraire le texte avec pdfjs-dist
-          console.log('[BIRS] Extraction du PDF...');
-          const arrayBuffer = event.target?.result as ArrayBuffer;
-          
-          // Charger le PDF
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          console.log('[BIRS] PDF chargé, pages:', pdf.numPages);
-          
-          // Extraire le texte de toutes les pages avec positionnement
-          const textParts: string[] = [];
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            
-            // Grouper les items par ligne en utilisant leur position Y
-            const lines: { [key: number]: string[] } = {};
-            textContent.items.forEach((item: any) => {
-              const y = Math.round(item.transform[5]); // Position Y
-              if (!lines[y]) lines[y] = [];
-              lines[y].push(item.str);
-            });
-            
-            // Trier par Y décroissant (du haut vers le bas) et joindre
-            const sortedLines = Object.keys(lines)
-              .map(Number)
-              .sort((a, b) => b - a)
-              .map(y => lines[y].join(' ').trim())
-              .filter(line => line.length > 0);
-            
-            textParts.push(sortedLines.join('\n'));
-          }
-          
-          fileContent = textParts.join('\n');
-          console.log('[BIRS] PDF extrait, texte:', fileContent.length, 'caractères');
-          console.log('[BIRS] Aperçu:', fileContent.substring(0, 500));
-        } else {
-          // Pour les fichiers texte, utiliser directement le contenu
-          fileContent = event.target?.result as string;
-          console.log('[BIRS] Fichier texte lu, taille:', fileContent.length, 'caractères');
-        }
-        
-        // Parser le fichier
-        console.log('[BIRS] Parsing du fichier...');
-        const items = await parseFileContent(fileContent);
-        console.log('[BIRS] Bagages détectés:', items.length);
-
-        if (items.length === 0) {
-          setMessage({ type: 'error', text: 'Aucun bagage détecté dans le fichier' });
-          setUploading(false);
-          return;
-        }
-
-        // Uploader vers l'API
-        console.log('[BIRS] Upload vers API avec', items.length, 'bagages...');
-        const response = await api.post('/api/v1/birs/upload', {
-          fileName: selectedFile.name,
-          fileContent: fileContent, // ✅ Envoyer le fichier complet (pas de limite)
-          reportType,
-          flightNumber,
-          flightDate,
-          origin,
-          destination: user.airport_code,
-          airline,
-          airlineCode: airline.substring(0, 2).toUpperCase(),
-          uploadedBy: user.id,
-          airportCode: user.airport_code,
-          items
-        });
-
-        console.log('[BIRS] Réponse API:', response.data);
-
-        if (response.data.success) {
-          setMessage({ 
-            type: 'success', 
-            text: `Rapport uploadé avec succès! ${items.length} bagages détectés.` 
-          });
-          
-          // Réinitialiser le formulaire
-          setSelectedFile(null);
-          setFilePreview('');
-          setFlightNumber('');
-          setFlightDate('');
-          setOrigin('');
-          setAirline('');
-          
-          // Recharger les rapports
-          await fetchReports();
-        }
-        
-        setUploading(false);
-      } catch (err: any) {
-        console.error('[BIRS] Erreur upload:', err);
-        setMessage({ 
-          type: 'error', 
-          text: err.response?.data?.error || err.message || 'Erreur lors de l\'upload' 
-        });
-        setUploading(false);
-      }
-    };
-
-    // Lire le fichier selon son type
-    if (isPdf) {
-      reader.readAsArrayBuffer(selectedFile);
-    } else {
-      reader.readAsText(selectedFile);
-    }
-  };
 
   const handleReconcile = async (reportId: string) => {
     if (!user?.airport_code) return;
@@ -446,144 +123,19 @@ export default function BIRS() {
         </div>
       )}
 
-      {/* Formulaire d'upload */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          <Upload className="w-6 h-6 inline mr-2" />
-          Uploader un fichier BIRS
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Type de rapport */}
+      {/* Info message - Seules les compagnies peuvent uploader */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div className="flex">
+          <AlertCircle className="w-6 h-6 text-yellow-600 mr-3 flex-shrink-0" />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type de rapport <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value as any)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            >
-              <option value="ethiopian">Ethiopian Airlines</option>
-              <option value="turkish">Turkish Airlines</option>
-              <option value="generic">Autre compagnie</option>
-            </select>
+            <h3 className="text-sm font-medium text-yellow-800 mb-1">
+              📋 Mode lecture seule
+            </h3>
+            <p className="text-sm text-yellow-700">
+              Les fichiers BIRS sont uploadés directement par les <strong>compagnies aériennes internationales</strong> via leur portail dédié. 
+              En tant que superviseur, vous pouvez <strong>visualiser</strong> ces rapports et effectuer des <strong>actions de réconciliation</strong>.
+            </p>
           </div>
-
-          {/* Numéro de vol */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Numéro de vol <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={flightNumber}
-              onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
-              placeholder="ex: ET809"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            />
-          </div>
-
-          {/* Date du vol */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Date du vol <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={flightDate}
-              onChange={(e) => setFlightDate(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            />
-          </div>
-
-          {/* Origine */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Aéroport d'origine <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value.toUpperCase())}
-              placeholder="ex: ADD"
-              maxLength={3}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            />
-          </div>
-
-          {/* Compagnie */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Compagnie aérienne <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={airline}
-              onChange={(e) => setAirline(e.target.value)}
-              placeholder="ex: Ethiopian Airlines"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-
-        {/* Sélection de fichier */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <input
-            type="file"
-            accept=".txt,.csv,.xlsx,.xls,.pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="file-upload"
-          />
-          <label 
-            htmlFor="file-upload" 
-            className="cursor-pointer"
-          >
-            <FileText className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-            {selectedFile ? (
-              <div>
-                <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-600">Cliquez pour sélectionner un fichier</p>
-                <p className="text-xs text-gray-500 mt-1">TXT, CSV, Excel, PDF</p>
-              </div>
-            )}
-          </label>
-        </div>
-
-        {/* Aperçu du fichier */}
-        {filePreview && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm font-medium text-blue-800 mb-2">Aperçu du fichier:</p>
-            <div className="text-sm text-blue-700 whitespace-pre-wrap overflow-x-auto max-h-40 overflow-y-auto">
-              {filePreview}
-            </div>
-          </div>
-        )}
-
-        {/* Bouton upload */}
-        <div className="mt-6">
-          <button
-            onClick={handleUpload}
-            disabled={uploading || !selectedFile}
-            className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {uploading ? (
-              <>
-                <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                Upload en cours...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5 mr-2" />
-                Uploader et traiter
-              </>
-            )}
-          </button>
         </div>
       </div>
 
@@ -685,15 +237,14 @@ export default function BIRS() {
       <div className="bg-blue-50 rounded-lg p-6">
         <h3 className="text-sm font-medium text-blue-800 mb-2">
           <AlertCircle className="w-4 h-4 inline mr-1" />
-          À propos des fichiers BIRS
+          À propos de la réconciliation BIRS
         </h3>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Les fichiers BIRS contiennent la liste des bagages envoyés par les compagnies aériennes</li>
-          <li>• La réconciliation compare ces fichiers avec les bagages scannés à l'arrivée</li>
-          <li>• <strong>Formats recommandés</strong>: TXT (Ethiopian), CSV, TSV</li>
-          <li>• <strong>Formats en développement</strong>: Excel (.xlsx), PDF (extraction à améliorer)</li>
-          <li>• Les bagages non réconciliés peuvent être déclarés en RUSH</li>
-          <li>• Pour de meilleurs résultats, privilégiez les fichiers texte (TXT/CSV)</li>
+          <li>• Les fichiers BIRS sont uploadés par les compagnies aériennes via le <strong>Portail Airlines</strong></li>
+          <li>• La réconciliation compare ces fichiers avec les bagages scannés à l'arrivée à FIH</li>
+          <li>• Cliquez sur <strong>"Lancer réconciliation"</strong> pour matcher les bagages automatiquement</li>
+          <li>• Les bagages non matchés peuvent être déclarés en <strong>RUSH</strong> (réacheminement)</li>
+          <li>• Vous pouvez re-traiter un rapport si de nouveaux bagages arrivent</li>
         </ul>
       </div>
     </div>
