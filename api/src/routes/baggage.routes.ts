@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 
 const router = Router();
@@ -29,10 +29,41 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
+    // Transformer les données pour le dashboard (snake_case -> camelCase)
+    const transformedData = data?.map(baggage => {
+      const passenger = Array.isArray(baggage.passengers) 
+        ? baggage.passengers[0] 
+        : baggage.passengers;
+      
+      return {
+        id: baggage.id,
+        tagNumber: baggage.tag_number,
+        passengerId: baggage.passenger_id,
+        weight: baggage.weight,
+        status: baggage.status,
+        flightNumber: baggage.flight_number,
+        airportCode: baggage.airport_code,
+        currentLocation: baggage.current_location,
+        scannedAt: baggage.scanned_at,
+        arrivedAt: baggage.arrived_at,
+        deliveredAt: baggage.delivered_at,
+        lastScannedAt: baggage.last_scanned_at,
+        lastScannedBy: baggage.last_scanned_by,
+        passenger: passenger ? {
+          id: passenger.id,
+          fullName: passenger.full_name,
+          pnr: passenger.pnr,
+          flightNumber: passenger.flight_number,
+          departure: passenger.departure,
+          arrival: passenger.arrival
+        } : null
+      };
+    });
+
     res.json({
       success: true,
-      count: data?.length || 0,
-      data: data || []
+      count: transformedData?.length || 0,
+      data: transformedData || []
     });
   } catch (error) {
     next(error);
