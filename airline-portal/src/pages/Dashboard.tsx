@@ -13,6 +13,10 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [flightNumber, setFlightNumber] = useState('');
+  const [flightDate, setFlightDate] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -24,6 +28,13 @@ export default function Dashboard() {
   const handleUpload = async () => {
     if (!file) {
       setMessage('Veuillez sélectionner un fichier');
+      setMessageType('error');
+      return;
+    }
+
+    // Vérifier les informations du vol
+    if (!flightNumber || !flightDate || !origin || !destination) {
+      setMessage('Veuillez remplir toutes les informations du vol');
       setMessageType('error');
       return;
     }
@@ -61,8 +72,12 @@ export default function Dashboard() {
         fileName: file.name,
         fileContent: fileContent,
         reportType: 'birs',
+        flightNumber: flightNumber.toUpperCase(),
+        flightDate: flightDate,
+        origin: origin.toUpperCase(),
+        destination: destination.toUpperCase(),
+        airline: airline?.name || '',
         airlineCode: airline?.code || '',
-        airlineName: airline?.name || '',
       };
 
       const response = await axios.post(`${API_URL}/api/v1/birs/upload`, payload, {
@@ -74,6 +89,10 @@ export default function Dashboard() {
       setMessage(`✅ Fichier uploadé avec succès ! ${response.data.processedCount || 0} bagages traités.`);
       setMessageType('success');
       setFile(null);
+      setFlightNumber('');
+      setFlightDate('');
+      setOrigin('');
+      setDestination('');
       
       // Réinitialiser l'input file
       const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -93,6 +112,66 @@ export default function Dashboard() {
         <p className="text-white/90 mb-8">
           Téléchargez vos fichiers BIRS (Baggage Irregularity Report System)
         </p>
+
+        {/* Formulaire des informations du vol */}
+        <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Informations du vol</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/85 mb-2">
+                Numéro de vol *
+              </label>
+              <input
+                type="text"
+                value={flightNumber}
+                onChange={(e) => setFlightNumber(e.target.value)}
+                placeholder="Ex: AC123"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/85 mb-2">
+                Date du vol *
+              </label>
+              <input
+                type="date"
+                value={flightDate}
+                onChange={(e) => setFlightDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/85 mb-2">
+                Origine (code aéroport) *
+              </label>
+              <input
+                type="text"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                placeholder="Ex: FIH"
+                maxLength={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/85 mb-2">
+                Destination (code aéroport) *
+              </label>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="Ex: GOM"
+                maxLength={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
+                required
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-8">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
@@ -177,6 +256,7 @@ export default function Dashboard() {
         <div className="mt-8 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-6">
           <h3 className="font-semibold text-white mb-2">À propos des fichiers BIRS</h3>
           <ul className="text-sm text-white/80 space-y-1">
+            <li>• <strong>Informations obligatoires :</strong> Numéro de vol, date du vol, origine et destination doivent être renseignés</li>
             <li>• Les fichiers BIRS contiennent la liste des bagages envoyés par les compagnies aériennes</li>
             <li>• La réconciliation compare les fichiers avec les bagages scannés à l'arrivée</li>
             <li>• Les bagages non réconciliés peuvent être déclarés en RUSH (soute pleine/problème tonnage)</li>
