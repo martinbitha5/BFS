@@ -72,7 +72,7 @@ export default function Export() {
       }
       
       // Parser pour extraire les vols
-      const parsedPassengers = parseRawScans(rawScans);
+      const parsedPassengers = parseRawScans(rawScans).filter(p => p !== null);
       const uniqueFlights = [...new Set(parsedPassengers.map(p => p.flightNumber))]
         .filter((flight: any) => flight && flight !== 'UNKNOWN')
         .sort() as string[];
@@ -98,7 +98,7 @@ export default function Export() {
       }
       
       // Parser pour extraire les destinations
-      const parsedPassengers = parseRawScans(rawScans);
+      const parsedPassengers = parseRawScans(rawScans).filter(p => p !== null);
       const uniqueDestinations = [...new Set(parsedPassengers.map(p => p.arrival))]
         .filter((dest: any) => dest && dest !== 'UNKNOWN')
         .sort() as string[];
@@ -628,13 +628,13 @@ export default function Export() {
         </div>
       </div>
 
-      {/* Section Export Ancien Système */}
+      {/* Section Export Standard */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Ancien Système (Passagers & Bagages)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Standard (Passagers & Bagages)</h3>
             <p className="text-sm text-gray-600 mb-3">
-              Export des données parsées et enregistrées dans le système classique
+              Export des données structurées avec parsing automatique
             </p>
             <div className="space-y-2">
               <label className="flex items-center text-sm">
@@ -678,7 +678,7 @@ export default function Export() {
             className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
-            {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Ancien Système'}
+            {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Standard'}
           </button>
         </div>
       </div>
@@ -691,32 +691,32 @@ export default function Export() {
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800 mb-2">
-              Quelle différence entre les deux exports ?
+              Différence entre les deux types d'export
             </h3>
             <div className="mt-2 text-sm text-blue-700 space-y-3">
               <div>
-                <p className="font-semibold mb-1">📊 Données Brutes (Raw Scans) :</p>
+                <p className="font-semibold mb-1">📊 Données Brutes (Raw Scans)</p>
                 <ul className="list-disc list-inside space-y-0.5 ml-2">
-                  <li>Données brutes PURES sans parsing ni transformation</li>
-                  <li>Raw data exacte comme scannée depuis l'app mobile</li>
-                  <li>Système anti-doublons : un scan = une seule ligne</li>
-                  <li>Tracking complet du parcours (4 checkpoints)</li>
-                  <li>Parfait pour les audits, vérifications et analyses techniques</li>
+                  <li>Données brutes sans modification</li>
+                  <li>Exactement ce qui est scanné par l'app mobile</li>
+                  <li>Un scan = une ligne (pas de doublons)</li>
+                  <li>Suivi complet : Check-in → Bagage → Embarquement → Arrivée</li>
+                  <li>Pour audits et vérifications</li>
                 </ul>
               </div>
               <div>
-                <p className="font-semibold mb-1">📁 Ancien Système (Passagers & Bagages) :</p>
+                <p className="font-semibold mb-1">📁 Export Standard (Passagers & Bagages)</p>
                 <ul className="list-disc list-inside space-y-0.5 ml-2">
-                  <li>Données parsées et enregistrées à chaque scan</li>
-                  <li>Séparation passagers / bagages / embarquements</li>
-                  <li>Structure classique avec tables relationnelles</li>
-                  <li>Utile pour les rapports standards</li>
+                  <li>Données extraites et organisées automatiquement</li>
+                  <li>Séparé en 3 tables : passagers / bagages / embarquements</li>
+                  <li>Format structuré pour Excel</li>
+                  <li>Pour rapports et statistiques</li>
                 </ul>
               </div>
               <div className="pt-2 border-t border-blue-200">
                 <p className="text-xs">
-                  <strong>Conseil :</strong> Utilisez <strong>Raw Scans</strong> pour avoir les données brutes exactes sans transformation. 
-                  Les filtres de dates s'appliquent, mais pas les filtres vol/destination (car données non parsées).
+                  <strong>Note :</strong> Les filtres de dates fonctionnent pour les deux. 
+                  Les filtres vol/destination fonctionnent uniquement pour l'export Standard.
                 </p>
               </div>
             </div>

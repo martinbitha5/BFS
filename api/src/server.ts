@@ -41,6 +41,8 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/confirm', confirmRoutes); // Confirmation email - endpoint public
 app.use('/api/v1/auth', authRoutes); // Authentification - endpoint public
+app.use('/api/v1/airlines', airlinesRoutes); // ✅ NEW: Auth compagnies aériennes - endpoint public
+app.use('/api/v1/birs/history', birsHistoryRoutes); // ✅ NEW: Historique BIRS pour compagnies
 app.use('/api/v1/baggage', apiKeyAuth, baggageRoutes);
 app.use('/api/v1/passengers', apiKeyAuth, passengerRoutes);
 app.use('/api/v1/boarding', apiKeyAuth, boardingRoutes);

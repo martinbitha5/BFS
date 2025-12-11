@@ -13,7 +13,8 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
-    { path: '/baggages', label: 'Bagages', icon: Plane },
+    { path: '/flights', label: 'Gestion des Vols', icon: Plane },
+    { path: '/baggages', label: 'Bagages', icon: Package },
     { path: '/passengers', label: 'Passagers', icon: Users },
     { path: '/birs', label: 'BIRS International', icon: Package },
     { path: '/raw-scans', label: 'Scans Bruts', icon: Barcode },
@@ -21,71 +22,73 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center space-x-3">
-                {/* Logo ATS/CSI */}
-                <Logo width={90} height={45} className="hover:scale-105 transition-transform duration-200" />
-                
-                {/* Separateur vertical */}
-                <div className="h-12 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent"></div>
-                
-                {/* Info Dashboard */}
-                <div>
-                  <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                    OPS
-                  </h1>
-                  {user && (
-                    <p className="text-xs text-gray-600 font-medium">
-                      {user.airport_code}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="ml-10 flex space-x-8">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                        isActive
-                          ? 'border-primary-500 text-gray-900'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 mr-2" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar à gauche (style Ubuntu) */}
+      <aside className="w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col shadow-xl">
+        {/* Header Sidebar */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center space-x-3 mb-3">
+            <Logo width={70} height={35} className="hover:scale-105 transition-transform duration-200" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+              OPS Dashboard
+            </h1>
             {user && (
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-right">
-                  <p className="font-medium text-gray-900">{user.full_name}</p>
-                  <p className="text-gray-500">{user.email}</p>
-                </div>
-                <button
-                  onClick={logout}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <LogOut className="w-4 h-4 mr-1" />
-                  Déconnexion
-                </button>
-              </div>
+              <p className="text-xs text-gray-400 font-medium mt-1">
+                Aéroport {user.airport_code}
+              </p>
             )}
           </div>
         </div>
-      </nav>
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-1 px-3">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* User info et déconnexion */}
+        {user && (
+          <div className="p-4 border-t border-gray-700">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-white truncate">{user.full_name}</p>
+              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Déconnexion
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* Contenu principal */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="container mx-auto py-6 px-6">
+          {children}
+        </div>
       </main>
     </div>
   );

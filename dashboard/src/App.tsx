@@ -7,6 +7,7 @@ import BIRS from './pages/BIRS';
 import DashboardEnhanced from './pages/DashboardEnhanced';
 import DebugParser from './pages/DebugParser';
 import Export from './pages/Export';
+import FlightManagement from './pages/FlightManagement';
 import Login from './pages/Login';
 import Passengers from './pages/Passengers';
 import RawScans from './pages/RawScans';
@@ -86,6 +87,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <DebugParser />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/flights"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FlightManagement />
                 </Layout>
               </ProtectedRoute>
             }

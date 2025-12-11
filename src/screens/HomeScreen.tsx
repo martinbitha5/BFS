@@ -151,7 +151,7 @@ export default function HomeScreen({ navigation }: Props) {
           {user.role === 'baggage' && (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('Baggage')}>
+              onPress={() => navigation.navigate('FlightSelection', { targetScreen: 'Baggage' })}>
               <Card style={styles.menuCard} elevated>
                 <View style={styles.menuCardContent}>
                   <View style={[styles.iconContainer, { backgroundColor: colors.success.light + '15' }]}>
@@ -189,7 +189,7 @@ export default function HomeScreen({ navigation }: Props) {
           {user.role === 'arrival' && (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('Arrival')}>
+              onPress={() => navigation.navigate('FlightSelection', { targetScreen: 'Arrival' })}>
               <Card style={styles.menuCard} elevated>
                 <View style={styles.menuCardContent}>
                   <View style={[styles.iconContainer, { backgroundColor: colors.warning.light + '15' }]}>

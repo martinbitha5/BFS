@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
+import { FlightProvider } from './src/contexts/FlightContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import RootStack from './src/navigation/RootStack';
 import SplashScreen from './src/screens/SplashScreen';
-import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { databaseServiceInstance } from './src/services';
 
 function AppContent() {
@@ -50,10 +51,12 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={mode === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootStack />
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      </NavigationContainer>
+      <FlightProvider>
+        <NavigationContainer theme={mode === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootStack />
+          <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        </NavigationContainer>
+      </FlightProvider>
     </SafeAreaProvider>
   );
 }
