@@ -182,55 +182,102 @@ class BirsParserService {
   private parseTextLines(content: string): BirsItem[] {
     const items: BirsItem[] = [];
     const lines = content.split(/\r?\n/);
+    
+    let skippedHeaders = 0;
+    let skippedEmpty = 0;
+    let skippedInvalid = 0;
+    let parsed = 0;
 
     for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (!trimmed) {
+        skippedEmpty++;
+        continue;
+      }
+      
+      if (this.isHeaderLine(trimmed)) {
+        skippedHeaders++;
+        continue;
+      }
+      
       const item = this.parseTextLine(line);
       if (item) {
         items.push(item);
+        parsed++;
+      } else if (trimmed.length > 10) {
+        skippedInvalid++;
       }
     }
+
+    console.log(`[BIRS Parser] Lines stats - Total: ${lines.length}, Parsed: ${parsed}, Headers: ${skippedHeaders}, Empty: ${skippedEmpty}, Invalid: ${skippedInvalid}`);
 
     return items;
   }
 
   /**
    * Parse une ligne de texte
-   * Format: "ET1234567890 DUPONT/JEAN ABC123 12A Y 23KG"
+   * Format flexible: "ET1234567890 DUPONT/JEAN [ABC123] [12A] [Y] [23KG]"
    */
   private parseTextLine(line: string): BirsItem | null {
     const trimmed = line.trim();
     
     // Skip lignes vides ou en-têtes
-    if (!trimmed || trimmed.length < 10 || this.isHeaderLine(trimmed)) {
+    // Ligne minimum: Bag ID (10 chars) + espace + nom (2 chars) = 13 chars
+    if (!trimmed || trimmed.length < 13 || this.isHeaderLine(trimmed)) {
       return null;
     }
 
-    // Pattern: Tag(10-13 chars) Nom PNR Siège Classe Poids
-    const pattern = /^([A-Z0-9]{10,13})\s+([A-Z\/\s]+?)\s+([A-Z0-9]{6})\s+(\d{1,3}[A-Z])?\s+([A-Z])?\s*(\d+KG)?/i;
-    const match = trimmed.match(pattern);
+    // Pattern flexible: Tag(10-13 chars) + Nom (reste de la ligne)
+    // Le Bag ID doit être au début et être 10-13 caractères alphanumériques
+    const bagIdPattern = /^([A-Z0-9]{10,13})\s+(.+)$/i;
+    const bagIdMatch = trimmed.match(bagIdPattern);
 
-    if (match) {
+    if (!bagIdMatch) {
+      return null;
+    }
+
+    const bagId = bagIdMatch[1].trim();
+    const restOfLine = bagIdMatch[2].trim();
+
+    // Extraire le nom (tout jusqu'au premier code PNR potentiel ou fin)
+    // Nom peut contenir: lettres, /, espaces
+    const namePattern = /^([A-Z\/\s\-']+?)(?:\s+([A-Z0-9]{5,7}))?(?:\s+(\d{1,3}[A-Z]))?(?:\s+([A-Z]))?(?:\s+(\d+\.?\d*)\s*KG)?/i;
+    const nameMatch = restOfLine.match(namePattern);
+
+    if (nameMatch) {
+      const passengerName = nameMatch[1].trim().replace(/\s+/g, ' ');
+      
+      // Ne garder que les noms qui ont au moins 2 caractères
+      if (passengerName.length < 2) {
+        return null;
+      }
+
       return {
-        bagId: match[1].trim(),
-        passengerName: match[2].trim().replace(/\s+/g, ' '),
-        pnr: match[3]?.trim(),
-        seatNumber: match[4]?.trim(),
-        class: match[5]?.trim(),
-        weight: this.parseWeight(match[6])
+        bagId: bagId,
+        passengerName: passengerName,
+        pnr: nameMatch[2]?.trim(),
+        seatNumber: nameMatch[3]?.trim(),
+        class: nameMatch[4]?.trim(),
+        weight: this.parseWeight(nameMatch[5])
       };
     }
 
-    // Fallback: au minimum Bag ID et nom
-    const simpleParts = trimmed.split(/\s+/);
-    if (simpleParts.length >= 2) {
-      const bagId = simpleParts[0];
-      const passengerName = simpleParts.slice(1).join(' ');
+    // Fallback ultra-simple: Bag ID + tout le reste comme nom
+    if (restOfLine.length >= 2) {
+      // Extraire juste le début du nom (avant tout ce qui ressemble à un code)
+      const simpleName = restOfLine.split(/\s+/);
+      let passengerName = simpleName[0];
       
-      // Valider que le bag ID ressemble à un tag
-      if (/^[A-Z0-9]{10,13}$/i.test(bagId)) {
+      // Essayer d'ajouter le deuxième mot si ça ressemble à un nom
+      if (simpleName.length > 1 && /^[A-Z\/\-']+$/i.test(simpleName[1])) {
+        passengerName += ' ' + simpleName[1];
+      }
+
+      if (passengerName.length >= 2) {
         return {
-          bagId: bagId.trim(),
-          passengerName: passengerName.trim()
+          bagId: bagId,
+          passengerName: passengerName.trim().replace(/\s+/g, ' ')
         };
       }
     }
@@ -255,13 +302,36 @@ class BirsParserService {
    */
   private isHeaderLine(line: string): boolean {
     const upperLine = line.toUpperCase();
+    
+    // En-têtes évidents (lignes qui contiennent principalement des mots-clés)
     const headerKeywords = [
-      'BAG ID', 'TAG', 'PASSENGER', 'NAME', 'PNR', 'SEAT', 'CLASS',
-      'WEIGHT', 'ROUTE', 'FLIGHT', 'DATE', '---', '===', 'BAGGAGE LIST',
-      'REPORT', 'BIRS', 'MANIFEST'
+      'BAGGAGE LIST', 'PASSENGER LIST', 'MANIFEST', 
+      '---', '===', '___', '***',
+      'PAGE', 'TOTAL', 'REPORT', 'SUMMARY'
     ];
     
-    return headerKeywords.some(keyword => upperLine.includes(keyword));
+    // Si la ligne contient un de ces mots-clés évidents, c'est un en-tête
+    if (headerKeywords.some(keyword => upperLine.includes(keyword))) {
+      return true;
+    }
+
+    // Si la ligne est très courte (< 15 chars), probablement un en-tête
+    if (line.trim().length < 15) {
+      return true;
+    }
+
+    // Si la ligne contient "BAG ID" + "PASSENGER" ensemble, c'est un en-tête de colonne
+    if (upperLine.includes('BAG') && upperLine.includes('PASSENGER')) {
+      return true;
+    }
+
+    // Si la ligne ne commence pas par un code alphanumérique de 10+ chars, 
+    // et contient des mots comme "FLIGHT", "DATE", c'est probablement un en-tête
+    if (!/^[A-Z0-9]{10}/.test(line) && (upperLine.includes('FLIGHT') || upperLine.includes('DATE'))) {
+      return true;
+    }
+    
+    return false;
   }
 
   /**
