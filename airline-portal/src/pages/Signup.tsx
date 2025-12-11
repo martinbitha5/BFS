@@ -57,12 +57,12 @@ export default function Signup() {
           <p className="text-primary-100">Inscription au système BFS</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-xl p-8">
+        <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-xl p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Inscription</h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="mb-4 p-3 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-md">
+              <p className="text-sm text-red-200">{error}</p>
             </div>
           )}
 
@@ -165,9 +165,9 @@ export default function Signup() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-white/70">
               Déjà un compte ?{' '}
-              <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link to="/login" className="text-primary-300 hover:text-primary-200 font-medium">
                 Se connecter
               </Link>
             </p>
