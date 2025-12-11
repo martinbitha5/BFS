@@ -45,7 +45,7 @@ const statusConfig = {
   scanned: { label: 'Scanné', color: 'bg-purple-100 text-purple-800', icon: Package },
   reconciled: { label: 'Réconcilié', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   unmatched: { label: 'Non matché', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-  pending: { label: 'En attente', color: 'bg-white/85 backdrop-blur-sm text-white/90', icon: Clock },
+  pending: { label: 'En attente', color: 'bg-white/85 backdrop-blur-lg text-white/90', icon: Clock },
 };
 
 export default function Baggages() {
@@ -172,13 +172,13 @@ export default function Baggages() {
     const StatusIcon = statusConfig[baggage.status].icon;
 
     return (
-      <div key={baggage.id} className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div key={baggage.id} className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-6 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Package className="w-5 h-5 text-white/80" />
               <span className="font-mono font-bold text-lg">{getBaggageIdentifier(baggage)}</span>
-              <span className="text-xs px-2 py-1 rounded bg-white/85 backdrop-blur-sm text-white/85">
+              <span className="text-xs px-2 py-1 rounded bg-white/85 backdrop-blur-lg text-white/85">
                 {isNational ? 'National' : 'International'}
               </span>
             </div>
@@ -280,7 +280,7 @@ export default function Baggages() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-4">
+      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-white/85 mb-2">
@@ -321,7 +321,7 @@ export default function Baggages() {
           </p>
           <button
             onClick={fetchBaggages}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-sm hover:bg-white/90 backdrop-blur-sm"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg"
           >
             Actualiser
           </button>
@@ -354,7 +354,7 @@ export default function Baggages() {
       {/* Rush Modal */}
       {showRushModal && selectedBaggage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center">
               <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
               Marquer comme RUSH
@@ -415,7 +415,7 @@ export default function Baggages() {
                   setNextFlight('');
                   setRushRemarks('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-white/85 hover:bg-white/90 backdrop-blur-sm"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-white/85 hover:bg-white/90 backdrop-blur-lg"
               >
                 Annuler
               </button>

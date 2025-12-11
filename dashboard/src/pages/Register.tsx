@@ -58,7 +58,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-2xl p-8 w-full max-w-md">
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">

@@ -116,7 +116,7 @@ export default function Passengers() {
   return (
     <div className="space-y-6">
       {/* Header & Filters */}
-      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-4">
+      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-4">
         <h2 className="text-2xl font-bold text-white mb-4">Liste des passagers - {user?.airport_code}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,7 +177,7 @@ export default function Passengers() {
             </button>
             <button
               onClick={fetchPassengers}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-sm hover:bg-white/90 backdrop-blur-sm"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg"
             >
               Actualiser
             </button>
@@ -209,9 +209,9 @@ export default function Passengers() {
           </p>
         </div>
       ) : (
-        <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-sm">
+            <thead className="bg-white/90 backdrop-blur-lg">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Passager
@@ -233,13 +233,13 @@ export default function Passengers() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
               {filteredPassengers.map((passenger) => {
                 const boarded = isBoarded(passenger);
                 const { arrivedCount, totalCount } = getBaggageStatus(passenger);
 
                 return (
-                  <tr key={passenger.id} className="hover:bg-white/90 backdrop-blur-sm">
+                  <tr key={passenger.id} className="hover:bg-white/90 backdrop-blur-lg">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="font-medium text-white">{passenger.fullName}</div>

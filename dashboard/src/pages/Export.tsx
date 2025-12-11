@@ -426,7 +426,7 @@ export default function Export() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-white/95 backdrop-blur-sm shadow-sm rounded-lg p-4 sm:p-6 space-y-6">
+      <div className="bg-white/95 backdrop-blur-lg shadow-sm rounded-lg p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">Filtres d'export</h3>
           <button
@@ -445,7 +445,7 @@ export default function Export() {
         </div>
 
         {/* Type de filtre de date */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4">
+        <div className="bg-white/90 backdrop-blur-lg rounded-lg p-4">
           <label className="block text-sm font-medium text-white/85 mb-3">
             <Calendar className="w-4 h-4 inline mr-1" />
             Type de période
@@ -629,7 +629,7 @@ export default function Export() {
       </div>
 
       {/* Section Export Standard */}
-      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-6">
+      <div className="bg-white/95 backdrop-blur-lg border border-gray-200 rounded-lg p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-2">Export Standard (Passagers & Bagages)</h3>
@@ -675,7 +675,7 @@ export default function Export() {
               handleExportFile();
             }}
             disabled={exporting || !user?.airport_code || exportType === 'raw_scans'}
-            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-white/85 bg-white/95 backdrop-blur-sm hover:bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
+            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-white/90 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
             {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Standard'}

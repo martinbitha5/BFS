@@ -127,13 +127,13 @@ export default function Dashboard() {
 
       {/* Messages */}
       {syncMessage && (
-        <div className="bg-green-50/95 backdrop-blur-sm border border-green-200 rounded-lg p-4">
+        <div className="bg-green-50/95 backdrop-blur-lg border border-green-200 rounded-lg p-4">
           <p className="text-green-800">{syncMessage}</p>
         </div>
       )}
       
       {error && (
-        <div className="bg-red-50/95 backdrop-blur-sm border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50/95 backdrop-blur-lg border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
           {/* Flights List */}
           {stats.uniqueFlights.length > 0 && (
-            <div className="bg-white/95 backdrop-blur-sm/95 backdrop-blur-sm shadow rounded-lg">
+            <div className="bg-white/75 backdrop-blur-lg shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200/50">
                 <h3 className="text-lg font-medium text-white">
                   Vols ({stats.flightsCount})

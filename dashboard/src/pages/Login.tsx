@@ -34,7 +34,7 @@ export default function Login() {
       {/* Overlay sombre pour améliorer la lisibilité */}
       <div className="absolute inset-0 bg-black/50"></div>
       
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
+      <div className="bg-white/80 backdrop-blur-md rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
@@ -112,15 +112,15 @@ export default function Login() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center mb-3">Comptes de test :</p>
           <div className="space-y-2 text-xs text-white/80">
-            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-lg p-3 rounded">
               <p className="font-medium">Kinshasa (FIH)</p>
               <p className="text-gray-500">kinshasa@bfs.cd / test123</p>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-lg p-3 rounded">
               <p className="font-medium">Goma (GOM)</p>
               <p className="text-gray-500">goma@bfs.cd / test123</p>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-lg p-3 rounded">
               <p className="font-medium">Lubumbashi (FBM)</p>
               <p className="text-gray-500">lubumbashi@bfs.cd / test123</p>
             </div>

@@ -17,7 +17,7 @@ const colorClasses = {
 
 export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps) {
   return (
-    <div className="bg-white/95 backdrop-blur-sm/95 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 p-3 sm:p-4 md:p-6 cursor-default overflow-hidden relative group">
+    <div className="bg-white/75 backdrop-blur-lg rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 p-3 sm:p-4 md:p-6 cursor-default overflow-hidden relative group">
       {/* Gradient hover effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       

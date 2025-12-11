@@ -67,13 +67,13 @@ export default function DebugParser() {
           {selectedScan && (
             <>
               <h2 className="text-xl font-semibold mb-4">Raw Data</h2>
-              <div className="bg-white/85 backdrop-blur-sm p-4 rounded mb-4 font-mono text-xs overflow-x-auto">
+              <div className="bg-white/85 backdrop-blur-lg p-4 rounded mb-4 font-mono text-xs overflow-x-auto">
                 {selectedScan.raw_data}
               </div>
 
               <h2 className="text-xl font-semibold mb-4">Résultat du Parsing</h2>
               {parsedResult && (
-                <div className="bg-white/95 backdrop-blur-sm border rounded p-4">
+                <div className="bg-white/95 backdrop-blur-lg border rounded p-4">
                   {parsedResult.error ? (
                     <div className="text-red-600">
                       <strong>Erreur:</strong> {parsedResult.error}

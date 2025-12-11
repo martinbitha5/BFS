@@ -137,7 +137,7 @@ export default function RawScans() {
       {/* Statistiques */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Total</p>
@@ -146,7 +146,7 @@ export default function RawScans() {
               <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Check-in</p>
@@ -155,7 +155,7 @@ export default function RawScans() {
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Embarqu.</p>
@@ -164,7 +164,7 @@ export default function RawScans() {
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">BP</p>
@@ -173,7 +173,7 @@ export default function RawScans() {
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">BT</p>
@@ -186,7 +186,7 @@ export default function RawScans() {
       )}
 
       {/* Filtres */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4">
+      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-white/80" />
           <h3 className="text-sm font-medium text-white">Filtrer par checkpoint</h3>
@@ -199,7 +199,7 @@ export default function RawScans() {
               className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 statusFilter === status
                   ? 'bg-primary-600 text-white'
-                  : 'bg-white/85 backdrop-blur-sm text-white/85 hover:bg-gray-200'
+                  : 'bg-white/85 backdrop-blur-lg text-white/85 hover:bg-gray-200'
               }`}
             >
               {status === 'all' ? 'Tous' : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -209,10 +209,10 @@ export default function RawScans() {
       </div>
 
       {/* Liste des scans */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-sm">
+            <thead className="bg-white/90 backdrop-blur-lg">
               <tr>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
@@ -231,9 +231,9 @@ export default function RawScans() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
               {scans.map((scan) => (
-                <tr key={scan.id} className="hover:bg-white/90 backdrop-blur-sm transition-colors">
+                <tr key={scan.id} className="hover:bg-white/90 backdrop-blur-lg transition-colors">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                       scan.scan_type === 'boarding_pass'

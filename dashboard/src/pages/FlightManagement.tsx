@@ -117,7 +117,7 @@ export default function FlightManagement() {
       </div>
 
       {/* Actions Bar */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
+      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           {/* Sélection date */}
           <div className="flex items-center gap-2">
@@ -159,12 +159,12 @@ export default function FlightManagement() {
 
       {/* Liste des vols */}
       {loading ? (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-white/80">Chargement des vols...</p>
         </div>
       ) : filteredFlights.length === 0 ? (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-8 text-center">
           <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">
             {searchQuery ? 'Aucun vol trouvé' : 'Aucun vol programmé'}
@@ -184,9 +184,9 @@ export default function FlightManagement() {
           )}
         </div>
       ) : (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white/90 backdrop-blur-sm">
+            <thead className="bg-white/90 backdrop-blur-lg">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vol
@@ -208,9 +208,9 @@ export default function FlightManagement() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
               {filteredFlights.map((flight) => (
-                <tr key={flight.id} className="hover:bg-white/90 backdrop-blur-sm transition-colors">
+                <tr key={flight.id} className="hover:bg-white/90 backdrop-blur-lg transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -240,7 +240,7 @@ export default function FlightManagement() {
                       flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                       flight.status === 'boarding' ? 'bg-yellow-100 text-yellow-800' :
                       flight.status === 'departed' ? 'bg-green-100 text-green-800' :
-                      flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-sm text-white/90' :
+                      flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-lg text-white/90' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {flight.status === 'scheduled' ? 'Programmé' :
@@ -335,7 +335,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white/95 backdrop-blur-lg rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <h2 className="text-xl font-bold text-white mb-4">
             {mode === 'add' ? 'Ajouter un vol' : 'Modifier le vol'}
@@ -447,7 +447,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-white/85 bg-white/85 backdrop-blur-sm rounded-lg hover:bg-gray-200 transition-colors">
+                className="px-4 py-2 text-white/85 bg-white/85 backdrop-blur-lg rounded-lg hover:bg-gray-200 transition-colors">
                 Annuler
               </button>
               <button

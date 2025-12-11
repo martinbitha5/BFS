@@ -140,7 +140,7 @@ export default function BIRS() {
       </div>
 
       {/* Liste des rapports */}
-      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6">
+      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-white">
             Historique des rapports
@@ -166,7 +166,7 @@ export default function BIRS() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-white/90 backdrop-blur-sm">
+              <thead className="bg-white/90 backdrop-blur-lg">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vol</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -177,9 +177,9 @@ export default function BIRS() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
+              <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
                 {reports.map((report) => (
-                  <tr key={report.id} className="hover:bg-white/90 backdrop-blur-sm">
+                  <tr key={report.id} className="hover:bg-white/90 backdrop-blur-lg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                       {report.flight_number}
                     </td>
