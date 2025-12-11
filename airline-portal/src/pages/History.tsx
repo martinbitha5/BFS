@@ -3,6 +3,7 @@ import { Calendar, CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // URL de l'API depuis les variables d'environnement
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -22,6 +23,7 @@ interface BIRSReport {
 
 export default function History() {
   const { airline } = useAuth();
+  const { t } = useLanguage();
   const [reports, setReports] = useState<BIRSReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,9 +88,9 @@ export default function History() {
       <div className="max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Historique des rapports</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">{t('history.title')}</h1>
             <p className="text-white/90">
-              Consultez l'historique de vos uploads BIRS (lecture seule)
+              {t('dashboard.subtitle')}
             </p>
           </div>
 
@@ -98,7 +100,7 @@ export default function History() {
             className="flex items-center space-x-2 px-4 py-2 bg-black/30 backdrop-blur-md border border-white/20 text-primary-600 rounded-lg hover:bg-black/40 disabled:opacity-50 transition-colors shadow-lg"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Actualiser</span>
+            <span>{t('history.view')}</span>
           </button>
         </div>
 
@@ -115,8 +117,8 @@ export default function History() {
         ) : reports.length === 0 ? (
           <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">Aucun rapport</h3>
-            <p className="text-gray-500">Vous n'avez pas encore uploadé de fichiers BIRS</p>
+            <h3 className="text-lg font-medium text-white mb-2">{t('history.noData')}</h3>
+            <p className="text-gray-500">{t('history.noData')}</p>
           </div>
         ) : (
           <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow overflow-hidden">
@@ -124,22 +126,22 @@ export default function History() {
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vol
+                    {t('history.flight')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    {t('history.date')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Compagnie
+                    {t('dashboard.connectedCompany')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Route
+                    {t('history.route')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bagages
+                    {t('history.baggages')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Statut
+                    {t('history.status')}
                   </th>
                 </tr>
               </thead>

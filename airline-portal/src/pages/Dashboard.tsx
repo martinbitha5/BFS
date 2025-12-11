@@ -113,9 +113,9 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="max-w-4xl">
-        <h1 className="text-3xl font-bold text-white mb-2">Upload BIRS</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('nav.upload')}</h1>
         <p className="text-white/90 mb-6">
-          Téléchargez vos fichiers BIRS (Baggage Irregularity Report System)
+          {t('dashboard.subtitle')}
         </p>
 
         {/* Informations de la compagnie connectée */}
@@ -124,14 +124,14 @@ export default function Dashboard() {
             <div>
               <p className="text-xs text-white/60 uppercase tracking-wide mb-1">{t('dashboard.connectedCompany')}</p>
               <p className="text-lg font-bold text-white">{airline?.name}</p>
-              <p className="text-sm text-primary-200">Code IATA: {airline?.code}</p>
+              <p className="text-sm text-primary-200">{t('dashboard.iataCode')}: {airline?.code}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-full p-3">
               <Plane className="w-8 h-8 text-primary-300" />
             </div>
           </div>
           <p className="text-xs text-white/60 mt-3 border-t border-white/10 pt-3">
-            ℹ️ Ces informations seront automatiquement ajoutées à tous vos uploads BIRS
+            ℹ️ {t('dashboard.autoInfo')}
           </p>
         </div>
 
@@ -139,27 +139,27 @@ export default function Dashboard() {
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-white">Informations spécifiques du vol</h2>
-              <p className="text-xs text-white/60 mt-1">Ces informations sont requises pour chaque upload BIRS</p>
+              <h2 className="text-xl font-semibold text-white">{t('dashboard.flightInfo')}</h2>
+              <p className="text-xs text-white/60 mt-1">{t('dashboard.flightInfo.subtitle')}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Numéro de vol *
+                {t('dashboard.flightNumber')} *
               </label>
               <input
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value)}
-                placeholder="Ex: AC123"
+                placeholder={t('dashboard.flightNumber.placeholder')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Date du vol *
+                {t('dashboard.flightDate')} *
               </label>
               <input
                 type="date"
@@ -171,13 +171,13 @@ export default function Dashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Origine (code aéroport) *
+                {t('dashboard.origin')} *
               </label>
               <input
                 type="text"
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value)}
-                placeholder="Ex: FIH"
+                placeholder={t('dashboard.origin.placeholder')}
                 maxLength={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
                 required
@@ -185,13 +185,13 @@ export default function Dashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Destination (code aéroport) *
+                {t('dashboard.destination')} *
               </label>
               <input
                 type="text"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                placeholder="Ex: GOM"
+                placeholder={t('dashboard.destination.placeholder')}
                 maxLength={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
                 required
@@ -199,19 +199,19 @@ export default function Dashboard() {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Aéroport destinataire du rapport BIRS *
+                {t('dashboard.airportCode')} *
               </label>
               <input
                 type="text"
                 value={airportCode}
                 onChange={(e) => setAirportCode(e.target.value)}
-                placeholder="Ex: GOM (généralement la destination du vol)"
+                placeholder={t('dashboard.airportCode.placeholder')}
                 maxLength={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
                 required
               />
               <p className="text-xs text-white/60 mt-1">
-                Code de l'aéroport qui recevra et réconciliera ce rapport BIRS (souvent identique à la destination)
+                {t('dashboard.airportCode.help')}
               </p>
             </div>
           </div>
@@ -233,11 +233,11 @@ export default function Dashboard() {
               htmlFor="file-input"
               className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 cursor-pointer transition-colors"
             >
-              Sélectionner un fichier
+              {t('dashboard.selectFile')}
             </label>
             
             <p className="text-sm text-white/60 mt-4">
-              Formats acceptés : TXT, CSV, TSV, XLSX, PDF
+              {t('dashboard.formats')}
             </p>
           </div>
 
@@ -261,12 +261,12 @@ export default function Dashboard() {
                 {uploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Upload en cours...</span>
+                    <span>{t('dashboard.uploading')}</span>
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    <span>Uploader</span>
+                    <span>{t('dashboard.upload')}</span>
                   </>
                 )}
               </button>
@@ -298,40 +298,40 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-8 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-6">
-          <h3 className="font-semibold text-white mb-3">📋 Guide d'utilisation</h3>
+          <h3 className="font-semibold text-white mb-3">📋 {t('dashboard.guide.title')}</h3>
           
           <div className="space-y-4">
             {/* Informations automatiques */}
             <div className="bg-green-900/20 border border-green-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-green-200 mb-2">✅ Informations automatiques (de votre inscription)</h4>
+              <h4 className="text-sm font-semibold text-green-200 mb-2">✅ {t('dashboard.guide.auto.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
-                <li>• <strong>Nom de la compagnie :</strong> {airline?.name}</li>
-                <li>• <strong>Code IATA :</strong> {airline?.code}</li>
-                <li>• Ces infos sont ajoutées automatiquement à chaque upload</li>
+                <li>• <strong>{t('dashboard.guide.auto.line1')} :</strong> {airline?.name}</li>
+                <li>• <strong>{t('dashboard.guide.auto.line2')} :</strong> {airline?.code}</li>
+                <li>• {t('dashboard.guide.auto.line3')}</li>
               </ul>
             </div>
 
             {/* Informations à renseigner */}
             <div className="bg-blue-900/20 border border-blue-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-blue-200 mb-2">📝 Informations à renseigner pour chaque vol</h4>
+              <h4 className="text-sm font-semibold text-blue-200 mb-2">📝 {t('dashboard.guide.manual.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
-                <li>• <strong>Numéro de vol :</strong> Code unique du vol (Ex: AC123, ET456)</li>
-                <li>• <strong>Date du vol :</strong> Date de départ du vol</li>
-                <li>• <strong>Origine :</strong> Code aéroport de départ (3 lettres, Ex: FIH)</li>
-                <li>• <strong>Destination :</strong> Code aéroport d'arrivée (3 lettres, Ex: GOM)</li>
-                <li>• <strong>Aéroport BIRS :</strong> Aéroport qui recevra le rapport (souvent = destination)</li>
+                <li>• {t('dashboard.guide.manual.line1')}</li>
+                <li>• {t('dashboard.guide.manual.line2')}</li>
+                <li>• {t('dashboard.guide.manual.line3')}</li>
+                <li>• {t('dashboard.guide.manual.line4')}</li>
+                <li>• {t('dashboard.guide.manual.line5')}</li>
               </ul>
             </div>
 
             {/* Informations sur les fichiers */}
             <div className="bg-purple-900/20 border border-purple-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-purple-200 mb-2">📄 À propos des fichiers BIRS</h4>
+              <h4 className="text-sm font-semibold text-purple-200 mb-2">📄 {t('dashboard.guide.files.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
-                <li>• Les fichiers BIRS contiennent la liste des bagages envoyés</li>
-                <li>• La réconciliation compare avec les bagages scannés à l'arrivée</li>
-                <li>• Les bagages non réconciliés peuvent être déclarés en RUSH</li>
-                <li>• <strong>Formats acceptés :</strong> TXT, CSV, TSV, XLSX, PDF</li>
-                <li>• <strong>Recommandé :</strong> Privilégiez les fichiers texte (.txt, .csv, .tsv) pour de meilleurs résultats</li>
+                <li>• {t('dashboard.guide.files.line1')}</li>
+                <li>• {t('dashboard.guide.files.line2')}</li>
+                <li>• {t('dashboard.guide.files.line3')}</li>
+                <li>• {t('dashboard.guide.files.line4')}</li>
+                <li>• {t('dashboard.guide.files.line5')}</li>
               </ul>
             </div>
           </div>
