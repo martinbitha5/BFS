@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [flightDate, setFlightDate] = useState('');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
+  const [airportCode, setAirportCode] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -33,7 +34,7 @@ export default function Dashboard() {
     }
 
     // Vérifier les informations du vol
-    if (!flightNumber || !flightDate || !origin || !destination) {
+    if (!flightNumber || !flightDate || !origin || !destination || !airportCode) {
       setMessage('Veuillez remplir toutes les informations du vol');
       setMessageType('error');
       return;
@@ -76,6 +77,7 @@ export default function Dashboard() {
         flightDate: flightDate,
         origin: origin.toUpperCase(),
         destination: destination.toUpperCase(),
+        airportCode: airportCode.toUpperCase(),
         airline: airline?.name || '',
         airlineCode: airline?.code || '',
       };
@@ -93,6 +95,7 @@ export default function Dashboard() {
       setFlightDate('');
       setOrigin('');
       setDestination('');
+      setAirportCode('');
       
       // Réinitialiser l'input file
       const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -191,6 +194,23 @@ export default function Dashboard() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
                 required
               />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
+                Aéroport destinataire du rapport BIRS *
+              </label>
+              <input
+                type="text"
+                value={airportCode}
+                onChange={(e) => setAirportCode(e.target.value)}
+                placeholder="Ex: GOM (généralement la destination du vol)"
+                maxLength={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
+                required
+              />
+              <p className="text-xs text-white/60 mt-1">
+                Code de l'aéroport qui recevra et réconciliera ce rapport BIRS (souvent identique à la destination)
+              </p>
             </div>
           </div>
         </div>
@@ -297,6 +317,7 @@ export default function Dashboard() {
                 <li>• <strong>Date du vol :</strong> Date de départ du vol</li>
                 <li>• <strong>Origine :</strong> Code aéroport de départ (3 lettres, Ex: FIH)</li>
                 <li>• <strong>Destination :</strong> Code aéroport d'arrivée (3 lettres, Ex: GOM)</li>
+                <li>• <strong>Aéroport BIRS :</strong> Aéroport qui recevra le rapport (souvent = destination)</li>
               </ul>
             </div>
 

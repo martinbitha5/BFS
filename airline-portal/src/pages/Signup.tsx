@@ -184,7 +184,7 @@ export default function Signup() {
               </h3>
               <ul className="text-xs text-white/70 space-y-1">
                 <li>• Les informations de la compagnie (nom et code) sont enregistrées une seule fois</li>
-                <li>• Lors des uploads BIRS, vous ne renseignerez que les infos spécifiques du vol</li>
+                <li>• Lors des uploads BIRS, vous renseignerez : numéro vol, date, origine, destination, aéroport destinataire</li>
                 <li>• Votre code IATA doit être officiel et reconnu internationalement</li>
               </ul>
             </div>
