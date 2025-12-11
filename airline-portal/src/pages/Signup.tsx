@@ -2,6 +2,7 @@ import { Building, Hash, Lock, Mail, Plane } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -12,6 +13,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,13 +55,13 @@ export default function Signup() {
           <div className="flex justify-center mb-4">
             <Plane className="w-16 h-16 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Portail Compagnies</h1>
-          <p className="text-primary-100">Inscription au système BFS</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('dashboard.title')}</h1>
+          <p className="text-primary-100">{t('signup.subtitle')}</p>
         </div>
 
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Inscription Compagnie Aérienne</h2>
-          <p className="text-sm text-white/70 mb-6">Renseignez les informations de votre compagnie. Ces données seront utilisées pour tous vos uploads BIRS.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('signup.title')}</h2>
+          <p className="text-sm text-white/70 mb-6">{t('signup.subtitle')}</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-md">
@@ -70,7 +72,7 @@ export default function Signup() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Nom de la compagnie *
+                {t('signup.airlineName')} *
               </label>
               <div className="relative">
                 <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -80,15 +82,15 @@ export default function Signup() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ex: Ethiopian Airlines, Air Congo"
+                  placeholder={t('signup.airlineName.placeholder')}
                 />
               </div>
-              <p className="text-xs text-white/60 mt-1">Ce nom apparaîtra sur tous vos rapports BIRS</p>
+              <p className="text-xs text-white/60 mt-1">{t('signup.airlineName.help')}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Code IATA * (2 lettres)
+                {t('signup.iataCode')} *
               </label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -103,12 +105,12 @@ export default function Signup() {
                   placeholder="ET"
                 />
               </div>
-              <p className="text-xs text-white/60 mt-1">Code unique de votre compagnie (Ex: ET, AC, TK, AF)</p>
+              <p className="text-xs text-white/60 mt-1">{t('signup.iataCode.help')}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Email de contact *
+                {t('signup.contactEmail')} *
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -118,14 +120,14 @@ export default function Signup() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="contact@airline.com"
+                  placeholder={t('signup.contactEmail.placeholder')}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Mot de passe * (min. 6 caractères)
+                {t('signup.password')} *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -142,7 +144,7 @@ export default function Signup() {
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Confirmer le mot de passe
+                {t('signup.confirmPassword')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -162,15 +164,15 @@ export default function Signup() {
               disabled={loading}
               className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? 'Inscription...' : 'S\'inscrire'}
+              {loading ? `${t('signup.button')}...` : t('signup.button')}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-white/70">
-              Déjà un compte ?{' '}
+              {t('signup.hasAccount')}{' '}
               <Link to="/login" className="text-primary-300 hover:text-primary-200 font-medium">
-                Se connecter
+                {t('signup.login')}
               </Link>
             </p>
           </div>
@@ -180,12 +182,12 @@ export default function Signup() {
             <div className="bg-blue-900/20 backdrop-blur-sm border border-blue-400/30 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-200 mb-2 flex items-center">
                 <Plane className="w-4 h-4 mr-2" />
-                À propos de votre compte
+                {t('signup.info.title')}
               </h3>
               <ul className="text-xs text-white/70 space-y-1">
-                <li>• Les informations de la compagnie (nom et code) sont enregistrées une seule fois</li>
-                <li>• Lors des uploads BIRS, vous renseignerez : numéro vol, date, origine, destination, aéroport destinataire</li>
-                <li>• Votre code IATA doit être officiel et reconnu internationalement</li>
+                <li>• {t('signup.info.line1')}</li>
+                <li>• {t('signup.info.line2')}</li>
+                <li>• {t('signup.info.line3')}</li>
               </ul>
             </div>
           </div>
