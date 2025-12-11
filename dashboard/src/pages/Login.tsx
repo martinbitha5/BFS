@@ -101,30 +101,11 @@ export default function Login() {
             Vous n'avez pas encore de compte ?{' '}
             <Link
               to="/register"
-              className="font-medium text-primary-600 hover:text-primary-700 transition"
+              className="font-medium text-primary-300 hover:text-primary-200 transition"
             >
               S'inscrire
             </Link>
           </p>
-        </div>
-
-        {/* Informations de test */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-white/70 text-center mb-3">Comptes de test :</p>
-          <div className="space-y-2 text-xs text-white/80">
-            <div className="bg-black/25 backdrop-blur-md border border-white/20 p-3 rounded">
-              <p className="font-medium">Kinshasa (FIH)</p>
-              <p className="text-white/70">kinshasa@bfs.cd / test123</p>
-            </div>
-            <div className="bg-black/25 backdrop-blur-md border border-white/20 p-3 rounded">
-              <p className="font-medium">Goma (GOM)</p>
-              <p className="text-white/70">goma@bfs.cd / test123</p>
-            </div>
-            <div className="bg-black/25 backdrop-blur-md border border-white/20 p-3 rounded">
-              <p className="font-medium">Lubumbashi (FBM)</p>
-              <p className="text-white/70">lubumbashi@bfs.cd / test123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
