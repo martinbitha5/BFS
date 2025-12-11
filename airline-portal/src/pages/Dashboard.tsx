@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 
+// URL de l'API depuis les variables d'environnement
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export default function Dashboard() {
   const { airline } = useAuth();
   const [file, setFile] = useState<File | null>(null);
@@ -43,7 +46,7 @@ export default function Dashboard() {
       formData.append('airline_code', airline?.code || '');
       formData.append('airline_name', airline?.name || '');
 
-      const response = await axios.post('/api/v1/birs/upload', formData, {
+      const response = await axios.post(`${API_URL}/api/v1/birs/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

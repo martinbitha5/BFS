@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 
+// URL de l'API depuis les variables d'environnement
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 interface BIRSReport {
   id: string;
   flight_number: string;
@@ -28,7 +31,7 @@ export default function History() {
     setError('');
 
     try {
-      const response = await axios.get(`/api/v1/birs/history?airline_code=${airline?.code}`);
+      const response = await axios.get(`${API_URL}/api/v1/birs/history?airline_code=${airline?.code}`);
       setReports(response.data.data || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur lors du chargement de l\'historique');

@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+// URL de l'API depuis les variables d'environnement
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 interface Airline {
   id: string;
   name: string;
@@ -33,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/api/v1/airlines/login', {
+      const response = await axios.post(`${API_URL}/api/v1/airlines/login`, {
         email,
         password,
       });
@@ -50,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (name: string, code: string, email: string, password: string) => {
     try {
-      const response = await axios.post('/api/v1/airlines/signup', {
+      const response = await axios.post(`${API_URL}/api/v1/airlines/signup`, {
         name,
         code,
         email,
