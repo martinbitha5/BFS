@@ -12,7 +12,7 @@ const colorClasses = {
   blue: 'bg-blue-50 text-blue-600',
   green: 'bg-green-50 text-green-600',
   yellow: 'bg-yellow-50 text-yellow-600',
-  red: 'bg-red-50 text-red-600',
+  red: 'bg-red-900/30 backdrop-blur-md text-red-600',
 };
 
 export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps) {

@@ -81,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-red-300 hover:bg-red-500/20 transition-colors"
+              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-red-300 hover:bg-red-900/30 backdrop-blur-md0/20 transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Déconnexion

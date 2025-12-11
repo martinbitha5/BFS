@@ -55,7 +55,7 @@ export default function BaggageTracker() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-6">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-6">
         <h2 className="text-2xl font-bold text-white mb-6">Suivre votre bagage</h2>
         
         <form onSubmit={handleSearch} className="mb-6">
@@ -88,7 +88,7 @@ export default function BaggageTracker() {
         </form>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-800">{error}</p>
           </div>
         )}

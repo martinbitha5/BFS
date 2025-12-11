@@ -105,7 +105,7 @@ export default function RawScans() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
         <p className="text-red-800">{error}</p>
       </div>
     );
@@ -137,7 +137,7 @@ export default function RawScans() {
       {/* Statistiques */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">Total</p>
@@ -146,7 +146,7 @@ export default function RawScans() {
               <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-white/60 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">Check-in</p>
@@ -155,7 +155,7 @@ export default function RawScans() {
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">Embarqu.</p>
@@ -164,7 +164,7 @@ export default function RawScans() {
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">BP</p>
@@ -173,7 +173,7 @@ export default function RawScans() {
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/70">BT</p>
@@ -186,7 +186,7 @@ export default function RawScans() {
       )}
 
       {/* Filtres */}
-      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm p-4">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-white/80" />
           <h3 className="text-sm font-medium text-white">Filtrer par checkpoint</h3>
@@ -209,7 +209,7 @@ export default function RawScans() {
       </div>
 
       {/* Liste des scans */}
-      <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-black/25 backdrop-blur-md border border-white/20">
@@ -231,7 +231,7 @@ export default function RawScans() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
+            <tbody className="bg-black/30 backdrop-blur-md border border-white/20 divide-y divide-gray-200">
               {scans.map((scan) => (
                 <tr key={scan.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20 transition-colors">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">

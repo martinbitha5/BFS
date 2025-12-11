@@ -116,7 +116,7 @@ export default function Passengers() {
   return (
     <div className="space-y-6">
       {/* Header & Filters */}
-      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-4">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-4">
         <h2 className="text-2xl font-bold text-white mb-4">Liste des passagers - {user?.airport_code}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,7 +177,7 @@ export default function Passengers() {
             </button>
             <button
               onClick={fetchPassengers}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-black/25 backdrop-blur-md border border-white/20"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/25 backdrop-blur-md border border-white/20"
             >
               Actualiser
             </button>
@@ -185,7 +185,7 @@ export default function Passengers() {
         </div>
 
         {syncMessage && (
-          <div className={`mt-2 p-3 rounded-md ${syncMessage.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          <div className={`mt-2 p-3 rounded-md ${syncMessage.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-900/30 backdrop-blur-md text-red-800'}`}>
             {syncMessage}
           </div>
         )}
@@ -197,7 +197,7 @@ export default function Passengers() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       ) : filteredPassengers.length === 0 ? (
@@ -209,7 +209,7 @@ export default function Passengers() {
           </p>
         </div>
       ) : (
-        <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg overflow-hidden">
+        <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-black/25 backdrop-blur-md border border-white/20">
               <tr>
@@ -233,7 +233,7 @@ export default function Passengers() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
+            <tbody className="bg-black/30 backdrop-blur-md border border-white/20 divide-y divide-gray-200">
               {filteredPassengers.map((passenger) => {
                 const boarded = isBoarded(passenger);
                 const { arrivedCount, totalCount } = getBaggageStatus(passenger);

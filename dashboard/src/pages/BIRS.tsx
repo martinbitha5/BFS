@@ -110,7 +110,7 @@ export default function BIRS() {
       {/* Messages */}
       {message && (
         <div className={`p-4 rounded-md ${
-          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-900/30 backdrop-blur-md text-red-800'
         }`}>
           <div className="flex">
             {message.type === 'success' ? (
@@ -140,7 +140,7 @@ export default function BIRS() {
       </div>
 
       {/* Liste des rapports */}
-      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-6">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-white">
             Historique des rapports
@@ -177,7 +177,7 @@ export default function BIRS() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white/95 backdrop-blur-lg divide-y divide-gray-200">
+              <tbody className="bg-black/30 backdrop-blur-md border border-white/20 divide-y divide-gray-200">
                 {reports.map((report) => (
                   <tr key={report.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">

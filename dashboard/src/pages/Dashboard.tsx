@@ -91,7 +91,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
         <p className="text-red-800">{error}</p>
       </div>
     );
@@ -133,7 +133,7 @@ export default function Dashboard() {
       )}
       
       {error && (
-        <div className="bg-red-50/95 backdrop-blur-lg border border-red-200 rounded-lg p-4">
+        <div className="bg-red-900/30 backdrop-blur-md/95 backdrop-blur-lg border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}

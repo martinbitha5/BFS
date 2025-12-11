@@ -73,7 +73,7 @@ export default function DebugParser() {
 
               <h2 className="text-xl font-semibold mb-4">Résultat du Parsing</h2>
               {parsedResult && (
-                <div className="bg-white/95 backdrop-blur-lg border rounded p-4">
+                <div className="bg-black/30 backdrop-blur-md border border-white/20 border rounded p-4">
                   {parsedResult.error ? (
                     <div className="text-red-600">
                       <strong>Erreur:</strong> {parsedResult.error}

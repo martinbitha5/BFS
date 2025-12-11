@@ -170,7 +170,7 @@ export default function DashboardEnhanced() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
         <p className="text-red-800">{error}</p>
       </div>
     );
@@ -222,7 +222,7 @@ export default function DashboardEnhanced() {
       )}
       
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}
@@ -264,7 +264,7 @@ export default function DashboardEnhanced() {
           {/* Raw Scans Statistics - Responsive */}
           {
             rawScansStats && (
-              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 sm:p-6 animate-fade-in">
+              <div className="bg-black/25 backdrop-blur-md border border-purple-200 rounded-lg p-4 sm:p-6 animate-fade-in">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div className="flex items-center flex-wrap gap-2">
                     <div className="flex items-center">
@@ -297,7 +297,7 @@ export default function DashboardEnhanced() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-white/70 mb-1">Total Scans</p>
@@ -306,7 +306,7 @@ export default function DashboardEnhanced() {
                       <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
                     </div>
                   </div>
-                  <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-white/70 mb-1">Boarding Pass</p>
@@ -315,7 +315,7 @@ export default function DashboardEnhanced() {
                       <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
                     </div>
                   </div>
-                  <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-white/70 mb-1">Baggage Tag</p>
@@ -324,7 +324,7 @@ export default function DashboardEnhanced() {
                       <Package className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 opacity-20" />
                     </div>
                   </div>
-                  <div className="bg-white/95 backdrop-blur-lg rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-white/70 mb-1">Checkpoints</p>
@@ -362,7 +362,7 @@ export default function DashboardEnhanced() {
           {/* Graphiques de statut réels - Responsive */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Statut des bagages */}
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
               <div className="flex items-center mb-4">
                 <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                 <h3 className="text-base sm:text-lg font-medium text-white">Statut des bagages</h3>
@@ -389,7 +389,7 @@ export default function DashboardEnhanced() {
             </div>
 
             {/* Statut des passagers */}
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6">
               <div className="flex items-center mb-4">
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                 <h3 className="text-base sm:text-lg font-medium text-white">Embarquement</h3>
@@ -410,7 +410,7 @@ export default function DashboardEnhanced() {
             </div>
 
             {/* Activités récentes */}
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6 lg:col-span-2">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg p-4 sm:p-6 lg:col-span-2">
               <div className="flex items-center mb-4">
                 <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                 <h3 className="text-base sm:text-lg font-medium text-white">Activités récentes</h3>
@@ -434,8 +434,8 @@ export default function DashboardEnhanced() {
           {/* Liste des vols - Responsive */}
           {
             stats.uniqueFlights.length > 0 && (
-              <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden">
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-black/25 backdrop-blur-md">
                   <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
                     <Plane className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary-600" />
                     Vols actifs ({stats.flightsCount})
@@ -460,7 +460,7 @@ export default function DashboardEnhanced() {
 
           {/* Statistiques détaillées en footer - Responsive */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">Arrivés</p>
@@ -469,7 +469,7 @@ export default function DashboardEnhanced() {
                 <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">En transit</p>
@@ -478,7 +478,7 @@ export default function DashboardEnhanced() {
                 <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">Embarq.</p>
@@ -489,7 +489,7 @@ export default function DashboardEnhanced() {
                 <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
               </div>
             </div>
-            <div className="bg-white/95 backdrop-blur-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-white/70">Moy. bag</p>

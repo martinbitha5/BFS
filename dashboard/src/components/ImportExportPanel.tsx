@@ -127,7 +127,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-lg rounded-lg shadow-lg p-6">
+    <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-lg p-6">
       <h2 className="text-2xl font-bold mb-6 text-white/90">Import / Export de Données</h2>
 
       {/* Message de statut */}
@@ -135,7 +135,7 @@ export const ImportExportPanel: React.FC<ImportExportPanelProps> = ({
         <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
           message.type === 'success' 
             ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
+            : 'bg-red-900/30 backdrop-blur-md text-red-800 border border-red-200'
         }`}>
           {message.type === 'success' ? (
             <CheckCircle className="w-5 h-5" />

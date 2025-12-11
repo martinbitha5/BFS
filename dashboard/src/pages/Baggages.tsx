@@ -172,7 +172,7 @@ export default function Baggages() {
     const StatusIcon = statusConfig[baggage.status].icon;
 
     return (
-      <div key={baggage.id} className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div key={baggage.id} className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-6 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -280,7 +280,7 @@ export default function Baggages() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white/95 backdrop-blur-lg shadow rounded-lg p-4">
+      <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-white/85 mb-2">
@@ -321,7 +321,7 @@ export default function Baggages() {
           </p>
           <button
             onClick={fetchBaggages}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-lg hover:bg-black/25 backdrop-blur-md border border-white/20"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/25 backdrop-blur-md border border-white/20"
           >
             Actualiser
           </button>
@@ -334,7 +334,7 @@ export default function Baggages() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       ) : filteredBaggages.length === 0 ? (
@@ -354,7 +354,7 @@ export default function Baggages() {
       {/* Rush Modal */}
       {showRushModal && selectedBaggage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-lg rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center">
               <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
               Marquer comme RUSH
