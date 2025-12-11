@@ -41,14 +41,33 @@ export default function Dashboard() {
     setMessage('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('airline_code', airline?.code || '');
-      formData.append('airline_name', airline?.name || '');
+      let fileContent: string;
+      
+      // Pour les PDF, utiliser base64, pour les autres fichiers texte
+      if (fileExtension === '.pdf') {
+        // Lire le fichier PDF en base64
+        const reader = new FileReader();
+        fileContent = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        // Lire le contenu texte pour TXT, CSV, TSV, XLSX
+        fileContent = await file.text();
+      }
+      
+      const payload = {
+        fileName: file.name,
+        fileContent: fileContent,
+        reportType: 'birs',
+        airlineCode: airline?.code || '',
+        airlineName: airline?.name || '',
+      };
 
-      const response = await axios.post(`${API_URL}/api/v1/birs/upload`, formData, {
+      const response = await axios.post(`${API_URL}/api/v1/birs/upload`, payload, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
       });
 
