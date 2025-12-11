@@ -172,17 +172,17 @@ export default function Baggages() {
     const StatusIcon = statusConfig[baggage.status].icon;
 
     return (
-      <div key={baggage.id} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div key={baggage.id} className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Package className="w-5 h-5 text-gray-600" />
+              <Package className="w-5 h-5 text-white/80" />
               <span className="font-mono font-bold text-lg">{getBaggageIdentifier(baggage)}</span>
               <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
                 {isNational ? 'National' : 'International'}
               </span>
             </div>
-            <p className="text-gray-900 font-medium">{getBaggagePassenger(baggage)}</p>
+            <p className="text-white font-medium">{getBaggagePassenger(baggage)}</p>
             {isNational && (baggage as Baggage).passengers?.pnr && (
               <p className="text-sm text-gray-500 font-mono">
                 PNR: {(baggage as Baggage).passengers.pnr}
@@ -203,11 +203,11 @@ export default function Baggages() {
         <div className="space-y-2 text-sm">
           {isNational && (
             <>
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-white/80">
                 <Plane className="w-4 h-4 mr-2" />
                 Vol {(baggage as Baggage).flightNumber}: {(baggage as Baggage).passengers?.departure} → {(baggage as Baggage).passengers?.arrival}
               </div>
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-white/80">
                 <Package className="w-4 h-4 mr-2" />
                 Poids: {baggage.weight || 'N/A'} kg
               </div>
@@ -216,19 +216,19 @@ export default function Baggages() {
           {!isNational && (
             <>
               {(baggage as InternationalBaggage).flightNumber && (
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-white/80">
                   <Plane className="w-4 h-4 mr-2" />
                   Vol {(baggage as InternationalBaggage).flightNumber}
                 </div>
               )}
               {(baggage as InternationalBaggage).origin && (
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-white/80">
                   <Plane className="w-4 h-4 mr-2" />
                   Origine: {(baggage as InternationalBaggage).origin}
                 </div>
               )}
               {(baggage as InternationalBaggage).weight && (
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-white/80">
                   <Package className="w-4 h-4 mr-2" />
                   Poids: {(baggage as InternationalBaggage).weight} kg
                 </div>
@@ -247,7 +247,7 @@ export default function Baggages() {
             }
           </div>
           {!isNational && (baggage as InternationalBaggage).remarks && (
-            <p className="text-sm text-gray-600 italic mt-2">
+            <p className="text-sm text-white/80 italic mt-2">
               {(baggage as InternationalBaggage).remarks}
             </p>
           )}
@@ -273,14 +273,14 @@ export default function Baggages() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Gestion des bagages - {user?.airport_code}</h2>
+        <h2 className="text-2xl font-bold text-white">Gestion des bagages - {user?.airport_code}</h2>
         <p className="mt-1 text-sm text-gray-500">
           Suivi des bagages nationaux, internationaux et RUSH
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
+      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -316,12 +316,12 @@ export default function Baggages() {
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white/80">
             {filteredBaggages.length} bagage(s) trouvé(s)
           </p>
           <button
             onClick={fetchBaggages}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white/95 backdrop-blur-sm hover:bg-gray-50"
           >
             Actualiser
           </button>
@@ -340,7 +340,7 @@ export default function Baggages() {
       ) : filteredBaggages.length === 0 ? (
         <div className="text-center py-12">
           <Package className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun bagage</h3>
+          <h3 className="mt-2 text-sm font-medium text-white">Aucun bagage</h3>
           <p className="mt-1 text-sm text-gray-500">
             Aucun bagage trouvé pour les critères sélectionnés
           </p>
@@ -354,14 +354,14 @@ export default function Baggages() {
       {/* Rush Modal */}
       {showRushModal && selectedBaggage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center">
               <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
               Marquer comme RUSH
             </h3>
 
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Bagage:</p>
+              <p className="text-sm text-white/80 mb-2">Bagage:</p>
               <p className="font-mono font-bold">{getBaggageIdentifier(selectedBaggage)}</p>
               <p className="text-sm text-gray-700">{getBaggagePassenger(selectedBaggage)}</p>
             </div>

@@ -116,8 +116,8 @@ export default function Passengers() {
   return (
     <div className="space-y-6">
       {/* Header & Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Liste des passagers - {user?.airport_code}</h2>
+      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-4">
+        <h2 className="text-2xl font-bold text-white mb-4">Liste des passagers - {user?.airport_code}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -157,7 +157,7 @@ export default function Passengers() {
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white/80">
             {filteredPassengers.length} passager(s) trouvé(s)
           </p>
           <div className="flex gap-2">
@@ -177,7 +177,7 @@ export default function Passengers() {
             </button>
             <button
               onClick={fetchPassengers}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white/95 backdrop-blur-sm hover:bg-gray-50"
             >
               Actualiser
             </button>
@@ -203,13 +203,13 @@ export default function Passengers() {
       ) : filteredPassengers.length === 0 ? (
         <div className="text-center py-12">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun passager</h3>
+          <h3 className="mt-2 text-sm font-medium text-white">Aucun passager</h3>
           <p className="mt-1 text-sm text-gray-500">
             Aucun passager trouvé pour les critères sélectionnés
           </p>
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -233,7 +233,7 @@ export default function Passengers() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
               {filteredPassengers.map((passenger) => {
                 const boarded = isBoarded(passenger);
                 const { arrivedCount, totalCount } = getBaggageStatus(passenger);
@@ -242,7 +242,7 @@ export default function Passengers() {
                   <tr key={passenger.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="font-medium text-gray-900">{passenger.fullName}</div>
+                        <div className="font-medium text-white">{passenger.fullName}</div>
                         <div className="text-sm text-gray-500 font-mono">PNR: {passenger.pnr}</div>
                         {passenger.seatNumber && (
                           <div className="text-sm text-gray-500">Siège: {passenger.seatNumber}</div>
@@ -250,18 +250,18 @@ export default function Passengers() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
+                      <div className="flex items-center text-sm text-white">
                         <Plane className="w-4 h-4 mr-2 text-gray-400" />
                         {passenger.flightNumber}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {passenger.departure} → {passenger.arrival}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm">
                         <Package className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className={arrivedCount === totalCount && totalCount > 0 ? 'text-green-600' : 'text-gray-900'}>
+                        <span className={arrivedCount === totalCount && totalCount > 0 ? 'text-green-600' : 'text-white'}>
                           {arrivedCount}/{totalCount}
                         </span>
                       </div>

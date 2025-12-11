@@ -98,7 +98,7 @@ export default function RawScans() {
     return (
       <div className="flex justify-center items-center h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-primary-600" />
-        <p className="ml-3 text-gray-600">Chargement...</p>
+        <p className="ml-3 text-white/80">Chargement...</p>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function RawScans() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
             <Barcode className="w-6 h-6 sm:w-8 sm:h-8" />
             Scans Bruts (Raw Data)
           </h2>
@@ -137,16 +137,16 @@ export default function RawScans() {
       {/* Statistiques */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Total</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xl sm:text-2xl font-bold text-white">{stats.total}</p>
               </div>
               <Barcode className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 opacity-20" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Check-in</p>
@@ -155,7 +155,7 @@ export default function RawScans() {
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">Embarqu.</p>
@@ -164,7 +164,7 @@ export default function RawScans() {
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">BP</p>
@@ -173,7 +173,7 @@ export default function RawScans() {
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 opacity-20" />
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-500">BT</p>
@@ -186,10 +186,10 @@ export default function RawScans() {
       )}
 
       {/* Filtres */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-gray-600" />
-          <h3 className="text-sm font-medium text-gray-900">Filtrer par checkpoint</h3>
+          <Filter className="w-4 h-4 text-white/80" />
+          <h3 className="text-sm font-medium text-white">Filtrer par checkpoint</h3>
         </div>
         <div className="flex flex-wrap gap-2">
           {['all', 'checkin', 'baggage', 'boarding', 'arrival'].map((status) => (
@@ -209,7 +209,7 @@ export default function RawScans() {
       </div>
 
       {/* Liste des scans */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -231,7 +231,7 @@ export default function RawScans() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
               {scans.map((scan) => (
                 <tr key={scan.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -279,7 +279,7 @@ export default function RawScans() {
       {scans.length === 0 && !loading && (
         <div className="text-center py-12">
           <Barcode className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun scan brut trouvé</h3>
+          <h3 className="mt-2 text-sm font-medium text-white">Aucun scan brut trouvé</h3>
           <p className="mt-1 text-sm text-gray-500">
             Les données brutes apparaissent ici après le scan depuis l'app mobile
           </p>

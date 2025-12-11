@@ -55,8 +55,8 @@ export default function BaggageTracker() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Suivre votre bagage</h2>
+      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6">
+        <h2 className="text-2xl font-bold text-white mb-6">Suivre votre bagage</h2>
         
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex gap-4">
@@ -111,7 +111,7 @@ export default function BaggageTracker() {
                     <Package className="w-4 h-4 mr-2" />
                     Numéro de tag
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono">{baggage.tagNumber}</dd>
+                  <dd className="mt-1 text-sm text-white font-mono">{baggage.tagNumber}</dd>
                 </div>
 
                 <div>
@@ -119,7 +119,7 @@ export default function BaggageTracker() {
                     <Plane className="w-4 h-4 mr-2" />
                     Vol
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-900">{baggage.flightNumber}</dd>
+                  <dd className="mt-1 text-sm text-white">{baggage.flightNumber}</dd>
                 </div>
 
                 <div>
@@ -127,7 +127,7 @@ export default function BaggageTracker() {
                     <Clock className="w-4 h-4 mr-2" />
                     Enregistré le
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+                  <dd className="mt-1 text-sm text-white">
                     {new Date(baggage.checkedAt).toLocaleString('fr-FR')}
                   </dd>
                 </div>
@@ -138,7 +138,7 @@ export default function BaggageTracker() {
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Arrivé le
                     </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
+                    <dd className="mt-1 text-sm text-white">
                       {new Date(baggage.arrivedAt).toLocaleString('fr-FR')}
                     </dd>
                   </div>
@@ -149,12 +149,12 @@ export default function BaggageTracker() {
                     <MapPin className="w-4 h-4 mr-2" />
                     Localisation actuelle
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-900">{baggage.currentLocation}</dd>
+                  <dd className="mt-1 text-sm text-white">{baggage.currentLocation}</dd>
                 </div>
 
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Poids</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{baggage.weight} kg</dd>
+                  <dd className="mt-1 text-sm text-white">{baggage.weight} kg</dd>
                 </div>
               </dl>
             </div>
@@ -162,21 +162,21 @@ export default function BaggageTracker() {
             {/* Passenger Info */}
             {baggage.passenger && (
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Informations passager</h3>
+                <h3 className="text-lg font-medium text-white mb-4">Informations passager</h3>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Nom</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{baggage.passenger.name}</dd>
+                    <dd className="mt-1 text-sm text-white">{baggage.passenger.name}</dd>
                   </div>
 
                   <div>
                     <dt className="text-sm font-medium text-gray-500">PNR</dt>
-                    <dd className="mt-1 text-sm text-gray-900 font-mono">{baggage.passenger.pnr}</dd>
+                    <dd className="mt-1 text-sm text-white font-mono">{baggage.passenger.pnr}</dd>
                   </div>
 
                   <div className="sm:col-span-2">
                     <dt className="text-sm font-medium text-gray-500">Itinéraire</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{baggage.passenger.route}</dd>
+                    <dd className="mt-1 text-sm text-white">{baggage.passenger.route}</dd>
                   </div>
                 </dl>
               </div>

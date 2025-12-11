@@ -76,7 +76,7 @@ export default function Dashboard() {
     return (
       <div className="flex justify-center items-center h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-primary-600" />
-        <p className="ml-3 text-gray-600">Chargement...</p>
+        <p className="ml-3 text-white/80">Chargement...</p>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default function Dashboard() {
   if (!user?.airport_code) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-gray-600">Aucun aéroport assigné</p>
+        <p className="text-white/80">Aucun aéroport assigné</p>
       </div>
     );
   }
@@ -188,9 +188,9 @@ export default function Dashboard() {
 
           {/* Flights List */}
           {stats.uniqueFlights.length > 0 && (
-            <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg">
+            <div className="bg-white/95 backdrop-blur-sm/95 backdrop-blur-sm shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200/50">
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-white">
                   Vols ({stats.flightsCount})
                 </h3>
               </div>

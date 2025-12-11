@@ -97,11 +97,11 @@ export default function BIRS() {
       {/* En-tête */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-white">
             <Package className="w-8 h-8 inline mr-2" />
             Rapports BIRS - Bagages Internationaux
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-white/80 mt-1">
             Importation et réconciliation des fichiers des compagnies aériennes
           </p>
         </div>
@@ -140,9 +140,9 @@ export default function BIRS() {
       </div>
 
       {/* Liste des rapports */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-white">
             Historique des rapports
           </h2>
           <button
@@ -177,10 +177,10 @@ export default function BIRS() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
                 {reports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                       {report.flight_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -192,7 +192,7 @@ export default function BIRS() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {report.origin} → {report.destination}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       <div className="flex items-center space-x-2">
                         <span className="font-semibold">{report.total_baggages}</span>
                         {report.processed_at && (
@@ -219,7 +219,7 @@ export default function BIRS() {
                       ) : (
                         <button
                           onClick={() => handleReconcile(report.id)}
-                          className="text-gray-600 hover:text-gray-700"
+                          className="text-white/80 hover:text-gray-700"
                         >
                           Re-traiter
                         </button>

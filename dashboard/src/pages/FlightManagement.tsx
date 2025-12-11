@@ -112,12 +112,12 @@ export default function FlightManagement() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestion des Vols</h1>
-        <p className="text-gray-600">Ajoutez et gérez les vols disponibles pour votre aéroport</p>
+        <h1 className="text-2xl font-bold text-white mb-2">Gestion des Vols</h1>
+        <p className="text-white/80">Ajoutez et gérez les vols disponibles pour votre aéroport</p>
       </div>
 
       {/* Actions Bar */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           {/* Sélection date */}
           <div className="flex items-center gap-2">
@@ -159,17 +159,17 @@ export default function FlightManagement() {
 
       {/* Liste des vols */}
       {loading ? (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des vols...</p>
+          <p className="mt-4 text-white/80">Chargement des vols...</p>
         </div>
       ) : filteredFlights.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-8 text-center">
           <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2">
             {searchQuery ? 'Aucun vol trouvé' : 'Aucun vol programmé'}
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-white/80 mb-4">
             {searchQuery
               ? 'Essayez avec un autre terme de recherche'
               : 'Commencez par ajouter un vol pour cette date'}
@@ -184,7 +184,7 @@ export default function FlightManagement() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -208,7 +208,7 @@ export default function FlightManagement() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
               {filteredFlights.map((flight) => (
                 <tr key={flight.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -217,22 +217,22 @@ export default function FlightManagement() {
                         <Plane className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{flight.flightNumber}</div>
+                        <div className="text-sm font-medium text-white">{flight.flightNumber}</div>
                         <div className="text-sm text-gray-500">{flight.airlineCode}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{flight.airline}</div>
+                    <div className="text-sm text-white">{flight.airline}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                    <div className="flex items-center gap-2 text-sm font-medium text-white">
                       <span>{flight.departure}</span>
                       <span className="text-gray-400">→</span>
                       <span>{flight.arrival}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {flight.scheduledTime || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -335,9 +335,9 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <h2 className="text-xl font-bold text-white mb-4">
             {mode === 'add' ? 'Ajouter un vol' : 'Modifier le vol'}
           </h2>
           

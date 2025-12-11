@@ -58,14 +58,14 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl p-8 w-full max-w-md">
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
             <UserPlus className="w-8 h-8 text-primary-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Baggage Found Solution</h1>
-          <p className="text-gray-600 mt-2">Créer un compte superviseur</p>
+          <h1 className="text-3xl font-bold text-white">Baggage Found Solution</h1>
+          <p className="text-white/80 mt-2">Créer un compte superviseur</p>
         </div>
 
         {/* Message d'erreur */}
@@ -188,7 +188,7 @@ export default function Register() {
 
         {/* Lien vers la connexion */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white/80">
             Vous avez déjà un compte ?{' '}
             <Link
               to="/login"

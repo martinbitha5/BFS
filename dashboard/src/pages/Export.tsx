@@ -416,7 +416,7 @@ export default function Export() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
           <FileSpreadsheet className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" />
           Exporter les données
         </h2>
@@ -426,9 +426,9 @@ export default function Export() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-white shadow-sm rounded-lg p-4 sm:p-6 space-y-6">
+      <div className="bg-white/95 backdrop-blur-sm shadow-sm rounded-lg p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Filtres d'export</h3>
+          <h3 className="text-lg font-semibold text-white">Filtres d'export</h3>
           <button
             onClick={() => {
               setStartDate('');
@@ -598,7 +598,7 @@ export default function Export() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">Données Brutes (Raw Scans)</h3>
+              <h3 className="text-lg font-semibold text-white">Données Brutes (Raw Scans)</h3>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 Recommandé 🎯
               </span>
@@ -606,7 +606,7 @@ export default function Export() {
             <p className="text-sm text-gray-700 mb-2">
               Export des données brutes PURES (sans parsing)
             </p>
-            <ul className="text-xs text-gray-600 space-y-1">
+            <ul className="text-xs text-white/80 space-y-1">
               <li>✓ Données brutes exactes telles que scannées</li>
               <li>✓ Aucune transformation ni parsing</li>
               <li>✓ Tracking complet : Check-in → Bagage → Embarquement → Arrivée</li>
@@ -629,11 +629,11 @@ export default function Export() {
       </div>
 
       {/* Section Export Standard */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Standard (Passagers & Bagages)</h3>
-            <p className="text-sm text-gray-600 mb-3">
+            <h3 className="text-lg font-semibold text-white mb-2">Export Standard (Passagers & Bagages)</h3>
+            <p className="text-sm text-white/80 mb-3">
               Export des données structurées avec parsing automatique
             </p>
             <div className="space-y-2">
@@ -675,7 +675,7 @@ export default function Export() {
               handleExportFile();
             }}
             disabled={exporting || !user?.airport_code || exportType === 'raw_scans'}
-            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
+            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white/95 backdrop-blur-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
             {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Standard'}
