@@ -1,5 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { birsParserService } from '../services/birs-parser.service';
 
 const router = Router();
 
@@ -170,8 +171,7 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       airline,
       airlineCode,
       uploadedBy,
-      airportCode,
-      items
+      airportCode
     } = req.body;
 
     if (!fileName || !fileContent || !reportType) {
@@ -179,6 +179,33 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
         success: false,
         error: 'fileName, fileContent, and reportType are required'
       });
+    }
+
+    console.log('[BIRS Upload] Parsing file:', fileName);
+
+    // Parser le fichier pour extraire les bagages
+    let parsedItems: any[] = [];
+    try {
+      // Créer un objet FileInfo pour le parser
+      const fileInfo = {
+        name: fileName,
+        size: fileContent.length,
+        type: fileName.endsWith('.pdf') ? 'application/pdf' : 
+              fileName.endsWith('.xlsx') ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+              fileName.endsWith('.csv') ? 'text/csv' :
+              fileName.endsWith('.txt') ? 'text/plain' : 'application/octet-stream',
+        uri: ''
+      };
+
+      // Parser le fichier
+      const parsedData = await birsParserService.parseFile(fileName, fileContent);
+      parsedItems = parsedData.items;
+
+      console.log(`[BIRS Upload] Parsed ${parsedItems.length} bagages from file`);
+    } catch (parseError: any) {
+      console.error('[BIRS Upload] Parse error:', parseError);
+      // Si le parsing échoue, on continue quand même avec 0 bagages
+      // L'utilisateur verra que 0 bagages ont été traités
     }
 
     // Créer le rapport BIRS
@@ -197,10 +224,10 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
         uploaded_at: new Date().toISOString(),
         uploaded_by: uploadedBy,
         airport_code: airportCode,
-        total_baggages: items?.length || 0,
+        total_baggages: parsedItems.length,
         reconciled_count: 0,
         unmatched_count: 0,
-        raw_data: JSON.stringify({ items, fileContent }),
+        raw_data: JSON.stringify({ items: parsedItems, fileContent }),
         synced: true
       })
       .select()
@@ -209,8 +236,8 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
     if (reportError) throw reportError;
 
     // Insérer les items du rapport
-    if (items && items.length > 0) {
-      const itemsToInsert = items.map((item: any) => ({
+    if (parsedItems && parsedItems.length > 0) {
+      const itemsToInsert = parsedItems.map((item: any) => ({
         birs_report_id: report.id,
         bag_id: item.bagId,
         passenger_name: item.passengerName,
@@ -235,6 +262,7 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
     res.status(201).json({
       success: true,
       message: 'BIRS report uploaded successfully',
+      processedCount: parsedItems.length,
       data: report
     });
   } catch (error) {
