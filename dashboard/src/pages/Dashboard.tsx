@@ -102,8 +102,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tableau de bord - {user?.airport_code}</h2>
-          <p className="mt-1 text-sm text-gray-500">Vue d'ensemble des opérations aéroportuaires</p>
+          <h2 className="text-2xl font-bold text-white">Tableau de bord - {user?.airport_code}</h2>
+          <p className="mt-1 text-sm text-white/90">Vue d'ensemble des opérations aéroportuaires</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -127,13 +127,13 @@ export default function Dashboard() {
 
       {/* Messages */}
       {syncMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-green-50/95 backdrop-blur-sm border border-green-200 rounded-lg p-4">
           <p className="text-green-800">{syncMessage}</p>
         </div>
       )}
       
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50/95 backdrop-blur-sm border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}
@@ -188,8 +188,8 @@ export default function Dashboard() {
 
           {/* Flights List */}
           {stats.uniqueFlights.length > 0 && (
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg">
+              <div className="px-6 py-4 border-b border-gray-200/50">
                 <h3 className="text-lg font-medium text-gray-900">
                   Vols ({stats.flightsCount})
                 </h3>
