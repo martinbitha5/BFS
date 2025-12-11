@@ -1,5 +1,5 @@
+import { Calendar, CheckCircle, Package, Plane, Search, Users, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Users, Search, Plane, Package, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,6 +26,34 @@ export default function Passengers() {
   const [flightFilter, setFlightFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+
+  const syncRawScans = async () => {
+    if (!user?.airport_code) return;
+    
+    try {
+      setSyncing(true);
+      setSyncMessage('');
+      
+      const response = await api.post('/api/v1/sync-raw-scans', {
+        airport_code: user.airport_code
+      });
+      
+      const stats = response.data.stats;
+      setSyncMessage(
+        `✅ Synchronisation réussie: ${stats.passengersCreated} passagers et ${stats.baggagesCreated} bagages créés`
+      );
+      
+      // Recharger les passagers
+      await fetchPassengers();
+    } catch (err: any) {
+      console.error('Error syncing raw scans:', err);
+      setSyncMessage('❌ ' + (err.response?.data?.error || 'Erreur lors de la synchronisation'));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchPassengers = async () => {
     if (!user?.airport_code) return;
@@ -132,13 +160,35 @@ export default function Passengers() {
           <p className="text-sm text-gray-600">
             {filteredPassengers.length} passager(s) trouvé(s)
           </p>
-          <button
-            onClick={fetchPassengers}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Actualiser
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={syncRawScans}
+              disabled={syncing}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {syncing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Synchronisation...
+                </>
+              ) : (
+                '🔄 Synchroniser les scans'
+              )}
+            </button>
+            <button
+              onClick={fetchPassengers}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Actualiser
+            </button>
+          </div>
         </div>
+
+        {syncMessage && (
+          <div className={`mt-2 p-3 rounded-md ${syncMessage.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            {syncMessage}
+          </div>
+        )}
       </div>
 
       {/* Passengers List */}

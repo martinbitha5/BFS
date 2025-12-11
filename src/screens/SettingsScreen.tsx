@@ -327,6 +327,19 @@ export default function SettingsScreen({ navigation }: Props) {
             <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
+          <View style={[styles.divider, { backgroundColor: colors.border.light }]} />
+
+          <TouchableOpacity
+            style={styles.linkItem}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Credits')}>
+            <View style={styles.linkLeft}>
+              <Ionicons name="people-outline" size={24} color={colors.primary.main} />
+              <Text style={[styles.linkLabel, { color: colors.text.primary }]}>Crédits</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+
         </Card>
 
         {/* Informations sur l'application */}

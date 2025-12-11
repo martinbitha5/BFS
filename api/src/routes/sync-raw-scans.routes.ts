@@ -165,58 +165,116 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 function parseSimpleBoardingPass(rawData: string): any {
   try {
-    // Format IATA : M1NOM/PRENOM PNRORIGDESTCOMPAGNIE VOLDATE...
-    // Exemple: M1MASIMANGO/ISSIAKA GREOIFLBU FIHMDKET 0080 235Y031J0095...
+    console.log('[PARSE BP] === DÉBUT PARSING ===');
+    console.log('[PARSE BP] Données brutes:', rawData.substring(0, 100) + '...');
+    console.log('[PARSE BP] Longueur:', rawData.length);
     
     if (!rawData || !rawData.startsWith('M')) {
-      console.log('[PARSE] Format non reconnu (ne commence pas par M)');
+      console.log('[PARSE BP] ❌ Format non reconnu (ne commence pas par M)');
       return null;
     }
 
-    // Extraire le nom (entre M1/M2/M3 et le premier espace)
-    const nameMatch = rawData.match(/M[123]([A-Z\/\s]+?)\s+([A-Z0-9]{6,})/);
     let fullName = 'UNKNOWN';
-    let restOfData = rawData;
+    let pnr = null;
+    let departure = null;
+    let arrival = null;
+    let flightNumber = null;
+    let seatNumber = null;
+    let baggageCount = 0;
 
-    if (nameMatch) {
-      fullName = nameMatch[1].replace(/\//g, ' ').trim();
-      restOfData = rawData.substring(nameMatch[0].length);
+    // Format BCBP standard : M1 + Nom(variable) + PNR(6-7) + Dep(3) + Arr(3) + Code(2) + Vol(4) + ...
+    // Exemple: M1RAZIOU/MOUSTAPHA    E7T5GVL FIHNBOKQ 0555 335M031G0009
+    // Exemple: M1MASIMANGO/ISSIAKA GROIFLBU FIHMDKET 0080 235Y031J0095
+    
+    // Regex BCBP complète et flexible
+    const bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
+    
+    if (bcbpMatch) {
+      console.log('[PARSE BP] ✅ Format BCBP structuré détecté');
+      fullName = bcbpMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+      pnr = bcbpMatch[2];
+      departure = bcbpMatch[3];
+      arrival = bcbpMatch[4];
+      const companyCode = bcbpMatch[5];
+      const flightNum = bcbpMatch[6];
+      const seatSeq = bcbpMatch[9];
+      const compartment = bcbpMatch[10];
+      
+      flightNumber = companyCode + flightNum;
+      seatNumber = seatSeq + compartment;
+      
+      // Essayer d'extraire le nombre de bagages
+      const checkInSeqNumber = bcbpMatch[11];
+      const afterMandatory = rawData.substring(rawData.indexOf(checkInSeqNumber) + 4);
+      const baggageMatch = afterMandatory.match(/(\d{1,2})PC/i) || 
+                          afterMandatory.match(/\s+(\d)A\d{3,4}\d+/) ||
+                          afterMandatory.match(/^\s*(\d{1,2})[^0-9]/);
+      
+      if (baggageMatch) {
+        const count = parseInt(baggageMatch[1], 10);
+        if (count > 0 && count <= 9) {
+          baggageCount = count;
+        }
+      }
+      
+      console.log('[PARSE BP] Données extraites BCBP:');
+      console.log('  - Nom:', fullName);
+      console.log('  - PNR:', pnr);
+      console.log('  - Route:', `${departure}-${arrival}`);
+      console.log('  - Vol:', flightNumber);
+      console.log('  - Siège:', seatNumber);
+      console.log('  - Bagages:', baggageCount);
+    } else {
+      console.log('[PARSE BP] ⚠️  Format BCBP non structuré, tentative extraction manuelle');
+      
+      // Fallback: extraction manuelle
+      // Nom: après M1 jusqu'au PNR
+      const nameMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})/);
+      if (nameMatch) {
+        fullName = nameMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+        pnr = nameMatch[2];
+      }
+      
+      // Route: 3 lettres + 3 lettres
+      const routeMatch = rawData.match(/([A-Z]{3})([A-Z]{3})/);
+      if (routeMatch) {
+        departure = routeMatch[1];
+        arrival = routeMatch[2];
+      }
+      
+      // Vol: Code compagnie (2 lettres) + numéro (3-4 chiffres)
+      const flightMatch = rawData.match(/([A-Z0-9]{2})\s*(\d{3,4})/);
+      if (flightMatch) {
+        flightNumber = flightMatch[1] + flightMatch[2];
+      }
+      
+      console.log('[PARSE BP] Extraction manuelle:');
+      console.log('  - Nom:', fullName);
+      console.log('  - PNR:', pnr);
+      console.log('  - Route:', departure && arrival ? `${departure}-${arrival}` : 'non trouvé');
+      console.log('  - Vol:', flightNumber || 'non trouvé');
     }
-
-    // Extraire le PNR (6 caractères alphanumériques après le nom)
-    // Dans l'exemple: GREOIFLBU (mais généralement c'est 6 caractères)
-    const pnrMatch = rawData.match(/[A-Z\/\s]+\s+([A-Z0-9]{6})\s/);
-    const pnr = pnrMatch ? pnrMatch[1] : null;
-
-    // Extraire origine et destination (3 lettres majuscules consécutives)
-    const routeMatch = rawData.match(/([A-Z]{3})([A-Z]{3})/);
-    const departure = routeMatch ? routeMatch[1] : null;
-    const arrival = routeMatch ? routeMatch[2] : null;
-
-    // Extraire le numéro de vol (code compagnie + numéro)
-    // Dans l'exemple: ET 0080
-    const flightMatch = rawData.match(/([A-Z]{2})\s*(\d{3,4})/);
-    const flightNumber = flightMatch ? `${flightMatch[1]}${flightMatch[2]}` : null;
-
-    console.log(`[PARSE BP] Nom: ${fullName}, PNR: ${pnr}, Vol: ${flightNumber}, ${departure}-${arrival}`);
 
     if (!pnr) {
-      console.log('[PARSE] ⚠️  PNR non trouvé, scan ignoré');
+      console.log('[PARSE BP] ❌ PNR non trouvé, scan ignoré');
       return null;
     }
 
-    return {
+    const result = {
       pnr,
       fullName,
       flightNumber: flightNumber || 'UNKNOWN',
-      departure: departure || null,
-      arrival: arrival || null,
-      seatNumber: null,
-      baggageCount: 0,
+      departure: departure || 'UNK',
+      arrival: arrival || 'UNK',
+      seatNumber,
+      baggageCount,
       rawData
     };
+    
+    console.log('[PARSE BP] ✅ Résultat final:', JSON.stringify(result, null, 2));
+    return result;
   } catch (error) {
-    console.error('[PARSE] Erreur parsing boarding pass:', error);
+    console.error('[PARSE BP] ❌ Erreur parsing boarding pass:', error);
     return null;
   }
 }
