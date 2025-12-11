@@ -2,6 +2,7 @@ import { History, LogOut, Plane, Upload } from 'lucide-react';
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const { airline, logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -17,9 +19,13 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === 'fr' ? 'en' : 'fr');
+  };
+
   const navItems = [
-    { path: '/dashboard', icon: Upload, label: 'Upload BIRS' },
-    { path: '/history', icon: History, label: 'Historique' },
+    { path: '/dashboard', icon: Upload, label: t('nav.upload') },
+    { path: '/history', icon: History, label: t('nav.history') },
   ];
 
   return (
@@ -33,12 +39,22 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <div className="w-64 bg-black/30 backdrop-blur-md shadow-lg relative z-10 border-r border-white/20">
         <div className="p-4 border-b border-white/20">
-          <div className="flex items-center space-x-2">
-            <Plane className="w-8 h-8 text-white" />
-            <div>
-              <h1 className="text-lg font-bold text-white">Portail Compagnies</h1>
-              <p className="text-xs text-white/70">BFS System</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Plane className="w-8 h-8 text-white" />
+              <div>
+                <h1 className="text-lg font-bold text-white">{t('dashboard.title')}</h1>
+                <p className="text-xs text-white/70">BFS System</p>
+              </div>
             </div>
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              title={language === 'fr' ? 'Switch to English' : 'Passer en Français'}
+            >
+              <span className="text-lg">🌐</span>
+              <span className="text-xs text-white font-semibold">{language.toUpperCase()}</span>
+            </button>
           </div>
         </div>
 
@@ -75,7 +91,7 @@ export default function Layout({ children }: LayoutProps) {
             className="flex items-center space-x-3 w-full px-3 py-2 text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-medium">Déconnexion</span>
+            <span className="font-medium">{t('nav.logout')}</span>
           </button>
         </div>
       </div>

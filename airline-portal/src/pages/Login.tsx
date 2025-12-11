@@ -2,6 +2,7 @@ import { Lock, Mail, Plane } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,12 +41,12 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             <Plane className="w-16 h-16 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Portail Compagnies</h1>
-          <p className="text-primary-100">Connexion au système BFS</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('dashboard.title')}</h1>
+          <p className="text-primary-100">{t('login.subtitle')}</p>
         </div>
 
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Connexion</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">{t('login.title')}</h2>
 
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-md">
@@ -55,7 +57,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Email
+                {t('login.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -65,14 +67,14 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="votre@email.com"
+                  placeholder="contact@airline.com"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Mot de passe
+                {t('login.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -92,15 +94,15 @@ export default function Login() {
               disabled={loading}
               className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? `${t('login.button')}...` : t('login.button')}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-white/70">
-              Pas encore de compte ?{' '}
+              {t('login.noAccount')}{' '}
               <Link to="/signup" className="text-primary-300 hover:text-primary-200 font-medium">
-                S'inscrire
+                {t('login.signup')}
               </Link>
             </p>
           </div>

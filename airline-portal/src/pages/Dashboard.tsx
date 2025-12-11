@@ -3,12 +3,14 @@ import { AlertCircle, Check, FileText, Plane, Upload } from 'lucide-react';
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // URL de l'API depuis les variables d'environnement
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
   const { airline } = useAuth();
+  const { t } = useLanguage();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
@@ -120,7 +122,7 @@ export default function Dashboard() {
         <div className="bg-gradient-to-r from-primary-900/30 to-blue-900/30 backdrop-blur-md border border-primary-400/30 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-white/60 uppercase tracking-wide mb-1">Compagnie connectée</p>
+              <p className="text-xs text-white/60 uppercase tracking-wide mb-1">{t('dashboard.connectedCompany')}</p>
               <p className="text-lg font-bold text-white">{airline?.name}</p>
               <p className="text-sm text-primary-200">Code IATA: {airline?.code}</p>
             </div>
