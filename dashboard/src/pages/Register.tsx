@@ -1,8 +1,8 @@
-import { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Plane, AlertCircle, UserPlus } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { AlertCircle, Plane, UserPlus } from 'lucide-react';
+import { FormEvent, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { getDomesticAirports, getInternationalAirports } from '../config/airports';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -57,8 +57,14 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl p-8 w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      {/* Overlay sombre pour améliorer la lisibilité */}
+      <div className="absolute inset-0 bg-black/50"></div>
+      <div className="relative z-10 w-full max-w-md">
+        <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl p-8">
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
@@ -70,9 +76,9 @@ export default function Register() {
 
         {/* Message d'erreur */}
         {error && (
-          <div className="mb-6 bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="text-red-800 text-sm">{error}</p>
+          <div className="mb-6 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-lg p-4 flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-300 mr-2 flex-shrink-0 mt-0.5" />
+            <p className="text-red-200 text-sm">{error}</p>
           </div>
         )}
 
@@ -192,7 +198,7 @@ export default function Register() {
             Vous avez déjà un compte ?{' '}
             <Link
               to="/login"
-              className="font-medium text-primary-600 hover:text-primary-700 transition"
+              className="font-medium text-primary-300 hover:text-primary-200 transition"
             >
               Se connecter
             </Link>
@@ -200,13 +206,14 @@ export default function Register() {
         </div>
 
         {/* Note d'information */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-white/20">
           <div className="flex items-start">
-            <Plane className="w-5 h-5 text-primary-600 mr-2 flex-shrink-0 mt-0.5" />
+            <Plane className="w-5 h-5 text-primary-300 mr-2 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-white/70">
               Ce compte vous permettra de gérer les opérations de bagages et de passagers pour votre aéroport.
             </p>
           </div>
+        </div>
         </div>
       </div>
     </div>
