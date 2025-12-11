@@ -4,6 +4,68 @@ import { supabase } from '../config/database';
 const router = Router();
 
 /**
+ * Valider qu'un vol est bien programmé avant d'accepter le scan
+ * @param flightNumber - Numéro du vol (ex: ET0080)
+ * @param airportCode - Code aéroport (ex: FIH)
+ * @param scanDate - Date du scan
+ * @returns true si le vol est valide, false sinon
+ */
+async function validateFlightBeforeScan(
+  flightNumber: string,
+  airportCode: string,
+  scanDate: Date
+): Promise<{ valid: boolean; reason?: string }> {
+  try {
+    // Extraire le jour de la semaine du scan (0 = dimanche, 1 = lundi, ...)
+    const dayOfWeek = scanDate.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[dayOfWeek];
+
+    // Vérifier si le vol existe dans flight_schedule
+    const { data: scheduledFlight, error } = await supabase
+      .from('flight_schedule')
+      .select('*')
+      .eq('flight_number', flightNumber)
+      .eq('airport_code', airportCode)
+      .eq('active', true)
+      .single();
+
+    if (error || !scheduledFlight) {
+      return {
+        valid: false,
+        reason: `Vol ${flightNumber} non programmé à l'aéroport ${airportCode}`
+      };
+    }
+
+    // Vérifier que le vol opère aujourd'hui
+    if (!scheduledFlight[dayName]) {
+      const frenchDays: any = {
+        sunday: 'dimanche',
+        monday: 'lundi',
+        tuesday: 'mardi',
+        wednesday: 'mercredi',
+        thursday: 'jeudi',
+        friday: 'vendredi',
+        saturday: 'samedi'
+      };
+      return {
+        valid: false,
+        reason: `Vol ${flightNumber} ne vole pas le ${frenchDays[dayName]}`
+      };
+    }
+
+    // Vol valide !
+    return { valid: true };
+  } catch (err) {
+    console.error('[VALIDATION] Erreur validation vol:', err);
+    return {
+      valid: false,
+      reason: 'Erreur lors de la validation du vol'
+    };
+  }
+}
+
+/**
  * POST /api/v1/sync-raw-scans
  * Parse tous les raw_scans et crée les passagers/bagages manquants
  */
@@ -58,6 +120,26 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
           const parsed = parseSimpleBoardingPass(scan.raw_data);
           
           if (parsed && parsed.pnr) {
+            // ✅ VALIDATION : Vérifier que le vol est programmé
+            const validation = await validateFlightBeforeScan(
+              parsed.flightNumber,
+              airport_code,
+              new Date(scan.checkin_at || scan.created_at)
+            );
+
+            if (!validation.valid) {
+              console.log(`[SYNC] ❌ Scan refusé: ${validation.reason}`);
+              errors++;
+              // Marquer le scan comme traité mais refusé
+              await supabase
+                .from('raw_scans')
+                .update({ 
+                  processed: true,
+                  processing_error: validation.reason
+                })
+                .eq('id', scan.id);
+              continue; // Passer au scan suivant
+            }
             // Vérifier si le passager existe déjà
             const { data: existing } = await supabase
               .from('passengers')
@@ -118,6 +200,31 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
         // Si c'est un bagage tag
         if (scan.scan_type === 'baggage_tag' && scan.status_baggage && scan.baggage_rfid_tag) {
+          // Extraire les infos du tag bagage
+          const baggageParsed = parseSimpleBaggageTag(scan.raw_data);
+          
+          // ✅ VALIDATION : Vérifier que le vol du bagage est programmé
+          if (baggageParsed?.flightNumber) {
+            const validation = await validateFlightBeforeScan(
+              baggageParsed.flightNumber,
+              airport_code,
+              new Date(scan.baggage_at || scan.created_at)
+            );
+
+            if (!validation.valid) {
+              console.log(`[SYNC] ❌ Bagage refusé: ${validation.reason}`);
+              errors++;
+              // Marquer le scan comme traité mais refusé
+              await supabase
+                .from('raw_scans')
+                .update({ 
+                  processed: true,
+                  processing_error: validation.reason
+                })
+                .eq('id', scan.id);
+              continue; // Passer au scan suivant
+            }
+          }
           // Vérifier si le bagage existe déjà (national ou international)
           const { data: existingNational } = await supabase
             .from('baggages')
