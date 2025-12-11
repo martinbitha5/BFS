@@ -1,6 +1,6 @@
-import { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Plane, AlertCircle } from 'lucide-react';
+import { AlertCircle, Plane } from 'lucide-react';
+import { FormEvent, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -27,8 +27,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      {/* Overlay sombre pour améliorer la lisibilité */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      
+      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">

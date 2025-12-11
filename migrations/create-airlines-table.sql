@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS airlines (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Index pour recherches rapides
-CREATE INDEX idx_airlines_code ON airlines(code);
-CREATE INDEX idx_airlines_email ON airlines(email);
+-- Index pour recherches rapides (IF NOT EXISTS seulement à partir de PostgreSQL 9.5+)
+CREATE INDEX IF NOT EXISTS idx_airlines_code ON airlines(code);
+CREATE INDEX IF NOT EXISTS idx_airlines_email ON airlines(email);
 
 -- Commentaires
 COMMENT ON TABLE airlines IS 'Compagnies aériennes autorisées à uploader des fichiers BIRS';

@@ -27,8 +27,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      {/* Overlay sombre pour améliorer la lisibilité */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Plane className="w-16 h-16 text-white" />
