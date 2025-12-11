@@ -29,10 +29,10 @@ export default function Dashboard() {
     }
 
     // Vérifier le format du fichier
-    const validFormats = ['.txt', '.csv', '.tsv', '.xlsx'];
+    const validFormats = ['.txt', '.csv', '.tsv', '.xlsx', '.pdf'];
     const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
     if (!validFormats.includes(fileExtension)) {
-      setMessage('Format de fichier non supporté. Formats acceptés : TXT, CSV, TSV, XLSX');
+      setMessage('Format de fichier non supporté. Formats acceptés : TXT, CSV, TSV, XLSX, PDF');
       setMessageType('error');
       return;
     }
@@ -75,7 +75,7 @@ export default function Dashboard() {
           Téléchargez vos fichiers BIRS (Baggage Irregularity Report System)
         </p>
 
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow p-8">
+        <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-8">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
             <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             
@@ -83,7 +83,7 @@ export default function Dashboard() {
               id="file-input"
               type="file"
               onChange={handleFileChange}
-              accept=".txt,.csv,.tsv,.xlsx"
+              accept=".txt,.csv,.tsv,.xlsx,.pdf"
               className="hidden"
             />
             
@@ -94,18 +94,18 @@ export default function Dashboard() {
               Sélectionner un fichier
             </label>
             
-            <p className="text-sm text-gray-500 mt-4">
-              Formats acceptés : TXT, CSV, TSV, XLSX
+            <p className="text-sm text-white/60 mt-4">
+              Formats acceptés : TXT, CSV, TSV, XLSX, PDF
             </p>
           </div>
 
           {file && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
+            <div className="mt-6 p-4 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <FileText className="w-8 h-8 text-primary-600" />
+                <FileText className="w-8 h-8 text-primary-400" />
                 <div>
-                  <p className="font-medium text-gray-900">{file.name}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-white">{file.name}</p>
+                  <p className="text-sm text-white/60">
                     {(file.size / 1024).toFixed(2)} KB
                   </p>
                 </div>
@@ -135,18 +135,18 @@ export default function Dashboard() {
             <div
               className={`mt-6 p-4 rounded-lg flex items-start space-x-3 ${
                 messageType === 'success'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-red-50 border border-red-200'
+                  ? 'bg-green-900/30 backdrop-blur-md border border-green-400/30'
+                  : 'bg-red-900/30 backdrop-blur-md border border-red-400/30'
               }`}
             >
               {messageType === 'success' ? (
-                <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Check className="w-5 h-5 text-green-300 flex-shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
               )}
               <p
                 className={`text-sm ${
-                  messageType === 'success' ? 'text-green-800' : 'text-red-800'
+                  messageType === 'success' ? 'text-green-200' : 'text-red-200'
                 }`}
               >
                 {message}
@@ -155,13 +155,13 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">À propos des fichiers BIRS</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+        <div className="mt-8 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-6">
+          <h3 className="font-semibold text-white mb-2">À propos des fichiers BIRS</h3>
+          <ul className="text-sm text-white/80 space-y-1">
             <li>• Les fichiers BIRS contiennent la liste des bagages envoyés par les compagnies aériennes</li>
             <li>• La réconciliation compare les fichiers avec les bagages scannés à l'arrivée</li>
             <li>• Les bagages non réconciliés peuvent être déclarés en RUSH (soute pleine/problème tonnage)</li>
-            <li>• Formats recommandés : TXT (Shipping), CSV, TSV, XLSX (extraction à améliorer)</li>
+            <li>• Formats recommandés : TXT (Shipping), CSV, TSV, XLSX, PDF (extraction à améliorer)</li>
             <li>• Pour meilleurs résultats, privilégiez les fichiers texte (.txt, .csv, .tsv)</li>
           </ul>
         </div>

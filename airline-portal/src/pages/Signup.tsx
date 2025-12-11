@@ -58,7 +58,7 @@ export default function Signup() {
         </div>
 
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Inscription</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Inscription</h2>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -68,7 +68,7 @@ export default function Signup() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 Nom de la compagnie
               </label>
               <div className="relative">
@@ -85,7 +85,7 @@ export default function Signup() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 Code IATA (2 lettres)
               </label>
               <div className="relative">
@@ -105,7 +105,7 @@ export default function Signup() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 Email
               </label>
               <div className="relative">
@@ -122,7 +122,7 @@ export default function Signup() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 Mot de passe
               </label>
               <div className="relative">
@@ -139,7 +139,7 @@ export default function Signup() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 Confirmer le mot de passe
               </label>
               <div className="relative">
