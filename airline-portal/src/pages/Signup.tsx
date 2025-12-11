@@ -58,7 +58,8 @@ export default function Signup() {
         </div>
 
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Inscription</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Inscription Compagnie Aérienne</h2>
+          <p className="text-sm text-white/70 mb-6">Renseignez les informations de votre compagnie. Ces données seront utilisées pour tous vos uploads BIRS.</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-md">
@@ -69,7 +70,7 @@ export default function Signup() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Nom de la compagnie
+                Nom de la compagnie *
               </label>
               <div className="relative">
                 <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -79,14 +80,15 @@ export default function Signup() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ethiopian Airlines"
+                  placeholder="Ex: Ethiopian Airlines, Air Congo"
                 />
               </div>
+              <p className="text-xs text-white/60 mt-1">Ce nom apparaîtra sur tous vos rapports BIRS</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Code IATA (2 lettres)
+                Code IATA * (2 lettres)
               </label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -101,12 +103,12 @@ export default function Signup() {
                   placeholder="ET"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Ex: ET (Ethiopian), TK (Turkish), AF (Air France)</p>
+              <p className="text-xs text-white/60 mt-1">Code unique de votre compagnie (Ex: ET, AC, TK, AF)</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Email
+                Email de contact *
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -123,7 +125,7 @@ export default function Signup() {
 
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
-                Mot de passe
+                Mot de passe * (min. 6 caractères)
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -171,6 +173,21 @@ export default function Signup() {
                 Se connecter
               </Link>
             </p>
+          </div>
+
+          {/* Informations sur l'utilisation */}
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <div className="bg-blue-900/20 backdrop-blur-sm border border-blue-400/30 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-200 mb-2 flex items-center">
+                <Plane className="w-4 h-4 mr-2" />
+                À propos de votre compte
+              </h3>
+              <ul className="text-xs text-white/70 space-y-1">
+                <li>• Les informations de la compagnie (nom et code) sont enregistrées une seule fois</li>
+                <li>• Lors des uploads BIRS, vous ne renseignerez que les infos spécifiques du vol</li>
+                <li>• Votre code IATA doit être officiel et reconnu internationalement</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

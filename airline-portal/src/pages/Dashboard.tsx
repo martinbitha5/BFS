@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AlertCircle, Check, FileText, Upload } from 'lucide-react';
+import { AlertCircle, Check, FileText, Plane, Upload } from 'lucide-react';
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -109,13 +109,35 @@ export default function Dashboard() {
     <Layout>
       <div className="max-w-4xl">
         <h1 className="text-3xl font-bold text-white mb-2">Upload BIRS</h1>
-        <p className="text-white/90 mb-8">
+        <p className="text-white/90 mb-6">
           Téléchargez vos fichiers BIRS (Baggage Irregularity Report System)
         </p>
 
+        {/* Informations de la compagnie connectée */}
+        <div className="bg-gradient-to-r from-primary-900/30 to-blue-900/30 backdrop-blur-md border border-primary-400/30 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-white/60 uppercase tracking-wide mb-1">Compagnie connectée</p>
+              <p className="text-lg font-bold text-white">{airline?.name}</p>
+              <p className="text-sm text-primary-200">Code IATA: {airline?.code}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-full p-3">
+              <Plane className="w-8 h-8 text-primary-300" />
+            </div>
+          </div>
+          <p className="text-xs text-white/60 mt-3 border-t border-white/10 pt-3">
+            ℹ️ Ces informations seront automatiquement ajoutées à tous vos uploads BIRS
+          </p>
+        </div>
+
         {/* Formulaire des informations du vol */}
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Informations du vol</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Informations spécifiques du vol</h2>
+              <p className="text-xs text-white/60 mt-1">Ces informations sont requises pour chaque upload BIRS</p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/85 mb-2">
@@ -254,15 +276,42 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-8 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-6">
-          <h3 className="font-semibold text-white mb-2">À propos des fichiers BIRS</h3>
-          <ul className="text-sm text-white/80 space-y-1">
-            <li>• <strong>Informations obligatoires :</strong> Numéro de vol, date du vol, origine et destination doivent être renseignés</li>
-            <li>• Les fichiers BIRS contiennent la liste des bagages envoyés par les compagnies aériennes</li>
-            <li>• La réconciliation compare les fichiers avec les bagages scannés à l'arrivée</li>
-            <li>• Les bagages non réconciliés peuvent être déclarés en RUSH (soute pleine/problème tonnage)</li>
-            <li>• Formats recommandés : TXT (Shipping), CSV, TSV, XLSX, PDF (extraction à améliorer)</li>
-            <li>• Pour meilleurs résultats, privilégiez les fichiers texte (.txt, .csv, .tsv)</li>
-          </ul>
+          <h3 className="font-semibold text-white mb-3">📋 Guide d'utilisation</h3>
+          
+          <div className="space-y-4">
+            {/* Informations automatiques */}
+            <div className="bg-green-900/20 border border-green-400/20 rounded-lg p-3">
+              <h4 className="text-sm font-semibold text-green-200 mb-2">✅ Informations automatiques (de votre inscription)</h4>
+              <ul className="text-xs text-white/70 space-y-1">
+                <li>• <strong>Nom de la compagnie :</strong> {airline?.name}</li>
+                <li>• <strong>Code IATA :</strong> {airline?.code}</li>
+                <li>• Ces infos sont ajoutées automatiquement à chaque upload</li>
+              </ul>
+            </div>
+
+            {/* Informations à renseigner */}
+            <div className="bg-blue-900/20 border border-blue-400/20 rounded-lg p-3">
+              <h4 className="text-sm font-semibold text-blue-200 mb-2">📝 Informations à renseigner pour chaque vol</h4>
+              <ul className="text-xs text-white/70 space-y-1">
+                <li>• <strong>Numéro de vol :</strong> Code unique du vol (Ex: AC123, ET456)</li>
+                <li>• <strong>Date du vol :</strong> Date de départ du vol</li>
+                <li>• <strong>Origine :</strong> Code aéroport de départ (3 lettres, Ex: FIH)</li>
+                <li>• <strong>Destination :</strong> Code aéroport d'arrivée (3 lettres, Ex: GOM)</li>
+              </ul>
+            </div>
+
+            {/* Informations sur les fichiers */}
+            <div className="bg-purple-900/20 border border-purple-400/20 rounded-lg p-3">
+              <h4 className="text-sm font-semibold text-purple-200 mb-2">📄 À propos des fichiers BIRS</h4>
+              <ul className="text-xs text-white/70 space-y-1">
+                <li>• Les fichiers BIRS contiennent la liste des bagages envoyés</li>
+                <li>• La réconciliation compare avec les bagages scannés à l'arrivée</li>
+                <li>• Les bagages non réconciliés peuvent être déclarés en RUSH</li>
+                <li>• <strong>Formats acceptés :</strong> TXT, CSV, TSV, XLSX, PDF</li>
+                <li>• <strong>Recommandé :</strong> Privilégiez les fichiers texte (.txt, .csv, .tsv) pour de meilleurs résultats</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
