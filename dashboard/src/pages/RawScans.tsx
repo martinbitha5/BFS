@@ -199,7 +199,7 @@ export default function RawScans() {
               className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 statusFilter === status
                   ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-white/85 backdrop-blur-sm text-white/85 hover:bg-gray-200'
               }`}
             >
               {status === 'all' ? 'Tous' : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -212,7 +212,7 @@ export default function RawScans() {
       <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-white/90 backdrop-blur-sm">
               <tr>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
@@ -233,7 +233,7 @@ export default function RawScans() {
             </thead>
             <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
               {scans.map((scan) => (
-                <tr key={scan.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={scan.id} className="hover:bg-white/90 backdrop-blur-sm transition-colors">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                       scan.scan_type === 'boarding_pass'
@@ -244,7 +244,7 @@ export default function RawScans() {
                     </span>
                   </td>
                   <td className="px-3 sm:px-6 py-4">
-                    <div className="text-xs font-mono text-gray-700 max-w-md overflow-hidden">
+                    <div className="text-xs font-mono text-white/85 max-w-md overflow-hidden">
                       <div className="truncate" title={scan.raw_data}>
                         {scan.raw_data.substring(0, 80)}{scan.raw_data.length > 80 ? '...' : ''}
                       </div>

@@ -61,7 +61,7 @@ export default function BaggageTracker() {
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label htmlFor="tagNumber" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="tagNumber" className="block text-sm font-medium text-white/85 mb-2">
                 Numéro de tag du bagage
               </label>
               <input

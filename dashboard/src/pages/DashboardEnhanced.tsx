@@ -137,7 +137,7 @@ export default function DashboardEnhanced() {
       case 'success': return 'text-green-600 bg-green-100';
       case 'warning': return 'text-yellow-600 bg-yellow-100';
       case 'error': return 'text-red-600 bg-red-100';
-      default: return 'text-white/80 bg-gray-100';
+      default: return 'text-white/80 bg-white/85 backdrop-blur-sm';
     }
   };
 
@@ -417,7 +417,7 @@ export default function DashboardEnhanced() {
               </div>
               <div className="space-y-2 sm:space-y-3 max-h-[200px] sm:max-h-[250px] overflow-y-auto">
                 {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white/85 backdrop-blur-sm transition">
                     <div className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(activity.status)}`}>
                       {getActivityIcon(activity.type)}
                     </div>

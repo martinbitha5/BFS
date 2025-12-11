@@ -67,7 +67,7 @@ export default function DebugParser() {
           {selectedScan && (
             <>
               <h2 className="text-xl font-semibold mb-4">Raw Data</h2>
-              <div className="bg-gray-100 p-4 rounded mb-4 font-mono text-xs overflow-x-auto">
+              <div className="bg-white/85 backdrop-blur-sm p-4 rounded mb-4 font-mono text-xs overflow-x-auto">
                 {selectedScan.raw_data}
               </div>
 

@@ -166,7 +166,7 @@ export default function BIRS() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-white/90 backdrop-blur-sm">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vol</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -179,7 +179,7 @@ export default function BIRS() {
               </thead>
               <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
                 {reports.map((report) => (
-                  <tr key={report.id} className="hover:bg-gray-50">
+                  <tr key={report.id} className="hover:bg-white/90 backdrop-blur-sm">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                       {report.flight_number}
                     </td>
@@ -219,7 +219,7 @@ export default function BIRS() {
                       ) : (
                         <button
                           onClick={() => handleReconcile(report.id)}
-                          className="text-white/80 hover:text-gray-700"
+                          className="text-white/80 hover:text-white/85"
                         >
                           Re-traiter
                         </button>

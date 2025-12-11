@@ -79,7 +79,7 @@ export default function Register() {
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="name" className="block text-sm font-medium text-white/85 mb-2">
               Nom complet
             </label>
             <input
@@ -96,7 +96,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-white/85 mb-2">
               Email
             </label>
             <input
@@ -113,7 +113,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="airportCode" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="airportCode" className="block text-sm font-medium text-white/85 mb-2">
               Aéroport
             </label>
             <select
@@ -144,7 +144,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-white/85 mb-2">
               Mot de passe
             </label>
             <input
@@ -161,7 +161,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/85 mb-2">
               Confirmer le mot de passe
             </label>
             <input

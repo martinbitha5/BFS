@@ -45,7 +45,7 @@ const statusConfig = {
   scanned: { label: 'Scanné', color: 'bg-purple-100 text-purple-800', icon: Package },
   reconciled: { label: 'Réconcilié', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   unmatched: { label: 'Non matché', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-  pending: { label: 'En attente', color: 'bg-gray-100 text-gray-800', icon: Clock },
+  pending: { label: 'En attente', color: 'bg-white/85 backdrop-blur-sm text-white/90', icon: Clock },
 };
 
 export default function Baggages() {
@@ -178,7 +178,7 @@ export default function Baggages() {
             <div className="flex items-center gap-2 mb-2">
               <Package className="w-5 h-5 text-white/80" />
               <span className="font-mono font-bold text-lg">{getBaggageIdentifier(baggage)}</span>
-              <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+              <span className="text-xs px-2 py-1 rounded bg-white/85 backdrop-blur-sm text-white/85">
                 {isNational ? 'National' : 'International'}
               </span>
             </div>
@@ -283,7 +283,7 @@ export default function Baggages() {
       <div className="bg-white/95 backdrop-blur-sm shadow rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white/85 mb-2">
               Type de bagage
             </label>
             <select
@@ -299,7 +299,7 @@ export default function Baggages() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white/85 mb-2">
               Rechercher
             </label>
             <div className="relative">
@@ -321,7 +321,7 @@ export default function Baggages() {
           </p>
           <button
             onClick={fetchBaggages}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white/95 backdrop-blur-sm hover:bg-gray-50"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-white/85 bg-white/95 backdrop-blur-sm hover:bg-white/90 backdrop-blur-sm"
           >
             Actualiser
           </button>
@@ -363,12 +363,12 @@ export default function Baggages() {
             <div className="mb-4">
               <p className="text-sm text-white/80 mb-2">Bagage:</p>
               <p className="font-mono font-bold">{getBaggageIdentifier(selectedBaggage)}</p>
-              <p className="text-sm text-gray-700">{getBaggagePassenger(selectedBaggage)}</p>
+              <p className="text-sm text-white/85">{getBaggagePassenger(selectedBaggage)}</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white/85 mb-2">
                   Raison <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -381,7 +381,7 @@ export default function Baggages() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white/85 mb-2">
                   Prochain vol (optionnel)
                 </label>
                 <input
@@ -394,7 +394,7 @@ export default function Baggages() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white/85 mb-2">
                   Remarques (optionnel)
                 </label>
                 <textarea
@@ -415,7 +415,7 @@ export default function Baggages() {
                   setNextFlight('');
                   setRushRemarks('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-white/85 hover:bg-white/90 backdrop-blur-sm"
               >
                 Annuler
               </button>

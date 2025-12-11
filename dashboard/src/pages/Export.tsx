@@ -445,8 +445,8 @@ export default function Export() {
         </div>
 
         {/* Type de filtre de date */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4">
+          <label className="block text-sm font-medium text-white/85 mb-3">
             <Calendar className="w-4 h-4 inline mr-1" />
             Type de période
           </label>
@@ -478,7 +478,7 @@ export default function Export() {
 
           {/* Vol */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white/85 mb-2">
               <Plane className="w-4 h-4 inline mr-1" />
               Vol {flights.length > 0 && <span className="text-xs text-gray-500">({flights.length} disponibles)</span>}
             </label>
@@ -503,7 +503,7 @@ export default function Export() {
 
           {/* Destination */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white/85 mb-2">
               <MapPin className="w-4 h-4 inline mr-1" />
               Route de destination {destinations.length > 0 && <span className="text-xs text-gray-500">({destinations.length})</span>}
             </label>
@@ -527,7 +527,7 @@ export default function Export() {
           {/* Dates selon le type choisi */}
           {dateFilterType === 'specific' ? (
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/85 mb-2">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Jour précis
               </label>
@@ -545,7 +545,7 @@ export default function Export() {
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white/85 mb-2">
                   <Calendar className="w-4 h-4 inline mr-1" />
                   Date de début
                 </label>
@@ -557,7 +557,7 @@ export default function Export() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white/85 mb-2">
                   <Calendar className="w-4 h-4 inline mr-1" />
                   Date de fin
                 </label>
@@ -603,7 +603,7 @@ export default function Export() {
                 Recommandé 🎯
               </span>
             </div>
-            <p className="text-sm text-gray-700 mb-2">
+            <p className="text-sm text-white/85 mb-2">
               Export des données brutes PURES (sans parsing)
             </p>
             <ul className="text-xs text-white/80 space-y-1">
@@ -645,7 +645,7 @@ export default function Export() {
                   onChange={(e) => setExportType(e.target.value as any)}
                   className="mr-2 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-gray-700">Tout (passagers + bagages + embarquements)</span>
+                <span className="text-white/85">Tout (passagers + bagages + embarquements)</span>
               </label>
               <label className="flex items-center text-sm">
                 <input
@@ -655,7 +655,7 @@ export default function Export() {
                   onChange={(e) => setExportType(e.target.value as any)}
                   className="mr-2 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-gray-700">Passagers uniquement</span>
+                <span className="text-white/85">Passagers uniquement</span>
               </label>
               <label className="flex items-center text-sm">
                 <input
@@ -665,7 +665,7 @@ export default function Export() {
                   onChange={(e) => setExportType(e.target.value as any)}
                   className="mr-2 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-gray-700">Bagages uniquement</span>
+                <span className="text-white/85">Bagages uniquement</span>
               </label>
             </div>
           </div>
@@ -675,7 +675,7 @@ export default function Export() {
               handleExportFile();
             }}
             disabled={exporting || !user?.airport_code || exportType === 'raw_scans'}
-            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white/95 backdrop-blur-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
+            className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-white/85 bg-white/95 backdrop-blur-sm hover:bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 whitespace-nowrap"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
             {exporting && exportType !== 'raw_scans' ? 'Export en cours...' : 'Export Standard'}

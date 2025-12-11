@@ -55,7 +55,7 @@ export default function Login() {
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-white/85 mb-2">
               Email
             </label>
             <input
@@ -71,7 +71,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-white/85 mb-2">
               Mot de passe
             </label>
             <input
@@ -112,15 +112,15 @@ export default function Login() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center mb-3">Comptes de test :</p>
           <div className="space-y-2 text-xs text-white/80">
-            <div className="bg-gray-50 p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
               <p className="font-medium">Kinshasa (FIH)</p>
               <p className="text-gray-500">kinshasa@bfs.cd / test123</p>
             </div>
-            <div className="bg-gray-50 p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
               <p className="font-medium">Goma (GOM)</p>
               <p className="text-gray-500">goma@bfs.cd / test123</p>
             </div>
-            <div className="bg-gray-50 p-3 rounded">
+            <div className="bg-white/90 backdrop-blur-sm p-3 rounded">
               <p className="font-medium">Lubumbashi (FBM)</p>
               <p className="text-gray-500">lubumbashi@bfs.cd / test123</p>
             </div>

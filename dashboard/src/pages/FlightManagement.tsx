@@ -121,7 +121,7 @@ export default function FlightManagement() {
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           {/* Sélection date */}
           <div className="flex items-center gap-2">
-            <label htmlFor="date" className="text-sm font-medium text-gray-700">
+            <label htmlFor="date" className="text-sm font-medium text-white/85">
               Date :
             </label>
             <input
@@ -186,7 +186,7 @@ export default function FlightManagement() {
       ) : (
         <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-white/90 backdrop-blur-sm">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vol
@@ -210,7 +210,7 @@ export default function FlightManagement() {
             </thead>
             <tbody className="bg-white/95 backdrop-blur-sm divide-y divide-gray-200">
               {filteredFlights.map((flight) => (
-                <tr key={flight.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={flight.id} className="hover:bg-white/90 backdrop-blur-sm transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -240,7 +240,7 @@ export default function FlightManagement() {
                       flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                       flight.status === 'boarding' ? 'bg-yellow-100 text-yellow-800' :
                       flight.status === 'departed' ? 'bg-green-100 text-green-800' :
-                      flight.status === 'arrived' ? 'bg-gray-100 text-gray-800' :
+                      flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-sm text-white/90' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {flight.status === 'scheduled' ? 'Programmé' :
@@ -344,7 +344,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Numéro de vol *
                 </label>
                 <input
@@ -358,7 +358,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Code compagnie *
                 </label>
                 <input
@@ -373,7 +373,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white/85 mb-1">
                 Compagnie aérienne *
               </label>
               <input
@@ -388,7 +388,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Départ *
                 </label>
                 <input
@@ -402,7 +402,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Arrivée *
                 </label>
                 <input
@@ -418,7 +418,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Date *
                 </label>
                 <input
@@ -431,7 +431,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white/85 mb-1">
                   Heure (optionnel)
                 </label>
                 <input
@@ -447,7 +447,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                className="px-4 py-2 text-white/85 bg-white/85 backdrop-blur-sm rounded-lg hover:bg-gray-200 transition-colors">
                 Annuler
               </button>
               <button
