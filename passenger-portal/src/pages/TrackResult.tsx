@@ -106,11 +106,15 @@ export default function TrackResult() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div 
+      className="min-h-screen flex flex-col relative bg-cover bg-center"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      <div className="absolute inset-0 bg-black/50"></div>
       <Header />
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b">
+      <div className="bg-gray-50 border-b relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center text-sm text-gray-600">
             <Link to="/" className="hover:text-black">{t('breadcrumb.home')}</Link>
@@ -123,7 +127,7 @@ export default function TrackResult() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 bg-gray-50">
+      <main className="flex-1 relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-12">
           {loading ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">

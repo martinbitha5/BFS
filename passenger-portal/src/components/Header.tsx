@@ -6,7 +6,7 @@ export default function Header() {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <header className="bg-black text-white sticky top-0 z-50">
+    <header className="bg-black/90 backdrop-blur-sm text-white sticky top-0 z-50 relative">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-3">
