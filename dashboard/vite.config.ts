@@ -11,7 +11,13 @@ export default defineConfig({
   },
   build: {
     commonjsOptions: {
-      include: [/pdfjs-dist/]
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
     }
   }
 })
