@@ -1,5 +1,5 @@
-import { History, LogOut, Plane, Upload } from 'lucide-react';
-import { ReactNode } from 'react';
+import { History, LogOut, Menu, Plane, Upload, X } from 'lucide-react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -14,6 +14,7 @@ export default function Layout({ children }: LayoutProps) {
   const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -37,8 +38,22 @@ export default function Layout({ children }: LayoutProps) {
       {/* Overlay sombre */}
       <div className="absolute inset-0 bg-black/40"></div>
       
+      {/* Overlay mobile pour fermer sidebar */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-black/30 backdrop-blur-md shadow-lg relative z-10 border-r border-white/20">
+      <div className={`
+        fixed md:relative
+        w-64 h-screen
+        bg-black/30 backdrop-blur-md shadow-lg z-30 border-r border-white/20
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         <div className="p-4 border-b border-white/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -72,6 +87,7 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                   isActive
                     ? 'bg-white/20 text-white font-semibold'
@@ -97,8 +113,16 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto relative z-10 flex flex-col">
-        <div className="flex-1 p-8">
+      <div className="flex-1 overflow-auto relative z-10 flex flex-col w-full md:w-auto">
+        {/* Bouton hamburger mobile */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="md:hidden fixed top-4 left-4 z-40 p-2 bg-black/50 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-black/70 transition-colors"
+        >
+          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+        
+        <div className="flex-1 p-8 pt-20 md:pt-8">
           {children}
         </div>
         <Footer />
