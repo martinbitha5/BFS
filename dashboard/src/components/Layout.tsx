@@ -1,6 +1,7 @@
 import { Barcode, Download, LayoutDashboard, LogOut, Package, Plane, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from './Footer';
 import Logo from './Logo';
 
 interface LayoutProps {
@@ -91,10 +92,11 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 overflow-y-auto relative z-10">
-        <div className="container mx-auto py-6 px-6">
+      <main className="flex-1 overflow-y-auto relative z-10 flex flex-col">
+        <div className="flex-1 container mx-auto py-6 px-6">
           {children}
         </div>
+        <Footer />
       </main>
     </div>
   );
