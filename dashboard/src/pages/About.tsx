@@ -32,7 +32,7 @@ export default function About() {
                     <div>
                       <h3 className="font-semibold text-white mb-1">Pour les Superviseurs</h3>
                       <p className="text-sm">
-                        Consultation des manifestes BIRS, réconciliation, exports Excel, statistiques
+                        Consultation des manifestes BRS, réconciliation, exports Excel, statistiques
                       </p>
                     </div>
                   </div>
@@ -115,7 +115,7 @@ export default function About() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                  <span><strong>Portail Compagnies</strong> - Envoi manifestes BIRS</span>
+                  <span><strong>Portail Compagnies</strong> - Envoi manifestes BRS</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-purple-400 rounded-full"></div>

@@ -35,7 +35,7 @@ export default function Terms() {
                 Le système BFS permet aux superviseurs de :
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>Consulter les rapports BIRS reçus des compagnies</li>
+                <li>Consulter les rapports BRS reçus des compagnies</li>
                 <li>Effectuer la réconciliation des bagages</li>
                 <li>Générer des statistiques et des exports</li>
                 <li>Suivre les bagages internationaux</li>

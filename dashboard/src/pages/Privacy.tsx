@@ -20,7 +20,7 @@ export default function Privacy() {
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Informations des superviseurs (nom, email, aéroport)</li>
-                <li>Données des rapports BIRS reçus</li>
+                <li>Données des rapports BRS reçus</li>
                 <li>Informations des bagages internationaux</li>
                 <li>Logs de réconciliation et d'utilisation</li>
               </ul>

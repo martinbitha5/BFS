@@ -99,7 +99,7 @@ export default function BIRS() {
         <div>
           <h1 className="text-3xl font-bold text-white">
             <Package className="w-8 h-8 inline mr-2" />
-            Rapports BIRS - Bagages Internationaux
+            Rapports BRS - Bagages Internationaux
           </h1>
           <p className="text-white/80 mt-1">
             Importation et réconciliation des fichiers des compagnies aériennes
@@ -132,7 +132,7 @@ export default function BIRS() {
               📋 Mode lecture seule
             </h3>
             <p className="text-sm text-yellow-700">
-              Les fichiers BIRS sont uploadés directement par les <strong>compagnies aériennes internationales</strong> via leur portail dédié. 
+              Les fichiers BRS sont uploadés directement par les <strong>compagnies aériennes internationales</strong> via leur portail dédié. 
               En tant que superviseur, vous pouvez <strong>visualiser</strong> ces rapports et effectuer des <strong>actions de réconciliation</strong>.
             </p>
           </div>
@@ -237,10 +237,10 @@ export default function BIRS() {
       <div className="bg-black/25 backdrop-blur-md rounded-lg p-6">
         <h3 className="text-sm font-medium text-blue-800 mb-2">
           <AlertCircle className="w-4 h-4 inline mr-1" />
-          À propos de la réconciliation BIRS
+          À propos de la réconciliation BRS
         </h3>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Les fichiers BIRS sont uploadés par les compagnies aériennes via le <strong>Portail Airlines</strong></li>
+          <li>• Les fichiers BRS sont uploadés par les compagnies aériennes via le <strong>Portail Airlines</strong></li>
           <li>• La réconciliation compare ces fichiers avec les bagages scannés à l'arrivée à FIH</li>
           <li>• Cliquez sur <strong>"Lancer réconciliation"</strong> pour matcher les bagages automatiquement</li>
           <li>• Les bagages non matchés peuvent être déclarés en <strong>RUSH</strong> (réacheminement)</li>

@@ -17,7 +17,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/flights', label: 'Gestion des Vols', icon: Plane },
     { path: '/baggages', label: 'Bagages', icon: Package },
     { path: '/passengers', label: 'Passagers', icon: Users },
-    { path: '/birs', label: 'BIRS International', icon: Package },
+    { path: '/birs', label: 'BRS International', icon: Package },
     { path: '/raw-scans', label: 'Scans Bruts', icon: Barcode },
     { path: '/export', label: 'Export', icon: Download },
   ];

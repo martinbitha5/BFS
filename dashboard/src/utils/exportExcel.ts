@@ -134,10 +134,10 @@ export const exportToExcel = async (
     ['Bagages En Transit', stats.inTransitBaggages],
     ['Taux d\'Arrivée des Bagages', `${arrivalRate}%`],
     ['', ''], // Ligne vide
-    ['BIRS - Total Bagages Internationaux', stats.totalBirsItems],
-    ['BIRS - Bagages Arrivés', stats.arrivedBirsItems],
-    ['BIRS - Bagages Non Arrivés', stats.notArrivedBirsItems],
-    ['BIRS - Taux d\'Arrivée', `${birsArrivalRate}%`],
+    ['BRS - Total Bagages Internationaux', stats.totalBirsItems],
+    ['BRS - Bagages Arrivés', stats.arrivedBirsItems],
+    ['BRS - Bagages Non Arrivés', stats.notArrivedBirsItems],
+    ['BRS - Taux d\'Arrivée', `${birsArrivalRate}%`],
   ];
 
   statsData.forEach((row, index) => {
@@ -366,7 +366,7 @@ export const exportToExcel = async (
   // birsItems est déjà extrait au début de la fonction
   
   if (birsItems.length > 0) {
-    const birsSheet = workbook.addWorksheet('BIRS International', {
+    const birsSheet = workbook.addWorksheet('BRS International', {
       views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
     });
 
