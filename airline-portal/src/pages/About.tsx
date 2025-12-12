@@ -1,8 +1,10 @@
-import { CheckCircle, Plane, Shield, Users } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Plane, Shield, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function About() {
   const { language } = useLanguage();
+  const navigate = useNavigate();
 
   return (
     <div 
@@ -236,9 +238,13 @@ export default function About() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/20">
-            <a href="/" className="text-primary-300 hover:text-primary-200">
-              {language === 'fr' ? '← Retour à l\'accueil' : '← Back to home'}
-            </a>
+            <button 
+              onClick={() => navigate(-1)}
+              className="flex items-center space-x-2 text-primary-300 hover:text-primary-200 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{language === 'fr' ? 'Retour' : 'Back'}</span>
+            </button>
           </div>
         </div>
       </div>
