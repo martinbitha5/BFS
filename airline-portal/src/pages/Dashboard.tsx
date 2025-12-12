@@ -131,7 +131,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-xs text-white/60 mt-3 border-t border-white/10 pt-3">
-            ℹ️ {t('dashboard.autoInfo')}
+            {t('dashboard.autoInfo')}
           </p>
         </div>
 
@@ -298,12 +298,12 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-8 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg p-6">
-          <h3 className="font-semibold text-white mb-3">📋 {t('dashboard.guide.title')}</h3>
+          <h3 className="font-semibold text-white mb-3">{t('dashboard.guide.title')}</h3>
           
           <div className="space-y-4">
             {/* Informations automatiques */}
             <div className="bg-green-900/20 border border-green-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-green-200 mb-2">✅ {t('dashboard.guide.auto.title')}</h4>
+              <h4 className="text-sm font-semibold text-green-200 mb-2">{t('dashboard.guide.auto.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
                 <li>• <strong>{t('dashboard.guide.auto.line1')} :</strong> {airline?.name}</li>
                 <li>• <strong>{t('dashboard.guide.auto.line2')} :</strong> {airline?.code}</li>
@@ -313,7 +313,7 @@ export default function Dashboard() {
 
             {/* Informations à renseigner */}
             <div className="bg-blue-900/20 border border-blue-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-blue-200 mb-2">📝 {t('dashboard.guide.manual.title')}</h4>
+              <h4 className="text-sm font-semibold text-blue-200 mb-2">{t('dashboard.guide.manual.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
                 <li>• {t('dashboard.guide.manual.line1')}</li>
                 <li>• {t('dashboard.guide.manual.line2')}</li>
@@ -325,7 +325,7 @@ export default function Dashboard() {
 
             {/* Informations sur les fichiers */}
             <div className="bg-purple-900/20 border border-purple-400/20 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-purple-200 mb-2">📄 {t('dashboard.guide.files.title')}</h4>
+              <h4 className="text-sm font-semibold text-purple-200 mb-2">{t('dashboard.guide.files.title')}</h4>
               <ul className="text-xs text-white/70 space-y-1">
                 <li>• {t('dashboard.guide.files.line1')}</li>
                 <li>• {t('dashboard.guide.files.line2')}</li>

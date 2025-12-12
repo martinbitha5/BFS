@@ -179,7 +179,7 @@ export default function History() {
         )}
 
         <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Mode lecture seule</h3>
+          <h3 className="font-semibold text-yellow-900 mb-2">Mode lecture seule</h3>
           <p className="text-sm text-yellow-800">
             Cette page affiche l'historique de vos uploads. La réconciliation des bagages est gérée par
             l'équipe de supervision de l'aéroport. Vous ne pouvez pas effectuer d'actions de réconciliation

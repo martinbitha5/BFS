@@ -49,10 +49,9 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
               title={language === 'fr' ? 'Switch to English' : 'Passer en Français'}
             >
-              <span className="text-lg">🌐</span>
               <span className="text-xs text-white font-semibold">{language.toUpperCase()}</span>
             </button>
           </div>

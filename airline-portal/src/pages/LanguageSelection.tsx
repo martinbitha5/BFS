@@ -43,11 +43,11 @@ export default function LanguageSelection() {
             {/* Bouton Français */}
             <button
               onClick={() => handleLanguageSelect('fr')}
-              className="group relative overflow-hidden bg-gradient-to-br from-blue-600/80 to-blue-800/80 hover:from-blue-500/90 hover:to-blue-700/90 backdrop-blur-md border-2 border-white/30 rounded-xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+              className="group relative overflow-hidden bg-gradient-to-br from-blue-600/80 to-blue-800/80 hover:from-blue-500/90 hover:to-blue-700/90 backdrop-blur-md border-2 border-white/30 rounded-xl p-10 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
               <div className="text-center">
-                <div className="text-6xl mb-4">🇫🇷</div>
-                <h3 className="text-2xl font-bold text-white mb-2">Français</h3>
+                <h3 className="text-4xl font-bold text-white mb-3">FR</h3>
+                <h4 className="text-xl font-semibold text-blue-100 mb-2">Français</h4>
                 <p className="text-blue-100 text-sm">
                   Continuer en français
                 </p>
@@ -58,11 +58,11 @@ export default function LanguageSelection() {
             {/* Bouton English */}
             <button
               onClick={() => handleLanguageSelect('en')}
-              className="group relative overflow-hidden bg-gradient-to-br from-red-600/80 to-red-800/80 hover:from-red-500/90 hover:to-red-700/90 backdrop-blur-md border-2 border-white/30 rounded-xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+              className="group relative overflow-hidden bg-gradient-to-br from-red-600/80 to-red-800/80 hover:from-red-500/90 hover:to-red-700/90 backdrop-blur-md border-2 border-white/30 rounded-xl p-10 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
               <div className="text-center">
-                <div className="text-6xl mb-4">🇬🇧</div>
-                <h3 className="text-2xl font-bold text-white mb-2">English</h3>
+                <h3 className="text-4xl font-bold text-white mb-3">EN</h3>
+                <h4 className="text-xl font-semibold text-red-100 mb-2">English</h4>
                 <p className="text-red-100 text-sm">
                   Continue in English
                 </p>
