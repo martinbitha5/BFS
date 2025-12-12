@@ -40,7 +40,8 @@ router.get('/track', async (req: Request, res: Response) => {
           p.pnr,
           p.flight_number,
           p.departure as origin,
-          p.arrival as destination
+          p.arrival as destination,
+          'national' as baggage_type
         FROM baggages b
         INNER JOIN passengers p ON b.passenger_id = p.id
         WHERE UPPER(p.pnr) = UPPER($1)
@@ -49,7 +50,7 @@ router.get('/track', async (req: Request, res: Response) => {
       `;
       params = [pnr];
     } else {
-      // Rechercher par tag RFID
+      // Rechercher par tag RFID - d'abord dans bagages nationaux
       query = `
         SELECT 
           b.id,
@@ -62,7 +63,8 @@ router.get('/track', async (req: Request, res: Response) => {
           p.pnr,
           p.flight_number,
           p.departure as origin,
-          p.arrival as destination
+          p.arrival as destination,
+          'national' as baggage_type
         FROM baggages b
         INNER JOIN passengers p ON b.passenger_id = p.id
         WHERE UPPER(b.tag_number) = UPPER($1)
@@ -72,7 +74,113 @@ router.get('/track', async (req: Request, res: Response) => {
       params = [tag];
     }
 
-    const result = await pool.query(query, params);
+    let result = await pool.query(query, params);
+
+    // Si aucun bagage national trouvé et recherche par tag, chercher dans bagages internationaux
+    if (result.rows.length === 0 && tag) {
+      const internationalQuery = `
+        SELECT 
+          ib.id,
+          ib.rfid_tag as bag_id,
+          ib.status,
+          ib.weight,
+          ib.airport_code as current_location,
+          ib.scanned_at as last_scanned_at,
+          COALESCE(ib.passenger_name, 'Passager international') as passenger_name,
+          ib.pnr,
+          ib.flight_number,
+          NULL as origin,
+          NULL as destination,
+          'international' as baggage_type
+        FROM international_baggages ib
+        WHERE UPPER(ib.rfid_tag) = UPPER($1)
+        ORDER BY ib.created_at DESC
+        LIMIT 1
+      `;
+      result = await pool.query(internationalQuery, [tag]);
+    }
+
+    // Si aucun bagage trouvé et recherche par PNR, chercher aussi dans bagages internationaux
+    if (result.rows.length === 0 && pnr) {
+      const internationalQuery = `
+        SELECT 
+          ib.id,
+          ib.rfid_tag as bag_id,
+          ib.status,
+          ib.weight,
+          ib.airport_code as current_location,
+          ib.scanned_at as last_scanned_at,
+          COALESCE(ib.passenger_name, 'Passager international') as passenger_name,
+          ib.pnr,
+          ib.flight_number,
+          NULL as origin,
+          NULL as destination,
+          'international' as baggage_type
+        FROM international_baggages ib
+        WHERE UPPER(ib.pnr) = UPPER($1)
+        ORDER BY ib.created_at DESC
+        LIMIT 1
+      `;
+      result = await pool.query(internationalQuery, [pnr]);
+    }
+
+    // Si toujours aucun bagage trouvé, chercher dans les rapports BIRS (bagages arrivés)
+    if (result.rows.length === 0 && tag) {
+      const birsQuery = `
+        SELECT 
+          bri.id,
+          bri.bag_id,
+          CASE 
+            WHEN bri.received IS NOT NULL THEN 'arrived'
+            WHEN bri.loaded IS NOT NULL THEN 'in_transit'
+            ELSE 'scanned'
+          END as status,
+          bri.weight,
+          br.destination as current_location,
+          bri.created_at as last_scanned_at,
+          COALESCE(bri.passenger_name, 'Passager international') as passenger_name,
+          bri.pnr,
+          br.flight_number,
+          br.origin,
+          br.destination,
+          'birs' as baggage_type
+        FROM birs_report_items bri
+        INNER JOIN birs_reports br ON bri.birs_report_id = br.id
+        WHERE UPPER(bri.bag_id) = UPPER($1)
+        ORDER BY bri.created_at DESC
+        LIMIT 1
+      `;
+      result = await pool.query(birsQuery, [tag]);
+    }
+
+    // Si toujours aucun bagage trouvé et recherche par PNR, chercher dans les rapports BIRS
+    if (result.rows.length === 0 && pnr) {
+      const birsQuery = `
+        SELECT 
+          bri.id,
+          bri.bag_id,
+          CASE 
+            WHEN bri.received IS NOT NULL THEN 'arrived'
+            WHEN bri.loaded IS NOT NULL THEN 'in_transit'
+            ELSE 'scanned'
+          END as status,
+          bri.weight,
+          br.destination as current_location,
+          bri.created_at as last_scanned_at,
+          COALESCE(bri.passenger_name, 'Passager international') as passenger_name,
+          bri.pnr,
+          br.flight_number,
+          br.origin,
+          br.destination,
+          'birs' as baggage_type
+        FROM birs_report_items bri
+        INNER JOIN birs_reports br ON bri.birs_report_id = br.id
+        WHERE UPPER(bri.pnr) = UPPER($1)
+        ORDER BY bri.created_at DESC
+        LIMIT 1
+      `;
+      result = await pool.query(birsQuery, [pnr]);
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -88,14 +196,15 @@ router.get('/track', async (req: Request, res: Response) => {
       data: {
         bag_id: baggage.bag_id,
         passenger_name: baggage.passenger_name,
-        pnr: baggage.pnr,
-        flight_number: baggage.flight_number,
+        pnr: baggage.pnr || 'N/A',
+        flight_number: baggage.flight_number || 'N/A',
         status: baggage.status,
         current_location: baggage.current_location || 'En cours de traitement',
         last_scanned_at: baggage.last_scanned_at,
         origin: baggage.origin,
         destination: baggage.destination,
-        weight: baggage.weight
+        weight: baggage.weight,
+        baggage_type: baggage.baggage_type
       }
     });
 

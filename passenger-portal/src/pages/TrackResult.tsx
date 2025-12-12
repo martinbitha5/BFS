@@ -19,6 +19,7 @@ interface BaggageInfo {
   destination?: string;
   origin?: string;
   weight?: number;
+  baggage_type?: 'national' | 'international' | 'birs';
 }
 
 export default function TrackResult() {
@@ -95,6 +96,34 @@ export default function TrackResult() {
           bgColor: 'bg-orange-900/40',
           icon: AlertCircle,
         };
+      case 'scanned':
+        return {
+          label: 'Scanné',
+          color: 'text-blue-400',
+          bgColor: 'bg-blue-900/40',
+          icon: Package,
+        };
+      case 'reconciled':
+        return {
+          label: 'Réconcilié',
+          color: 'text-green-400',
+          bgColor: 'bg-green-900/40',
+          icon: CheckCircle,
+        };
+      case 'unmatched':
+        return {
+          label: 'Non apparié',
+          color: 'text-yellow-400',
+          bgColor: 'bg-yellow-900/40',
+          icon: AlertCircle,
+        };
+      case 'pending':
+        return {
+          label: 'En attente',
+          color: 'text-gray-400',
+          bgColor: 'bg-gray-900/40',
+          icon: Clock,
+        };
       default:
         return {
           label: status,
@@ -154,7 +183,19 @@ export default function TrackResult() {
             <div className="space-y-8">
               {/* Header Info */}
               <div>
-                <h1 className="text-4xl font-bold text-white mb-2">{t('track.title')}</h1>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-4xl font-bold text-white">{t('track.title')}</h1>
+                  {baggage.baggage_type === 'international' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                      🌍 International
+                    </span>
+                  )}
+                  {baggage.baggage_type === 'birs' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                      📋 BIRS Report
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center space-x-4 text-sm text-white/70">
                   <span>{t('track.pnr')}: <span className="font-semibold text-white">{baggage.pnr}</span></span>
                   <span>•</span>
