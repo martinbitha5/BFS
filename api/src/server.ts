@@ -16,6 +16,7 @@ import confirmRoutes from './routes/confirm.routes';
 import exportRoutes from './routes/export.routes';
 import flightRoutes from './routes/flights.routes';
 import passengerRoutes from './routes/passenger.routes';
+import publicRoutes from './routes/public.routes';
 import rawScansRoutes from './routes/raw-scans.routes';
 import rushRoutes from './routes/rush.routes';
 import statsRoutes from './routes/stats.routes';
