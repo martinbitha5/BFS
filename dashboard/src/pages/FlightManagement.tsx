@@ -31,6 +31,8 @@ export default function FlightManagement() {
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === today;
 
   useEffect(() => {
     loadFlights();
@@ -114,6 +116,22 @@ export default function FlightManagement() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white mb-2">Gestion des Vols</h1>
         <p className="text-white/80">Ajoutez et gérez les vols disponibles pour votre aéroport</p>
+        
+        {/* Info: Vols du jour */}
+        <div className="mt-4 bg-blue-900/30 backdrop-blur-md border border-blue-400/30 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <span className="text-blue-300 text-lg">ℹ️</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-blue-200 mb-1">Programmation par jour</h3>
+              <p className="text-xs text-blue-100/80">
+                Les vols sont programmés pour une date précise. L'application mobile ne chargera que les vols du jour en cours.
+                {!isToday && " Vous consultez actuellement les vols d'une autre date."}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Actions Bar */}
@@ -131,6 +149,19 @@ export default function FlightManagement() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            {!isToday && (
+              <button
+                onClick={() => setSelectedDate(today)}
+                className="text-xs bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Aujourd'hui
+              </button>
+            )}
+            {isToday && (
+              <span className="text-xs bg-green-900/30 text-green-300 px-3 py-1.5 rounded-lg border border-green-400/30">
+                📅 Jour actuel
+              </span>
+            )}
           </div>
 
           {/* Recherche */}
@@ -419,15 +450,19 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/85 mb-1">
-                  Date *
+                  Date * (Vol visible uniquement ce jour)
                 </label>
                 <input
                   type="date"
                   required
+                  min={new Date().toISOString().split('T')[0]}
                   value={formData.scheduledDate}
                   onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                <p className="text-xs text-white/60 mt-1">
+                  Le vol sera visible uniquement le jour sélectionné dans l'app mobile.
+                </p>
               </div>
 
               <div>
