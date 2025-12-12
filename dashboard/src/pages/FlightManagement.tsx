@@ -215,7 +215,9 @@ export default function FlightManagement() {
           )}
         </div>
       ) : (
-        <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm overflow-hidden">
+        <>
+        {/* Vue Desktop - Table */}
+        <div className="hidden md:block bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-black/25 backdrop-blur-md border border-white/20">
               <tr>
@@ -304,6 +306,78 @@ export default function FlightManagement() {
             </tbody>
           </table>
         </div>
+
+        {/* Vue Mobile - Cartes */}
+        <div className="md:hidden space-y-4">
+          {filteredFlights.map((flight) => (
+            <div key={flight.id} className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg p-4">
+              {/* En-tête */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0 h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Plane className="h-6 w-6 text-blue-300" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-white">{flight.flightNumber}</div>
+                    <div className="text-xs text-white/70">{flight.airlineCode}</div>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                  flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                  flight.status === 'boarding' ? 'bg-yellow-900/40 text-yellow-200' :
+                  flight.status === 'departed' ? 'bg-green-900/40 text-green-200' :
+                  flight.status === 'arrived' ? 'bg-white/85 text-gray-900' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {flight.status === 'scheduled' ? 'Programmé' :
+                   flight.status === 'boarding' ? 'Embarquement' :
+                   flight.status === 'departed' ? 'Parti' :
+                   flight.status === 'arrived' ? 'Arrivé' :
+                   'Annulé'}
+                </span>
+              </div>
+
+              {/* Infos vol */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/70">Compagnie</span>
+                  <span className="text-sm font-medium text-white">{flight.airline}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/70">Route</span>
+                  <div className="flex items-center gap-2 text-sm font-medium text-white">
+                    <span>{flight.departure}</span>
+                    <span className="text-white/60">→</span>
+                    <span>{flight.arrival}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/70">Heure</span>
+                  <span className="text-sm font-medium text-white">{flight.scheduledTime || '-'}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/20">
+                <button 
+                  onClick={() => handleEdit(flight)}
+                  className="flex items-center space-x-1 text-blue-300 hover:text-blue-200 transition-colors px-3 py-2 hover:bg-black/25 rounded-lg"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="text-sm">Modifier</span>
+                </button>
+                <button 
+                  onClick={() => handleDelete(flight)}
+                  className="flex items-center space-x-1 text-red-400 hover:text-red-300 transition-colors px-3 py-2 hover:bg-red-900/30 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="text-sm">Supprimer</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {/* Modal Ajout Vol */}

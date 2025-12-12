@@ -43,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar à gauche (style glassmorphism) */}
       <aside className={`
         fixed md:relative
-        w-64 h-screen
+        w-64 h-screen max-h-screen
         bg-black/30 backdrop-blur-md text-white
         flex flex-col shadow-xl z-30 border-r border-white/20
         transform transition-transform duration-300 ease-in-out
@@ -91,16 +91,16 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </nav>
 
-        {/* User info et déconnexion */}
+        {/* User info et déconnexion - toujours visible en bas */}
         {user && (
-          <div className="p-4 border-t border-white/20 bg-black/20">
+          <div className="mt-auto p-4 border-t border-white/20 bg-black/20">
             <div className="mb-3">
               <p className="text-sm font-semibold text-white truncate">{user.full_name}</p>
               <p className="text-xs text-white/60 truncate">{user.email}</p>
             </div>
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-red-300 hover:bg-red-900/30 backdrop-blur-md0/20 transition-colors"
+              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-red-300 hover:bg-red-900/30 transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Déconnexion
