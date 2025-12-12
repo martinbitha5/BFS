@@ -600,7 +600,7 @@ export default function Export() {
             <div className="flex items-center gap-2 mb-2">
               <h3 className="text-lg font-semibold text-white">Données Brutes (Raw Scans)</h3>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/40 backdrop-blur-sm text-green-800">
-                Recommandé 🎯
+                Recommandé
               </span>
             </div>
             <p className="text-sm text-white/85 mb-2">
