@@ -96,10 +96,11 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto relative z-10">
-        <div className="p-8">
+      <div className="flex-1 overflow-auto relative z-10 flex flex-col">
+        <div className="flex-1 p-8">
           {children}
         </div>
+        <Footer />
       </div>
     </div>
   );
