@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="32" fill="#dc2626"/>
+  
+  <!-- Airplane icon -->
+  <g transform="translate(8, 16)">
+    <!-- Fuselage -->
+    <ellipse cx="24" cy="16" rx="18" ry="6" fill="#fff"/>
+    
+    <!-- Wings -->
+    <path d="M 10 16 L 38 16 L 42 20 L 38 24 L 10 24 Z" fill="#fff"/>
+    
+    <!-- Tail -->
+    <path d="M 6 12 L 12 16 L 6 20 Z" fill="#fff"/>
+    
+    <!-- Cockpit window -->
+    <circle cx="36" cy="16" r="3" fill="#1e40af"/>
+    
+    <!-- Engine highlights -->
+    <ellipse cx="24" cy="10" rx="3" ry="1.5" fill="#94a3b8"/>
+    <ellipse cx="24" cy="22" rx="3" ry="1.5" fill="#94a3b8"/>
+  </g>
+</svg>
