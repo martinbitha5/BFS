@@ -44,13 +44,13 @@ export function useLanguage() {
 const translations: Record<Language, Record<string, string>> = {
   fr: {
     // Navigation
-    'nav.upload': 'Upload BIRS',
+    'nav.upload': 'Upload BRS',
     'nav.history': 'Historique',
     'nav.logout': 'Déconnexion',
     
     // Login
     'login.title': 'Connexion Compagnie Aérienne',
-    'login.subtitle': 'Connectez-vous pour uploader vos rapports BIRS',
+    'login.subtitle': 'Connectez-vous pour uploader vos rapports BRS',
     'login.email': 'Email',
     'login.password': 'Mot de passe',
     'login.button': 'Se connecter',
@@ -60,7 +60,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Signup
     'signup.title': 'Inscription Compagnie Aérienne',
-    'signup.subtitle': 'Renseignez les informations de votre compagnie. Ces données seront utilisées pour tous vos uploads BIRS.',
+    'signup.subtitle': 'Renseignez les informations de votre compagnie. Ces données seront utilisées pour tous vos uploads BRS.',
     'signup.airlineName': 'Nom de la compagnie aérienne',
     'signup.airlineName.placeholder': 'Ex: Ethiopian Airlines',
     'signup.airlineName.help': 'Nom complet officiel de votre compagnie aérienne',
@@ -80,12 +80,12 @@ const translations: Record<Language, Record<string, string>> = {
     'signup.login': 'Se connecter',
     'signup.info.title': 'À propos de votre compte',
     'signup.info.line1': 'Les informations de la compagnie (nom et code) sont enregistrées une seule fois',
-    'signup.info.line2': 'Lors des uploads BIRS, vous renseignerez : numéro vol, date, origine, destination, aéroport destinataire',
+    'signup.info.line2': 'Lors des uploads BRS, vous renseignerez : numéro vol, date, origine, destination, aéroport destinataire',
     'signup.info.line3': 'Votre code IATA doit être officiel et reconnu internationalement',
     
     // Dashboard
     'dashboard.title': 'Portail Compagnies',
-    'dashboard.subtitle': 'Envoi de rapports BIRS',
+    'dashboard.subtitle': 'Envoi de rapports BRS',
     'dashboard.connectedCompany': 'Compagnie connectée',
     'dashboard.airlineName': 'Nom',
     'dashboard.iataCode': 'Code IATA',
@@ -120,7 +120,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.guide.manual.line3': 'Origine (3 lettres, Ex: FIH)',
     'dashboard.guide.manual.line4': 'Destination (3 lettres, Ex: GOM)',
     'dashboard.guide.manual.line5': 'Aéroport destinataire (souvent la destination)',
-    'dashboard.guide.files.title': 'Fichiers BIRS',
+    'dashboard.guide.files.title': 'Fichiers BRS',
     'dashboard.guide.files.line1': 'Liste des bagages envoyés',
     'dashboard.guide.files.line2': 'Comparé aux scans à l\'arrivée',
     'dashboard.guide.files.line3': 'Les manquants peuvent être déclarés RUSH',
@@ -142,13 +142,13 @@ const translations: Record<Language, Record<string, string>> = {
   },
   en: {
     // Navigation
-    'nav.upload': 'Upload BIRS',
+    'nav.upload': 'Upload BRS',
     'nav.history': 'History',
     'nav.logout': 'Logout',
     
     // Login
     'login.title': 'Airline Login',
-    'login.subtitle': 'Sign in to upload your BIRS reports',
+    'login.subtitle': 'Sign in to upload your BRS reports',
     'login.email': 'Email',
     'login.password': 'Password',
     'login.button': 'Sign in',
@@ -158,7 +158,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Signup
     'signup.title': 'Airline Registration',
-    'signup.subtitle': 'Enter your airline information. This data will be used for all your BIRS uploads.',
+    'signup.subtitle': 'Enter your airline information. This data will be used for all your BRS uploads.',
     'signup.airlineName': 'Airline name',
     'signup.airlineName.placeholder': 'Ex: Ethiopian Airlines',
     'signup.airlineName.help': 'Official full name of your airline',
@@ -178,12 +178,12 @@ const translations: Record<Language, Record<string, string>> = {
     'signup.login': 'Sign in',
     'signup.info.title': 'About your account',
     'signup.info.line1': 'Company information (name and code) is registered once',
-    'signup.info.line2': 'For BIRS uploads, you will enter: flight number, date, origin, destination, receiving airport',
+    'signup.info.line2': 'For BRS uploads, you will enter: flight number, date, origin, destination, receiving airport',
     'signup.info.line3': 'Your IATA code must be official and internationally recognized',
     
     // Dashboard
     'dashboard.title': 'Airlines Portal',
-    'dashboard.subtitle': 'BIRS Reports',
+    'dashboard.subtitle': 'BRS Reports',
     'dashboard.connectedCompany': 'Airline',
     'dashboard.airlineName': 'Name',
     'dashboard.iataCode': 'IATA Code',
@@ -218,7 +218,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.guide.manual.line3': 'Origin (3 letters, Ex: FIH)',
     'dashboard.guide.manual.line4': 'Destination (3 letters, Ex: GOM)',
     'dashboard.guide.manual.line5': 'Receiving airport (usually destination)',
-    'dashboard.guide.files.title': 'BIRS Files',
+    'dashboard.guide.files.title': 'BRS Files',
     'dashboard.guide.files.line1': 'List of sent baggage',
     'dashboard.guide.files.line2': 'Compared with arrival scans',
     'dashboard.guide.files.line3': 'Missing items can be declared RUSH',

@@ -41,7 +41,7 @@ export default function Terms() {
                     Le système BFS permet aux compagnies aériennes de :
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
-                    <li>Transmettre les rapports BIRS (manifestes bagages)</li>
+                    <li>Transmettre les rapports BRS (manifestes bagages)</li>
                     <li>Consulter l'historique de leurs envois</li>
                     <li>Suivre le statut de réconciliation des bagages</li>
                   </ul>
@@ -54,7 +54,7 @@ export default function Terms() {
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Fournir des informations exactes et à jour</li>
-                    <li>Transmettre les rapports BIRS dans les délais convenus</li>
+                    <li>Transmettre les rapports BRS dans les délais convenus</li>
                     <li>Respecter les formats de fichiers spécifiés</li>
                     <li>Ne pas tenter d'accéder à des données non autorisées</li>
                   </ul>
@@ -116,7 +116,7 @@ export default function Terms() {
                     The BFS system allows airlines to:
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
-                    <li>Submit BIRS reports (baggage manifests)</li>
+                    <li>Submit BRS reports (baggage manifests)</li>
                     <li>View their submission history</li>
                     <li>Track baggage reconciliation status</li>
                   </ul>
@@ -129,7 +129,7 @@ export default function Terms() {
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Provide accurate and up-to-date information</li>
-                    <li>Submit BIRS reports within agreed timeframes</li>
+                    <li>Submit BRS reports within agreed timeframes</li>
                     <li>Comply with specified file formats</li>
                     <li>Not attempt to access unauthorized data</li>
                   </ul>

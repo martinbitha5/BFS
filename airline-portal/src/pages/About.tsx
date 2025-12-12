@@ -37,7 +37,7 @@ export default function About() {
                         <div>
                           <h3 className="font-semibold text-white mb-1">Pour les Compagnies</h3>
                           <p className="text-sm">
-                            Envoi des manifestes BIRS, suivi en temps réel, historique complet des rapports
+                            Envoi des manifestes BRS, suivi en temps réel, historique complet des rapports
                           </p>
                         </div>
                       </div>
@@ -144,7 +144,7 @@ export default function About() {
                         <div>
                           <h3 className="font-semibold text-white mb-1">For Airlines</h3>
                           <p className="text-sm">
-                            BIRS manifest submission, real-time tracking, complete report history
+                            BRS manifest submission, real-time tracking, complete report history
                           </p>
                         </div>
                       </div>

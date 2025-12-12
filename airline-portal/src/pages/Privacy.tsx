@@ -26,7 +26,7 @@ export default function Privacy() {
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Informations de la compagnie (nom, code IATA, email)</li>
-                    <li>Données des rapports BIRS (manifestes bagages)</li>
+                    <li>Données des rapports BRS (manifestes bagages)</li>
                     <li>Informations de vol (numéro, date, origine, destination)</li>
                     <li>Logs de connexion et d'utilisation du système</li>
                   </ul>
@@ -128,7 +128,7 @@ export default function Privacy() {
                   </p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Company information (name, IATA code, email)</li>
-                    <li>BIRS report data (baggage manifests)</li>
+                    <li>BRS report data (baggage manifests)</li>
                     <li>Flight information (number, date, origin, destination)</li>
                     <li>Connection and system usage logs</li>
                   </ul>
