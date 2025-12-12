@@ -1,7 +1,7 @@
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Legal() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
 
   return (
     <div 
