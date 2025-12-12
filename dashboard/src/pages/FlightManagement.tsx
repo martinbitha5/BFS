@@ -49,7 +49,7 @@ export default function FlightManagement() {
       const response = await api.get(`/api/v1/flights?airport=${user.airport_code}&date=${selectedDate}`);
       setFlights(response.data.data || []);
       
-      console.log(`✅ ${response.data.data?.length || 0} vols chargés pour ${selectedDate}`);
+      console.log(`${response.data.data?.length || 0} vols chargés pour ${selectedDate}`);
     } catch (error: any) {
       console.error('Erreur chargement vols:', error);
       if (error.response?.status === 404) {

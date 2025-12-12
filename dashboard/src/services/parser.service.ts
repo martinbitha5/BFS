@@ -215,7 +215,7 @@ class ParserService {
 
     // Si ça ne commence même pas par M1/M2, on essaie quand même GENERIC
     // (peut-être un format non-standard ou corrompu)
-    console.log('[PARSER] ⚠️  Format GENERIC détecté (par défaut - données non-standard)');
+    console.log('[PARSER] Format GENERIC détecté (par défaut - données non-standard)');
     return 'GENERIC';
   }
 

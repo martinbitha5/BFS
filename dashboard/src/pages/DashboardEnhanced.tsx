@@ -91,7 +91,7 @@ export default function DashboardEnhanced() {
       });
       
       const { stats: syncStats } = response.data;
-      setSyncMessage(`✅ Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
+      setSyncMessage(`Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
       
       // Recharger les stats après sync
       await fetchStats();
@@ -348,7 +348,7 @@ export default function DashboardEnhanced() {
                   <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <h3 className="text-xs sm:text-sm font-medium text-yellow-800">
-                      ⚠️ {stats.notBoardedPassengers} passagers non embarqués
+                      {stats.notBoardedPassengers} passagers non embarqués
                     </h3>
                     <p className="text-xs sm:text-sm text-yellow-700 mt-1 hidden sm:block">
                       Vérifiez les passagers en attente d'embarquement

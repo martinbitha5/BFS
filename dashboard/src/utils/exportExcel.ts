@@ -98,9 +98,9 @@ export const exportToExcel = async (
       ext: { width: 250, height: 120 }
     });
     
-    console.log('[EXPORT STANDARD] ✅ Logo ajouté');
+    console.log('[EXPORT STANDARD] Logo ajouté');
   } catch (error) {
-    console.error('[EXPORT STANDARD] ❌ Erreur logo:', error);
+    console.error('[EXPORT STANDARD] Erreur logo:', error);
   }
 
   // Informations (commencer après le logo)
@@ -399,11 +399,11 @@ export const exportToExcel = async (
     // Données
     birsItems.forEach((item: any) => {
       // Déterminer le statut (réconcilié = a une date de réconciliation)
-      let statut = '❌ NON ARRIVÉ';
+      let statut = 'NON ARRIVÉ';
       let rfidTag = '-';
       
       if (item.reconciled_at) {
-        statut = '✅ ARRIVÉ';
+        statut = 'ARRIVÉ';
         // Le RFID tag est stocké dans international_baggage, pas directement dans l'item
         rfidTag = item.rfid_tag || item.bag_id || '-';
       }
@@ -452,13 +452,13 @@ export const exportToExcel = async (
           
           // Couleur selon le statut (colonne 11)
           if (colNumber === 11) {
-            if (cell.value === '✅ ARRIVÉ') {
+            if (cell.value === 'ARRIVÉ') {
               cell.fill = {
                 type: 'pattern',
                 pattern: 'solid',
                 fgColor: { argb: 'FF90EE90' } // Vert clair
               };
-            } else if (cell.value === '❌ NON ARRIVÉ') {
+            } else if (cell.value === 'NON ARRIVÉ') {
               cell.fill = {
                 type: 'pattern',
                 pattern: 'solid',
@@ -470,7 +470,7 @@ export const exportToExcel = async (
       }
     });
 
-    console.log(`✅ Feuille BIRS ajoutée avec ${birsItems.length} bagages`);
+    console.log(`Feuille BIRS ajoutée avec ${birsItems.length} bagages`);
   }
 
   // Générer et sauvegarder le fichier
@@ -549,9 +549,9 @@ export const exportRawScansToExcel = async (
       ext: { width: 250, height: 120 }
     });
     
-    console.log('[EXPORT RAW SCANS] ✅ Logo ajouté');
+    console.log('[EXPORT RAW SCANS] Logo ajouté');
   } catch (error) {
-    console.error('[EXPORT RAW SCANS] ❌ Erreur logo:', error);
+    console.error('[EXPORT RAW SCANS] Erreur logo:', error);
   }
 
   infoSheet.getCell('A8').value = 'EXPORT RAW SCANS - DONNÉES BRUTES PURES (SANS PARSING)';
@@ -590,10 +590,10 @@ export const exportRawScansToExcel = async (
       scan.id,
       scan.scan_type === 'boarding_pass' ? 'BP' : 'BT',
       scan.raw_data, // Données brutes exactes
-      scan.status_checkin ? '✅' : '❌',
-      scan.status_baggage ? '✅' : '❌',
-      scan.status_boarding ? '✅' : '❌',
-      scan.status_arrival ? '✅' : '❌',
+      scan.status_checkin ? 'OUI' : 'NON',
+      scan.status_baggage ? 'OUI' : 'NON',
+      scan.status_boarding ? 'OUI' : 'NON',
+      scan.status_arrival ? 'OUI' : 'NON',
       scan.baggage_rfid_tag || '-',
       scan.scan_count,
       new Date(scan.first_scanned_at).toLocaleString('fr-FR'),

@@ -42,14 +42,14 @@ export default function Passengers() {
       
       const stats = response.data.stats;
       setSyncMessage(
-        `✅ Synchronisation réussie: ${stats.passengersCreated} passagers et ${stats.baggagesCreated} bagages créés`
+        `Synchronisation réussie: ${stats.passengersCreated} passagers et ${stats.baggagesCreated} bagages créés`
       );
       
       // Recharger les passagers
       await fetchPassengers();
     } catch (err: any) {
       console.error('Error syncing raw scans:', err);
-      setSyncMessage('❌ ' + (err.response?.data?.error || 'Erreur lors de la synchronisation'));
+      setSyncMessage((err.response?.data?.error || 'Erreur lors de la synchronisation'));
     } finally {
       setSyncing(false);
     }
@@ -185,7 +185,7 @@ export default function Passengers() {
         </div>
 
         {syncMessage && (
-          <div className={`mt-2 p-3 rounded-md ${syncMessage.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-900/30 backdrop-blur-md text-red-800'}`}>
+          <div className={`mt-2 p-3 rounded-md ${syncMessage.includes('réussie') ? 'bg-green-50 text-green-800' : 'bg-red-900/30 backdrop-blur-md text-red-800'}`}>
             {syncMessage}
           </div>
         )}

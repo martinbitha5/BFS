@@ -29,7 +29,7 @@ const parseRawScans = (rawScans: any[]) => {
           checkinAt: scan.first_scanned_at || new Date().toISOString(),
         };
       } catch (error) {
-        console.error('❌ Erreur parsing raw scan:', error);
+        console.error('Erreur parsing raw scan:', error);
         return null;
       }
     })
@@ -66,7 +66,7 @@ export default function Export() {
       const rawScans = response.data.data || [];
       
       if (rawScans.length === 0) {
-        console.warn('⚠️  Aucun raw scan trouvé pour cet aéroport.');
+        console.warn('Aucun raw scan trouvé pour cet aéroport.');
         setFlights([]);
         return;
       }
@@ -78,7 +78,7 @@ export default function Export() {
         .sort() as string[];
       
       setFlights(uniqueFlights);
-      console.log(`✅ ${uniqueFlights.length} vols trouvés depuis ${rawScans.length} raw scans:`, uniqueFlights);
+      console.log(`${uniqueFlights.length} vols trouvés depuis ${rawScans.length} raw scans:`, uniqueFlights);
     } catch (err) {
       console.error('Error fetching flights:', err);
       setFlights([]);
@@ -104,7 +104,7 @@ export default function Export() {
         .sort() as string[];
       
       setDestinations(uniqueDestinations);
-      console.log(`✅ ${uniqueDestinations.length} destinations trouvées`);
+      console.log(`${uniqueDestinations.length} destinations trouvées`);
     } catch (err) {
       console.error('Error fetching destinations:', err);
       setDestinations([]);
@@ -131,7 +131,7 @@ export default function Export() {
         }
       };
 
-      // ✅ Export des raw scans SANS parsing (données brutes pures)
+      // Export des raw scans SANS parsing (données brutes pures)
       if (exportType === 'raw_scans') {
         let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
         
@@ -253,15 +253,15 @@ export default function Export() {
                 raw_data: scan.raw_data,
               };
             } catch (error) {
-              console.error('❌ Erreur parsing raw scan:', error);
+              console.error('Erreur parsing raw scan:', error);
               console.error('   Raw data:', scan.raw_data?.substring(0, 100));
               return null;
             }
           })
           .filter((p: any) => p !== null);
         
-        console.log(`✅ ${parsedPassengers.length} passagers parsés avec succès dans le web!`);
-        console.log('📊 Répartition par route:', 
+        console.log(`${parsedPassengers.length} passagers parsés avec succès dans le web!`);
+        console.log('Répartition par route:', 
           parsedPassengers.reduce((acc: any, p: any) => {
             const route = `${p.departure}→${p.arrival}`;
             acc[route] = (acc[route] || 0) + 1;
@@ -292,7 +292,7 @@ export default function Export() {
         }
         
         exportData.passengers = passengers;
-        console.log(`✅ ${parsedPassengers.length} raw scans parsés → ${passengers.length} passagers après filtres`);
+        console.log(`${parsedPassengers.length} raw scans parsés → ${passengers.length} passagers après filtres`);
       }
 
       if (exportType === 'all' || exportType === 'baggages') {
@@ -340,7 +340,7 @@ export default function Export() {
         }
         
         exportData.birsItems = birsItems;
-        console.log(`✅ ${birsItems.length} bagages BIRS récupérés depuis ${birsReports.length} rapports`);
+        console.log(`${birsItems.length} bagages BIRS récupérés depuis ${birsReports.length} rapports`);
       } catch (err) {
         console.error('Erreur récupération rapports BIRS:', err);
         exportData.birsItems = [];
@@ -695,7 +695,7 @@ export default function Export() {
             </h3>
             <div className="mt-2 text-sm text-blue-700 space-y-3">
               <div>
-                <p className="font-semibold mb-1">📊 Données Brutes (Raw Scans)</p>
+                <p className="font-semibold mb-1">Données Brutes (Raw Scans)</p>
                 <ul className="list-disc list-inside space-y-0.5 ml-2">
                   <li>Données brutes sans modification</li>
                   <li>Exactement ce qui est scanné par l'app mobile</li>
@@ -705,7 +705,7 @@ export default function Export() {
                 </ul>
               </div>
               <div>
-                <p className="font-semibold mb-1">📁 Export Standard (Passagers & Bagages)</p>
+                <p className="font-semibold mb-1">Export Standard (Passagers & Bagages)</p>
                 <ul className="list-disc list-inside space-y-0.5 ml-2">
                   <li>Données extraites et organisées automatiquement</li>
                   <li>Séparé en 3 tables : passagers / bagages / embarquements</li>

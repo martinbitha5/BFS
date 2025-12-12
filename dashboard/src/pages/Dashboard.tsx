@@ -60,7 +60,7 @@ export default function Dashboard() {
       });
       
       const { stats: syncStats } = response.data;
-      setSyncMessage(`✅ Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
+      setSyncMessage(`Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
       
       // Recharger les stats après sync
       await fetchStats();
