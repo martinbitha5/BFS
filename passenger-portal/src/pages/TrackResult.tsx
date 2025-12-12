@@ -130,20 +130,20 @@ export default function TrackResult() {
       <main className="flex-1 relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-12">
           {loading ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-              <Loader className="w-12 h-12 text-black animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">{t('track.loading')}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-12 text-center">
+              <Loader className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
+              <p className="text-white/80">{t('track.loading')}</p>
             </div>
           ) : error ? (
-            <div className="bg-white rounded-lg shadow-sm border border-red-200 p-8">
+            <div className="bg-red-900/20 backdrop-blur-sm rounded-lg shadow-sm border border-red-400/30 p-8">
               <div className="flex items-start space-x-4">
-                <AlertCircle className="w-8 h-8 text-red-500 flex-shrink-0" />
+                <AlertCircle className="w-8 h-8 text-red-400 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-black mb-2">{t('track.error.title')}</h3>
-                  <p className="text-gray-600 mb-4">{error}</p>
+                  <h3 className="text-lg font-semibold text-white mb-2">{t('track.error.title')}</h3>
+                  <p className="text-white/80 mb-4">{error}</p>
                   <Link 
                     to="/" 
-                    className="inline-block bg-black hover:bg-gray-800 text-white font-medium py-2 px-6 rounded transition-colors"
+                    className="inline-block bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 text-white font-medium py-2 px-6 rounded transition-colors"
                   >
                     {t('track.error.button')}
                   </Link>
@@ -154,13 +154,13 @@ export default function TrackResult() {
             <div className="space-y-8">
               {/* Header Info */}
               <div>
-                <h1 className="text-4xl font-bold text-black mb-2">{t('track.title')}</h1>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span>{t('track.pnr')}: <span className="font-semibold text-black">{baggage.pnr}</span></span>
+                <h1 className="text-4xl font-bold text-white mb-2">{t('track.title')}</h1>
+                <div className="flex items-center space-x-4 text-sm text-white/70">
+                  <span>{t('track.pnr')}: <span className="font-semibold text-white">{baggage.pnr}</span></span>
                   <span>•</span>
-                  <span>{t('track.flight')}: <span className="font-semibold text-black">{baggage.flight_number}</span></span>
+                  <span>{t('track.flight')}: <span className="font-semibold text-white">{baggage.flight_number}</span></span>
                   <span>•</span>
-                  <span>{t('track.passenger')}: <span className="font-semibold text-black">{baggage.passenger_name}</span></span>
+                  <span>{t('track.passenger')}: <span className="font-semibold text-white">{baggage.passenger_name}</span></span>
                 </div>
               </div>
 
@@ -169,12 +169,12 @@ export default function TrackResult() {
                 {/* Left Column - Timeline */}
                 <div className="lg:col-span-2 space-y-6">
                   {/* Current Status */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold text-black">{t('track.status.title')}</h2>
+                      <h2 className="text-xl font-bold text-white">{t('track.status.title')}</h2>
                       <button
                         onClick={fetchBaggageInfo}
-                        className="flex items-center space-x-2 text-sm text-gray-600 hover:text-black transition-colors"
+                        className="flex items-center space-x-2 text-sm text-white/70 hover:text-white transition-colors"
                       >
                         <RefreshCw className="w-4 h-4" />
                         <span>{t('track.status.refresh')}</span>
@@ -190,15 +190,15 @@ export default function TrackResult() {
                             <StatusIcon className={`w-8 h-8 ${statusInfo.color}`} />
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-2xl font-bold text-black mb-1">{statusInfo.label}</h3>
+                            <h3 className="text-2xl font-bold text-white mb-1">{statusInfo.label}</h3>
                             {baggage.current_location && (
-                              <p className="text-gray-600 flex items-center space-x-2">
+                              <p className="text-white/80 flex items-center space-x-2">
                                 <MapPin className="w-4 h-4" />
                                 <span>{baggage.current_location}</span>
                               </p>
                             )}
                             {baggage.last_scanned_at && (
-                              <p className="text-sm text-gray-500 mt-1">
+                              <p className="text-sm text-white/60 mt-1">
                                 {t('track.updated')}: {new Date(baggage.last_scanned_at).toLocaleString()}
                               </p>
                             )}
@@ -210,31 +210,31 @@ export default function TrackResult() {
 
                   {/* Journey Timeline */}
                   {(baggage.origin || baggage.destination) && (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                      <h2 className="text-xl font-bold text-black mb-6">{t('track.journey.title')}</h2>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
+                      <h2 className="text-xl font-bold text-white mb-6">{t('track.journey.title')}</h2>
                       <div className="flex items-center justify-between">
                         <div className="text-center">
-                          <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mb-3">
+                          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mb-3">
                             <Plane className="w-8 h-8 text-white" />
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">{t('track.journey.origin')}</p>
-                          <p className="text-2xl font-bold text-black">{baggage.origin || '-'}</p>
+                          <p className="text-sm text-white/70 mb-1">{t('track.journey.origin')}</p>
+                          <p className="text-2xl font-bold text-white">{baggage.origin || '-'}</p>
                         </div>
 
                         <div className="flex-1 mx-8">
                           <div className="relative">
-                            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-300"></div>
-                            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-black" style={{ width: '50%' }}></div>
-                            <Plane className="absolute top-1/2 -translate-y-1/2 w-6 h-6 text-black" style={{ left: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }} />
+                            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/30"></div>
+                            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white" style={{ width: '50%' }}></div>
+                            <Plane className="absolute top-1/2 -translate-y-1/2 w-6 h-6 text-white" style={{ left: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }} />
                           </div>
                         </div>
 
                         <div className="text-center">
-                          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                            <MapPin className="w-8 h-8 text-gray-600" />
+                          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mb-3">
+                            <MapPin className="w-8 h-8 text-white" />
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">{t('track.journey.destination')}</p>
-                          <p className="text-2xl font-bold text-black">{baggage.destination || '-'}</p>
+                          <p className="text-sm text-white/70 mb-1">{t('track.journey.destination')}</p>
+                          <p className="text-2xl font-bold text-white">{baggage.destination || '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -244,39 +244,39 @@ export default function TrackResult() {
                 {/* Right Column - Details */}
                 <div className="space-y-6">
                   {/* Baggage Details */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 className="font-bold text-black mb-4">{t('track.details.title')}</h3>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
+                    <h3 className="font-bold text-white mb-4">{t('track.details.title')}</h3>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">{t('track.details.tag')}</p>
-                        <p className="font-semibold text-black">{baggage.bag_id}</p>
+                        <p className="text-xs text-white/60 mb-1">{t('track.details.tag')}</p>
+                        <p className="font-semibold text-white">{baggage.bag_id}</p>
                       </div>
                       {baggage.weight && (
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">{t('track.details.weight')}</p>
-                          <p className="font-semibold text-black">{baggage.weight} kg</p>
+                          <p className="text-xs text-white/60 mb-1">{t('track.details.weight')}</p>
+                          <p className="font-semibold text-white">{baggage.weight} kg</p>
                         </div>
                       )}
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">{t('track.details.flight')}</p>
-                        <p className="font-semibold text-black">{baggage.flight_number}</p>
+                        <p className="text-xs text-white/60 mb-1">{t('track.details.flight')}</p>
+                        <p className="font-semibold text-white">{baggage.flight_number}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">{t('track.details.passenger')}</p>
-                        <p className="font-semibold text-black">{baggage.passenger_name}</p>
+                        <p className="text-xs text-white/60 mb-1">{t('track.details.passenger')}</p>
+                        <p className="font-semibold text-white">{baggage.passenger_name}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Help Card */}
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-                    <h3 className="font-bold text-black mb-3">{t('track.help.title')}</h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
+                    <h3 className="font-bold text-white mb-3">{t('track.help.title')}</h3>
+                    <p className="text-sm text-white/80 mb-4">
                       {t('track.help.text')}
                     </p>
                     <a
                       href="mailto:support@bfs-system.com"
-                      className="block w-full text-center bg-black hover:bg-gray-800 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
+                      className="block w-full text-center bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
                     >
                       {t('track.help.button')}
                     </a>
@@ -285,7 +285,7 @@ export default function TrackResult() {
                   {/* New Search */}
                   <Link
                     to="/"
-                    className="block w-full text-center border border-gray-300 hover:bg-gray-50 text-black font-medium py-2 px-4 rounded transition-colors text-sm"
+                    className="block w-full text-center bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
                   >
                     {t('track.another')}
                   </Link>

@@ -15,12 +15,12 @@ export default function Cookies() {
       <Header />
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b relative z-10">
+      <div className="bg-white/5 backdrop-blur-sm border-b relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center text-sm text-gray-600">
-            <Link to="/" className="hover:text-black">{t('breadcrumb.home')}</Link>
+          <div className="flex items-center text-sm text-white/70">
+            <Link to="/" className="hover:text-white">{t('breadcrumb.home')}</Link>
             <span className="mx-2">/</span>
-            <span className="text-black font-medium">{t('footer.legal.cookies')}</span>
+            <span className="text-white font-medium">{t('footer.legal.cookies')}</span>
           </div>
         </div>
       </div>
@@ -28,28 +28,28 @@ export default function Cookies() {
       {/* Main Content */}
       <main className="flex-1 relative z-10">
         <div className="max-w-4xl mx-auto px-4 py-16">
-          <h1 className="text-5xl font-bold text-black mb-6 tracking-tight">
+          <h1 className="text-5xl font-bold text-white mb-6 tracking-tight">
             {t('cookies.title')}
           </h1>
-          <p className="text-gray-700 mb-12 leading-relaxed">{t('cookies.intro')}</p>
+          <p className="text-white/80 mb-12 leading-relaxed">{t('cookies.intro')}</p>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <h2 className="text-2xl font-bold text-black mb-4">{t('cookies.what.title')}</h2>
-              <p className="text-gray-700 leading-relaxed">{t('cookies.what.text')}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+              <h2 className="text-2xl font-bold text-white mb-4">{t('cookies.what.title')}</h2>
+              <p className="text-white/80 leading-relaxed">{t('cookies.what.text')}</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <h2 className="text-2xl font-bold text-black mb-4">{t('cookies.types.title')}</h2>
-              <ul className="space-y-2 text-gray-700">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+              <h2 className="text-2xl font-bold text-white mb-4">{t('cookies.types.title')}</h2>
+              <ul className="space-y-2 text-white/80">
                 <li>• {t('cookies.types.essential')}</li>
                 <li>• {t('cookies.types.analytics')}</li>
               </ul>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <h2 className="text-2xl font-bold text-black mb-4">{t('cookies.control.title')}</h2>
-              <p className="text-gray-700 leading-relaxed">{t('cookies.control.text')}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+              <h2 className="text-2xl font-bold text-white mb-4">{t('cookies.control.title')}</h2>
+              <p className="text-white/80 leading-relaxed">{t('cookies.control.text')}</p>
             </div>
           </div>
         </div>

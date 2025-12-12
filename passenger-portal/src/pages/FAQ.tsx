@@ -27,12 +27,12 @@ export default function FAQ() {
       <Header />
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b relative z-10">
+      <div className="bg-white/5 backdrop-blur-sm border-b relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center text-sm text-gray-600">
-            <Link to="/" className="hover:text-black">{t('breadcrumb.home')}</Link>
+          <div className="flex items-center text-sm text-white/70">
+            <Link to="/" className="hover:text-white">{t('breadcrumb.home')}</Link>
             <span className="mx-2">/</span>
-            <span className="text-black font-medium">FAQ</span>
+            <span className="text-white font-medium">FAQ</span>
           </div>
         </div>
       </div>
@@ -40,26 +40,26 @@ export default function FAQ() {
       {/* Main Content */}
       <main className="flex-1 relative z-10">
         <div className="max-w-4xl mx-auto px-4 py-16">
-          <h1 className="text-5xl font-bold text-black mb-12 tracking-tight">
+          <h1 className="text-5xl font-bold text-white mb-12 tracking-tight">
             {t('faq.title')}
           </h1>
 
           <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 overflow-hidden">
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                  className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/5 backdrop-blur-sm transition-colors"
                 >
-                  <span className="font-semibold text-black">{faq.q}</span>
+                  <span className="font-semibold text-white">{faq.q}</span>
                   <ChevronDown
-                    className={`w-5 h-5 text-gray-600 transition-transform ${
+                    className={`w-5 h-5 text-white/70 transition-transform ${
                       openIndex === index ? 'transform rotate-180' : ''
                     }`}
                   />
                 </button>
                 {openIndex === index && (
-                  <div className="px-6 pb-4 text-gray-700 leading-relaxed">
+                  <div className="px-6 pb-4 text-white/80 leading-relaxed">
                     {faq.a}
                   </div>
                 )}

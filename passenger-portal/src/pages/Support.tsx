@@ -29,12 +29,12 @@ export default function Support() {
       <Header />
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b relative z-10">
+      <div className="bg-white/5 backdrop-blur-sm border-b relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center text-sm text-gray-600">
-            <Link to="/" className="hover:text-black">{t('breadcrumb.home')}</Link>
+          <div className="flex items-center text-sm text-white/70">
+            <Link to="/" className="hover:text-white">{t('breadcrumb.home')}</Link>
             <span className="mx-2">/</span>
-            <span className="text-black font-medium">{t('nav.support')}</span>
+            <span className="text-white font-medium">{t('nav.support')}</span>
           </div>
         </div>
       </div>
@@ -42,53 +42,53 @@ export default function Support() {
       {/* Main Content */}
       <main className="flex-1 relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-16">
-          <h1 className="text-5xl font-bold text-black mb-4 tracking-tight">
+          <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
             {t('support.title')}
           </h1>
-          <p className="text-xl text-gray-600 mb-12">{t('support.subtitle')}</p>
+          <p className="text-xl text-white/70 mb-12">{t('support.subtitle')}</p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Info */}
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                <h2 className="text-2xl font-bold text-black mb-4">{t('support.contact.title')}</h2>
-                <p className="text-gray-700 mb-6">{t('support.contact.text')}</p>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+                <h2 className="text-2xl font-bold text-white mb-4">{t('support.contact.title')}</h2>
+                <p className="text-white/80 mb-6">{t('support.contact.text')}</p>
 
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5 text-gray-600" />
+                    <Mail className="w-5 h-5 text-white/70" />
                     <div>
-                      <p className="text-sm text-gray-600">{t('support.contact.email')}</p>
-                      <a href="mailto:support@bfs-system.com" className="font-medium text-black hover:underline">
+                      <p className="text-sm text-white/70">{t('support.contact.email')}</p>
+                      <a href="mailto:support@bfs-system.com" className="font-medium text-white hover:underline">
                         support@bfs-system.com
                       </a>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-gray-600" />
+                    <Phone className="w-5 h-5 text-white/70" />
                     <div>
-                      <p className="text-sm text-gray-600">{t('support.contact.phone')}</p>
-                      <p className="font-medium text-black">+243 123 456 789</p>
-                      <p className="text-xs text-gray-500">{t('support.contact.hours')}</p>
+                      <p className="text-sm text-white/70">{t('support.contact.phone')}</p>
+                      <p className="font-medium text-white">+243 123 456 789</p>
+                      <p className="text-xs text-white/60">{t('support.contact.hours')}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Emergency */}
-              <div className="bg-red-50 rounded-lg border border-red-200 p-6">
-                <h3 className="font-bold text-red-900 mb-2">{t('support.emergency.title')}</h3>
-                <p className="text-sm text-red-800">{t('support.emergency.text')}</p>
+              <div className="bg-red-900/20 backdrop-blur-sm rounded-lg border border-red-400/30 p-6">
+                <h3 className="font-bold text-red-400 mb-2">{t('support.emergency.title')}</h3>
+                <p className="text-sm text-red-300">{t('support.emergency.text')}</p>
               </div>
             </div>
 
             {/* Contact Form */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <h2 className="text-2xl font-bold text-black mb-6">{t('support.form.title')}</h2>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+              <h2 className="text-2xl font-bold text-white mb-6">{t('support.form.title')}</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('support.form.name')}
                   </label>
                   <input
@@ -96,12 +96,12 @@ export default function Support() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50 text-white placeholder-white/60"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('support.form.email')}
                   </label>
                   <input
@@ -109,24 +109,24 @@ export default function Support() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50 text-white placeholder-white/60"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('support.form.pnr')}
                   </label>
                   <input
                     type="text"
                     value={formData.pnr}
                     onChange={(e) => setFormData({ ...formData, pnr: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50 text-white placeholder-white/60"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('support.form.subject')}
                   </label>
                   <input
@@ -134,12 +134,12 @@ export default function Support() {
                     required
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50 text-white placeholder-white/60"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('support.form.message')}
                   </label>
                   <textarea
@@ -147,13 +147,13 @@ export default function Support() {
                     rows={5}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50 text-white placeholder-white/60"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-black hover:bg-gray-800 text-white font-medium py-3 px-4 rounded transition-colors flex items-center justify-center space-x-2"
+                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 text-white font-medium py-3 px-6 rounded transition-colors flex items-center justify-center space-x-2"
                 >
                   <Send className="w-5 h-5" />
                   <span>{t('support.form.submit')}</span>
