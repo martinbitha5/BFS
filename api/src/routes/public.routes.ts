@@ -39,11 +39,10 @@ router.get('/track', async (req: Request, res: Response) => {
           p.full_name as passenger_name,
           p.pnr,
           p.flight_number,
-          f.origin,
-          f.destination
+          p.departure as origin,
+          p.arrival as destination
         FROM baggages b
         INNER JOIN passengers p ON b.passenger_id = p.id
-        LEFT JOIN flights f ON p.flight_number = f.flight_number
         WHERE UPPER(p.pnr) = UPPER($1)
         ORDER BY b.created_at DESC
         LIMIT 1
@@ -62,11 +61,10 @@ router.get('/track', async (req: Request, res: Response) => {
           p.full_name as passenger_name,
           p.pnr,
           p.flight_number,
-          f.origin,
-          f.destination
+          p.departure as origin,
+          p.arrival as destination
         FROM baggages b
         INNER JOIN passengers p ON b.passenger_id = p.id
-        LEFT JOIN flights f ON p.flight_number = f.flight_number
         WHERE UPPER(b.tag_number) = UPPER($1)
         ORDER BY b.created_at DESC
         LIMIT 1
