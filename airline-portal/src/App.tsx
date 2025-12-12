@@ -2,11 +2,15 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import About from './pages/About';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import LanguageSelection from './pages/LanguageSelection';
+import Legal from './pages/Legal';
 import Login from './pages/Login';
+import Privacy from './pages/Privacy';
 import Signup from './pages/Signup';
+import Terms from './pages/Terms';
 
 function App() {
   return (
