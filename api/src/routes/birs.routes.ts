@@ -1,22 +1,29 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { birsParserService } from '../services/birs-parser.service';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 
 const router = Router();
 
 // GET /api/v1/birs/international-baggages - Liste des bagages internationaux
-router.get('/international-baggages', async (req: Request, res: Response, next: NextFunction) => {
+// RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+router.get('/international-baggages', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, status, flight } = req.query;
+
+    // Le middleware garantit que airport existe et correspond à l'utilisateur
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
 
     let query = supabase
       .from('international_baggages')
       .select('*')
+      .eq('airport_code', airport) // FORCER le filtre par aéroport
       .order('scanned_at', { ascending: false });
-
-    if (airport) {
-      query = query.eq('airport_code', airport);
-    }
 
     if (status) {
       query = query.eq('status', status);
@@ -37,18 +44,24 @@ router.get('/international-baggages', async (req: Request, res: Response, next: 
 });
 
 // GET /api/v1/birs/reports - Liste des rapports BIRS
-router.get('/reports', async (req: Request, res: Response, next: NextFunction) => {
+// RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+router.get('/reports', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.query;
+
+    // Le middleware garantit que airport existe
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
 
     let query = supabase
       .from('birs_reports')
       .select('*')
+      .eq('airport_code', airport) // FORCER le filtre par aéroport
       .order('uploaded_at', { ascending: false });
-
-    if (airport) {
-      query = query.eq('airport_code', airport);
-    }
 
     const { data, error } = await query;
 
@@ -65,15 +78,43 @@ router.get('/reports', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // GET /api/v1/birs/reports/:id - Détails d'un rapport BIRS
-router.get('/reports/:id', async (req: Request, res: Response, next: NextFunction) => {
+// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
+router.get('/reports/:id', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const airport = req.query.airport as string;
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
 
     const { data: report, error: reportError } = await supabase
       .from('birs_reports')
       .select('*')
       .eq('id', id)
+      .eq('airport_code', airport) // FORCER le filtre par aéroport
       .single();
+
+    if (reportError) {
+      if (reportError.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Rapport non trouvé ou accès refusé'
+        });
+      }
+      throw reportError;
+    }
+
+    // Double vérification de sécurité
+    if (report && report.airport_code !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce rapport n\'appartient pas à votre aéroport'
+      });
+    }
 
     if (reportError) throw reportError;
 
@@ -98,9 +139,19 @@ router.get('/reports/:id', async (req: Request, res: Response, next: NextFunctio
 });
 
 // GET /api/v1/birs/statistics/:airport - Statistiques BIRS
-router.get('/statistics/:airport', async (req: Request, res: Response, next: NextFunction) => {
+// RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport
+router.get('/statistics/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.params;
+    const userAirport = req.query.airport as string;
+
+    // Vérifier que l'utilisateur demande les stats de son propre aéroport
+    if (userAirport && userAirport !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Vous ne pouvez accéder qu\'aux statistiques de votre aéroport'
+      });
+    }
 
     // Compter les bagages internationaux par statut
     const { data: baggages, error: baggagesError } = await supabase
@@ -271,10 +322,40 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // POST /api/v1/birs/reconcile/:reportId - Lancer la réconciliation
-router.post('/reconcile/:reportId', async (req: Request, res: Response, next: NextFunction) => {
+// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
+router.post('/reconcile/:reportId', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { reportId } = req.params;
     const { airportCode } = req.body;
+    const userAirport = req.query.airport as string || airportCode;
+
+    if (!userAirport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+
+    // Vérifier que le rapport appartient à l'aéroport de l'utilisateur
+    const { data: report, error: reportError } = await supabase
+      .from('birs_reports')
+      .select('airport_code')
+      .eq('id', reportId)
+      .single();
+
+    if (reportError || !report) {
+      return res.status(404).json({
+        success: false,
+        error: 'Rapport non trouvé'
+      });
+    }
+
+    if (report.airport_code !== userAirport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce rapport n\'appartient pas à votre aéroport'
+      });
+    }
 
     // Récupérer les items du rapport
     const { data: reportItems, error: itemsError } = await supabase
@@ -284,24 +365,41 @@ router.post('/reconcile/:reportId', async (req: Request, res: Response, next: Ne
 
     if (itemsError) throw itemsError;
 
-    // Récupérer les bagages scannés non réconciliés
+    // Récupérer les bagages scannés non réconciliés (déjà filtrés par aéroport)
     const { data: scannedBags, error: bagsError } = await supabase
       .from('international_baggages')
       .select('*')
-      .eq('airport_code', airportCode)
-      .eq('status', 'scanned');
+      .eq('airport_code', userAirport) // Utiliser l'aéroport validé
+      .in('status', ['scanned', 'pending']);
 
     if (bagsError) throw bagsError;
 
     let matchedCount = 0;
     const matches: any[] = [];
 
-    // Réconciliation simple: match par bagId
+    // Réconciliation améliorée: match par bagId, PNR, et nom de passager
     for (const item of reportItems || []) {
-      const matchedBag = scannedBags?.find(bag => 
-        bag.rfid_tag === item.bag_id || 
-        (bag.pnr && bag.pnr === item.pnr)
-      );
+      // Skip si déjà réconcilié
+      if (item.reconciled_at) continue;
+
+      const matchedBag = scannedBags?.find(bag => {
+        // Match exact sur tag RFID
+        if (bag.rfid_tag === item.bag_id) return true;
+        
+        // Match sur PNR si disponible
+        if (bag.pnr && item.pnr && bag.pnr === item.pnr) return true;
+        
+        // Match partiel sur nom de passager (insensible à la casse)
+        if (bag.passenger_name && item.passenger_name) {
+          const bagName = bag.passenger_name.toLowerCase().trim();
+          const itemName = item.passenger_name.toLowerCase().trim();
+          if (bagName === itemName || bagName.includes(itemName) || itemName.includes(bagName)) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
 
       if (matchedBag) {
         // Mettre à jour le bagage
@@ -335,11 +433,12 @@ router.post('/reconcile/:reportId', async (req: Request, res: Response, next: Ne
     }
 
     // Mettre à jour le rapport
+    const totalItems = reportItems?.length || 0;
     await supabase
       .from('birs_reports')
       .update({
         reconciled_count: matchedCount,
-        unmatched_count: (reportItems?.length || 0) - matchedCount,
+        unmatched_count: totalItems - matchedCount,
         processed_at: new Date().toISOString()
       })
       .eq('id', reportId);
@@ -348,12 +447,233 @@ router.post('/reconcile/:reportId', async (req: Request, res: Response, next: Ne
       success: true,
       data: {
         reportId,
-        totalItems: reportItems?.length || 0,
+        totalItems,
         matchedCount,
-        unmatchedCount: (reportItems?.length || 0) - matchedCount,
+        unmatchedCount: totalItems - matchedCount,
         matches
       }
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/v1/birs/manual-reconcile - Réconciliation manuelle
+// RESTRICTION: Vérifie que l'item et le bagage appartiennent à l'aéroport de l'utilisateur
+router.post('/manual-reconcile', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { itemId, baggageId, userId } = req.body;
+    const airport = req.query.airport as string || req.body.airport_code;
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+
+    if (!itemId || !baggageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'itemId and baggageId are required'
+      });
+    }
+
+    // Récupérer l'item du rapport
+    const { data: item, error: itemError } = await supabase
+      .from('birs_report_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+
+    if (itemError) throw itemError;
+
+    // Vérifier que l'item n'est pas déjà réconcilié
+    if (item.reconciled_at) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cet item est déjà réconcilié'
+      });
+    }
+
+    // Récupérer le rapport pour obtenir le numéro de vol
+    const { data: report, error: reportError } = await supabase
+      .from('birs_reports')
+      .select('flight_number')
+      .eq('id', item.birs_report_id)
+      .single();
+
+    if (reportError) throw reportError;
+
+    // Récupérer le bagage avec vérification de l'aéroport
+    const { data: baggage, error: baggageError } = await supabase
+      .from('international_baggages')
+      .select('*')
+      .eq('id', baggageId)
+      .eq('airport_code', airport) // FORCER le filtre par aéroport
+      .single();
+
+    if (baggageError) {
+      if (baggageError.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Bagage non trouvé ou accès refusé'
+        });
+      }
+      throw baggageError;
+    }
+
+    // Double vérification de sécurité
+    if (baggage && baggage.airport_code !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce bagage n\'appartient pas à votre aéroport'
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    // Mettre à jour le bagage
+    const { error: updateBaggageError } = await supabase
+      .from('international_baggages')
+      .update({
+        status: 'reconciled',
+        birs_report_id: item.birs_report_id,
+        passenger_name: item.passenger_name,
+        pnr: item.pnr,
+        flight_number: report.flight_number,
+        reconciled_at: now,
+        reconciled_by: userId
+      })
+      .eq('id', baggageId);
+
+    if (updateBaggageError) throw updateBaggageError;
+
+    // Mettre à jour l'item du rapport
+    const { error: updateItemError } = await supabase
+      .from('birs_report_items')
+      .update({
+        international_baggage_id: baggageId,
+        reconciled_at: now
+      })
+      .eq('id', itemId);
+
+    if (updateItemError) throw updateItemError;
+
+    // Mettre à jour les statistiques du rapport
+    const { data: reportItems } = await supabase
+      .from('birs_report_items')
+      .select('id, reconciled_at')
+      .eq('birs_report_id', item.birs_report_id);
+
+    const reconciledCount = reportItems?.filter(i => i.reconciled_at).length || 0;
+
+    await supabase
+      .from('birs_reports')
+      .update({
+        reconciled_count: reconciledCount,
+        unmatched_count: (reportItems?.length || 0) - reconciledCount
+      })
+      .eq('id', item.birs_report_id);
+
+    res.json({
+      success: true,
+      message: 'Réconciliation manuelle effectuée avec succès'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/v1/birs/reports/:id/export - Export Excel d'un rapport
+// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
+router.get('/reports/:id/export', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const airport = req.query.airport as string;
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+
+    // Vérifier que le rapport appartient à l'aéroport
+    const { data: reportCheck, error: checkError } = await supabase
+      .from('birs_reports')
+      .select('airport_code')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !reportCheck) {
+      return res.status(404).json({
+        success: false,
+        error: 'Rapport non trouvé'
+      });
+    }
+
+    if (reportCheck.airport_code !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce rapport n\'appartient pas à votre aéroport'
+      });
+    }
+
+    // Récupérer le rapport avec ses items
+    const { data: report, error: reportError } = await supabase
+      .from('birs_reports')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (reportError) throw reportError;
+
+    const { data: items, error: itemsError } = await supabase
+      .from('birs_report_items')
+      .select('*')
+      .eq('birs_report_id', id)
+      .order('passenger_name', { ascending: true });
+
+    if (itemsError) throw itemsError;
+
+    // Créer un fichier CSV simple (plus léger que Excel)
+    const csvRows: string[] = [];
+    
+    // En-têtes
+    csvRows.push([
+      'Tag Bagage',
+      'Nom Passager',
+      'PNR',
+      'Siège',
+      'Classe',
+      'Poids (kg)',
+      'Route',
+      'Statut',
+      'Date Réconciliation'
+    ].join(','));
+
+    // Données
+    items?.forEach(item => {
+      csvRows.push([
+        item.bag_id || '',
+        item.passenger_name || '',
+        item.pnr || '',
+        item.seat_number || '',
+        item.class || '',
+        item.weight?.toString() || '',
+        item.route || '',
+        item.reconciled_at ? 'Réconcilié' : 'Non matché',
+        item.reconciled_at ? new Date(item.reconciled_at).toLocaleString('fr-FR') : ''
+      ].map(v => `"${v}"`).join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const buffer = Buffer.from('\ufeff' + csvContent, 'utf8'); // BOM pour Excel
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="BRS_Report_${report.flight_number}_${report.flight_date}.csv"`);
+    res.send(buffer);
   } catch (error) {
     next(error);
   }

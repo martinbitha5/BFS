@@ -1,4 +1,4 @@
-import { Barcode, Download, LayoutDashboard, LogOut, Menu, Package, Plane, Users, X } from 'lucide-react';
+import { AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, ShieldCheck, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,20 +9,62 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface NavItem {
+  path?: string;
+  label: string;
+  icon: any;
+  children?: NavItem[];
+}
+
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['brs']);
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
     { path: '/flights', label: 'Gestion des Vols', icon: Plane },
     { path: '/baggages', label: 'Bagages', icon: Package },
     { path: '/passengers', label: 'Passagers', icon: Users },
-    { path: '/birs', label: 'BRS International', icon: Package },
+    {
+      label: 'BRS International',
+      icon: BarChart3,
+      children: [
+        { path: '/brs-dashboard', label: 'Dashboard', icon: BarChart3 },
+        { path: '/birs', label: 'Rapports', icon: Package },
+        { path: '/brs-workflow', label: 'Workflow', icon: RefreshCw },
+        { path: '/brs-unmatched', label: 'Non Matchés', icon: AlertTriangle },
+        { path: '/brs-traceability', label: 'Traçabilité', icon: Search },
+      ]
+    },
     { path: '/raw-scans', label: 'Scans Bruts', icon: Barcode },
     { path: '/export', label: 'Export', icon: Download },
+    { path: '/user-approval', label: 'Approbations', icon: ShieldCheck },
   ];
+
+  const isMenuExpanded = (menuLabel: string) => {
+    return expandedMenus.includes(menuLabel.toLowerCase().replace(/\s+/g, '-'));
+  };
+
+  const toggleMenu = (menuLabel: string) => {
+    const key = menuLabel.toLowerCase().replace(/\s+/g, '-');
+    setExpandedMenus(prev =>
+      prev.includes(key)
+        ? prev.filter(m => m !== key)
+        : [...prev, key]
+    );
+  };
+
+  const isActive = (path?: string) => {
+    if (!path) return false;
+    return location.pathname === path;
+  };
+
+  const isChildActive = (children?: NavItem[]) => {
+    if (!children) return false;
+    return children.some(child => child.path && location.pathname === child.path);
+  };
 
   return (
     <div 
@@ -71,14 +113,71 @@ export default function Layout({ children }: LayoutProps) {
           <div className="space-y-1 px-3">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              
+              // Item avec sous-menu
+              if (item.children) {
+                const menuKey = item.label.toLowerCase().replace(/\s+/g, '-');
+                const expanded = isMenuExpanded(menuKey);
+                const hasActiveChild = isChildActive(item.children);
+                
+                return (
+                  <div key={item.label}>
+                    <button
+                      onClick={() => toggleMenu(menuKey)}
+                      className={`w-full flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        hasActiveChild
+                          ? 'bg-white/20 text-white font-semibold'
+                          : 'text-white/80 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <Icon className="w-5 h-5 mr-3" />
+                        {item.label}
+                      </div>
+                      {expanded ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
+                    
+                    {expanded && (
+                      <div className="ml-4 mt-1 space-y-1 border-l-2 border-white/10 pl-2">
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const childActive = isActive(child.path);
+                          
+                          return (
+                            <Link
+                              key={child.path}
+                              to={child.path!}
+                              onClick={() => setSidebarOpen(false)}
+                              className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                                childActive
+                                  ? 'bg-white/20 text-white font-semibold'
+                                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              <ChildIcon className="w-4 h-4 mr-2" />
+                              {child.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              
+              // Item simple sans sous-menu
+              const active = isActive(item.path);
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={item.path!}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
+                    active
                       ? 'bg-white/20 text-white font-semibold shadow-lg'
                       : 'text-white/80 hover:bg-white/10'
                   }`}

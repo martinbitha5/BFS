@@ -5,6 +5,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import About from './pages/About';
 import Baggages from './pages/Baggages';
 import BIRS from './pages/BIRS';
+import BRSDashboard from './pages/BRSDashboard';
+import BRSUnmatched from './pages/BRSUnmatched';
+import BRSWorkflow from './pages/BRSWorkflow';
+import BRSTraceability from './pages/BRSTraceability';
 import DashboardEnhanced from './pages/DashboardEnhanced';
 import DebugParser from './pages/DebugParser';
 import Export from './pages/Export';
@@ -16,6 +20,7 @@ import Privacy from './pages/Privacy';
 import RawScans from './pages/RawScans';
 import Register from './pages/Register';
 import Terms from './pages/Terms';
+import UserApproval from './pages/UserApproval';
 
 function App() {
   return (
@@ -70,6 +75,46 @@ function App() {
             }
           />
           <Route
+            path="/brs-unmatched"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BRSUnmatched />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/brs-dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BRSDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/brs-traceability"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BRSTraceability />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/brs-workflow"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BRSWorkflow />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/export"
             element={
               <ProtectedRoute>
@@ -105,6 +150,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <FlightManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user-approval"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserApproval />
                 </Layout>
               </ProtectedRoute>
             }

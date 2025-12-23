@@ -1,24 +1,75 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/database';
+import { normalizeAuthError, normalizeHttpAuthError } from '../utils/auth-errors.util';
 
 const router = Router();
 
 /**
  * POST /api/v1/auth/register
- * Inscription d'un nouveau superviseur
+ * Inscription d'un nouveau superviseur ou litige bagages
+ * Nécessite une approbation par le support
  */
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name, airportCode, role = 'supervisor' } = req.body;
+    const { email, password, name, airportCode, role } = req.body;
 
-    if (!email || !password || !name || !airportCode) {
+    // Validation des champs requis
+    if (!email || !password || !name || !role) {
       return res.status(400).json({
         success: false,
-        error: 'Tous les champs sont requis'
+        error: 'Veuillez remplir tous les champs requis pour créer votre compte.'
       });
     }
 
-    // Créer l'utilisateur dans Supabase Auth
+    // Vérifier que le rôle est valide pour le dashboard
+    if (!['supervisor', 'baggage_dispute'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rôle invalide. Les rôles valides sont: supervisor, baggage_dispute'
+      });
+    }
+
+    // Pour supervisor, airportCode est requis
+    if (role === 'supervisor' && !airportCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le code aéroport est requis pour les superviseurs'
+      });
+    }
+
+    // Pour baggage_dispute, airportCode n'est pas requis (accès à tous les aéroports)
+    const finalAirportCode = role === 'baggage_dispute' ? 'ALL' : airportCode;
+
+    // Vérifier si une demande existe déjà pour cet email
+    const { data: existingRequest } = await supabase
+      .from('user_registration_requests')
+      .select('*')
+      .eq('email', email)
+      .in('status', ['pending', 'approved'])
+      .single();
+
+    if (existingRequest) {
+      return res.status(409).json({
+        success: false,
+        error: 'Une demande d\'inscription existe déjà pour cet email. Veuillez attendre l\'approbation ou contacter le support.'
+      });
+    }
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'Un compte existe déjà avec cet email. Veuillez vous connecter.'
+      });
+    }
+
+    // Créer l'utilisateur dans Supabase Auth (mais pas encore approuvé)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -28,19 +79,20 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     if (authError) {
       return res.status(400).json({
         success: false,
-        error: authError.message
+        error: normalizeAuthError(authError.message, 'register')
       });
     }
 
-    // Créer le profil dans la table users
+    // Créer le profil dans la table users (non approuvé par défaut)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .insert({
         id: authData.user.id,
         email,
         full_name: name,
-        airport_code: airportCode,
-        role
+        airport_code: finalAirportCode,
+        role,
+        approved: false // Non approuvé par défaut
       })
       .select()
       .single();
@@ -50,30 +102,40 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       await supabase.auth.admin.deleteUser(authData.user.id);
       return res.status(400).json({
         success: false,
-        error: userError.message
+        error: 'Une erreur est survenue lors de la création de votre profil. Veuillez réessayer.'
       });
     }
 
-    // Connecter automatiquement l'utilisateur après l'inscription
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    // Créer la demande d'inscription
+    const { data: registrationRequest, error: requestError } = await supabase
+      .from('user_registration_requests')
+      .insert({
+        email,
+        full_name: name,
+        airport_code: finalAirportCode,
+        role,
+        status: 'pending',
+        auth_user_id: authData.user.id
+      })
+      .select()
+      .single();
 
-    if (signInError) {
-      return res.status(500).json({
-        success: false,
-        error: 'Compte créé mais erreur de connexion automatique'
-      });
+    if (requestError) {
+      console.error('Error creating registration request:', requestError);
+      // Ne pas échouer si la demande ne peut pas être créée, l'utilisateur existe déjà
     }
 
+    // NE PAS connecter automatiquement l'utilisateur - il doit attendre l'approbation
     return res.status(201).json({
       success: true,
       data: {
-        user: userData,
-        token: signInData.session?.access_token
+        userId: userData.id,
+        requestId: registrationRequest?.id,
+        email: userData.email,
+        role: userData.role
       },
-      message: 'Inscription réussie'
+      message: 'Votre demande d\'inscription a été soumise avec succès. Vous recevrez un email une fois votre compte approuvé par le support.',
+      requiresApproval: true
     });
 
   } catch (error) {
@@ -92,7 +154,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email et mot de passe requis'
+        error: 'Veuillez saisir votre email et votre mot de passe.'
       });
     }
 
@@ -105,7 +167,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (authError) {
       return res.status(401).json({
         success: false,
-        error: 'Email ou mot de passe incorrect'
+        error: normalizeAuthError(authError.message, 'login')
       });
     }
 
@@ -119,7 +181,16 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (userError) {
       return res.status(404).json({
         success: false,
-        error: 'Profil utilisateur non trouvé'
+        error: 'Votre profil utilisateur n\'a pas été trouvé. Veuillez contacter le support.'
+      });
+    }
+
+    // Vérifier que l'utilisateur est approuvé (pour supervisor et baggage_dispute)
+    if (['supervisor', 'baggage_dispute'].includes(userData.role) && !userData.approved) {
+      return res.status(403).json({
+        success: false,
+        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        requiresApproval: true
       });
     }
 
@@ -148,7 +219,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        error: 'Token manquant'
+        error: 'Authentification requise. Veuillez vous connecter.'
       });
     }
 
@@ -160,7 +231,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (authError || !user) {
       return res.status(401).json({
         success: false,
-        error: 'Token invalide'
+        error: 'Votre session a expiré. Veuillez vous reconnecter.'
       });
     }
 
@@ -174,7 +245,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (userError) {
       return res.status(404).json({
         success: false,
-        error: 'Profil utilisateur non trouvé'
+        error: 'Votre profil utilisateur n\'a pas été trouvé. Veuillez contacter le support.'
       });
     }
 

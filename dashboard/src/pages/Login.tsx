@@ -1,6 +1,6 @@
-import { AlertCircle, Plane } from 'lucide-react';
-import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, CheckCircle, Plane } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -8,8 +8,19 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Afficher le message de succès si présent dans la navigation state
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Nettoyer le state après affichage
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -43,6 +54,14 @@ export default function Login() {
           <h1 className="text-3xl font-bold text-white">Baggage Found Solution</h1>
           <p className="text-white/80 mt-2">Connexion Superviseur</p>
         </div>
+
+        {/* Message de succès */}
+        {successMessage && (
+          <div className="mb-6 bg-green-900/30 backdrop-blur-md border border-green-200 rounded-lg p-4 flex items-start">
+            <CheckCircle className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+            <p className="text-green-800 text-sm">{successMessage}</p>
+          </div>
+        )}
 
         {/* Message d'erreur */}
         {error && (

@@ -1,15 +1,26 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/database';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 
 const router = Router();
 
 /**
  * GET /api/v1/stats/airport/:airport
  * Statistiques pour un aéroport spécifique
+ * RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport
  */
-router.get('/airport/:airport', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/airport/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.params;
+    const userAirport = req.query.airport as string;
+
+    // Vérifier que l'utilisateur demande les stats de son propre aéroport
+    if (userAirport && userAirport !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Vous ne pouvez accéder qu\'aux statistiques de votre aéroport'
+      });
+    }
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -71,8 +82,9 @@ router.get('/airport/:airport', async (req: Request, res: Response, next: NextFu
 /**
  * GET /api/v1/stats/global
  * Statistiques globales de tous les aéroports
+ * RESTRICTION: Réservé aux superviseurs uniquement
  */
-router.get('/global', async (req, res, next) => {
+router.get('/global', requireAirportCode, async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 

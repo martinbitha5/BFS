@@ -68,7 +68,7 @@ Les fichiers de production seront dans le dossier `dist/`
    - **Publish directory** : `dist`
    - **Base directory** : `airline-portal`
 3. Ajoutez les variables d'environnement :
-   - `VITE_API_URL=https://votre-api.onrender.com`
+   - `VITE_API_URL=https://api.votre-domaine.com` (Hostinger Cloud Pro)
 
 ### Vercel
 

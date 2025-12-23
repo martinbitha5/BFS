@@ -1,10 +1,29 @@
-import { Request, Response, Router } from 'express';
+import { Request, Response, Router, NextFunction } from 'express';
 import { Pool } from 'pg';
 
 const router = Router();
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
+
+// Initialize database pool only if DATABASE_URL is configured
+let pool: Pool | null = null;
+
+if (process.env.DATABASE_URL) {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+  });
+
+  // Handle pool errors
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle database client', err);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:15',message:'Database pool error',data:{error:err.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+  });
+} else {
+  console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:20',message:'DATABASE_URL missing',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+}
 
 /**
  * Route publique pour tracker un bagage
@@ -12,8 +31,19 @@ const pool = new Pool({
  * GET /api/v1/public/track?pnr=ABC123
  * GET /api/v1/public/track?tag=RF123456
  */
-router.get('/track', async (req: Request, res: Response) => {
+router.get('/track', async (req: Request, res: Response, next: NextFunction) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:25',message:'Track request received',data:{pnr:req.query.pnr,tag:req.query.tag,hasPool:!!pool},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+
   try {
+    if (!pool) {
+      return res.status(503).json({
+        success: false,
+        error: 'Service de base de données non disponible. Veuillez configurer DATABASE_URL.'
+      });
+    }
+
     const { pnr, tag } = req.query;
 
     if (!pnr && !tag) {
@@ -209,11 +239,12 @@ router.get('/track', async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:217',message:'Track request error',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+
     console.error('Erreur lors de la recherche du bagage:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la recherche. Veuillez réessayer.'
-    });
+    next(error);
   }
 });
 

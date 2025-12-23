@@ -1,23 +1,30 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
 
 const router = Router();
 
 /**
  * GET /api/v1/passengers
  * Récupérer tous les passagers avec filtres optionnels
+ * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, flight, status } = req.query;
     
+    // Le middleware garantit que airport existe et correspond à l'utilisateur
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+    
     let query = supabase
       .from('passengers')
-      .select('*, baggages(*), boarding_status(*)');
-
-    if (airport) {
-      query = query.eq('airport_code', airport);
-    }
+      .select('*, baggages(*), boarding_status(*)')
+      .eq('airport_code', airport); // FORCER le filtre par aéroport
     if (flight) {
       query = query.eq('flight_number', flight);
     }
@@ -55,16 +62,44 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * GET /api/v1/passengers/:id
  * Récupérer un passager spécifique
+ * RESTRICTION: Vérifie que le passager appartient à l'aéroport de l'utilisateur
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requireAirportCode, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const airport = req.query.airport as string || req.body.airport_code as string;
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
 
     const { data, error } = await supabase
       .from('passengers')
       .select('*, baggages(*), boarding_status(*)')
       .eq('id', id)
+      .eq('airport_code', airport) // FORCER le filtre par aéroport
       .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Passenger not found or access denied'
+        });
+      }
+      throw error;
+    }
+
+    // Double vérification de sécurité
+    if (data && data.airport_code !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce passager n\'appartient pas à votre aéroport'
+      });
+    }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -121,10 +156,37 @@ router.get('/pnr/:pnr', async (req, res, next) => {
 /**
  * POST /api/v1/passengers
  * Créer un nouveau passager (check-in)
+ * RESTRICTION: Vérifie que le vol est programmé et que l'aéroport correspond
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const passengerData = req.body;
+    const airport = req.query.airport as string || passengerData.airport_code;
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+
+    // VALIDATION: Vérifier que le vol est programmé
+    if (passengerData.flight_number) {
+      const { validateFlightForScan } = await import('../middleware/scan-validation.middleware');
+      const validation = await validateFlightForScan(passengerData.flight_number, airport);
+
+      if (!validation.valid) {
+        return res.status(403).json({
+          success: false,
+          error: validation.reason || 'Vol non programmé',
+          rejected: true,
+          flightNumber: passengerData.flight_number
+        });
+      }
+    }
+
+    // FORCER l'aéroport dans les données
+    passengerData.airport_code = airport;
 
     const { data, error } = await supabase
       .from('passengers')

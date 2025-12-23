@@ -1,16 +1,20 @@
-import { Request, Response, Router } from 'express';
+import { Request, Response, Router, NextFunction } from 'express';
 import { supabase } from '../config/database';
+import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { validateBoardingPassScan, validateBaggageScan } from '../middleware/scan-validation.middleware';
 
 const router = Router();
 
 /**
  * GET /api/v1/raw-scans?airport=XXX&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&status=checkin
  * Récupérer les scans bruts avec filtres
+ * RESTRICTION: Nécessite le code aéroport et filtre automatiquement par aéroport
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { airport, start_date, end_date, status, scan_type } = req.query;
 
+        // Le middleware requireAirportCode garantit que airport existe
         if (!airport) {
             return res.status(400).json({ error: 'Le code aéroport est requis' });
         }
@@ -54,7 +58,7 @@ router.get('/', async (req: Request, res: Response) => {
         });
     } catch (err: any) {
         console.error('Error in GET /raw-scans:', err);
-        res.status(500).json({ error: err.message || 'Erreur serveur' });
+        next(err);
     }
 });
 
@@ -62,7 +66,7 @@ router.get('/', async (req: Request, res: Response) => {
  * GET /api/v1/raw-scans/stats?airport=XXX
  * Statistiques des scans bruts
  */
-router.get('/stats', async (req: Request, res: Response) => {
+router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { airport } = req.query;
 
@@ -101,15 +105,16 @@ router.get('/stats', async (req: Request, res: Response) => {
         });
     } catch (err: any) {
         console.error('Error in GET /raw-scans/stats:', err);
-        res.status(500).json({ error: err.message || 'Erreur serveur' });
+        next(err);
     }
 });
 
 /**
  * POST /api/v1/raw-scans (sync depuis l'app mobile)
  * Créer ou mettre à jour un scan brut
+ * VALIDATION: Vérifie que le vol est programmé avant d'accepter le scan
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const {
             raw_data,
@@ -128,12 +133,40 @@ router.post('/', async (req: Request, res: Response) => {
             });
         }
 
+        // VALIDATION: Si c'est un boarding pass (check-in), valider le vol
+        if (scan_type === 'boarding_pass' && status_checkin) {
+            const { validateFlightForScan } = await import('../middleware/scan-validation.middleware');
+            
+            // Extraire le numéro de vol du boarding pass
+            const flightMatch = raw_data.match(/\b([A-Z]{2,3}\d{2,4})\b/);
+            if (flightMatch) {
+                const flightNumber = flightMatch[1];
+                const validation = await validateFlightForScan(flightNumber, airport_code);
+
+                if (!validation.valid) {
+                    return res.status(403).json({
+                        success: false,
+                        error: validation.reason || 'Vol non programmé',
+                        rejected: true,
+                        flightNumber,
+                        message: `Le scan a été refusé car le vol ${flightNumber} n'est pas programmé à l'aéroport ${airport_code}`
+                    });
+                }
+            }
+        }
+
         // Vérifier si le scan existe déjà  
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from('raw_scans')
             .select('id, scan_count, status_checkin, status_baggage, status_boarding, status_arrival')
             .eq('raw_data', raw_data)
             .single();
+
+        // Ignorer l'erreur PGRST116 (no rows returned) - c'est normal si le scan n'existe pas
+        if (existingError && existingError.code !== 'PGRST116') {
+            console.error('Error checking existing scan:', existingError);
+            return res.status(500).json({ error: 'Erreur lors de la vérification du scan' });
+        }
 
         if (existing) {
             // Mise à jour
@@ -196,7 +229,7 @@ router.post('/', async (req: Request, res: Response) => {
         });
     } catch (err: any) {
         console.error('Error in POST /raw-scans:', err);
-        res.status(500).json({ error: err.message || 'Erreur serveur' });
+        next(err);
     }
 });
 

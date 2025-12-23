@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { User, UserRole, UserSession } from '../types/user.types';
+import { normalizeAuthError } from '../utils/auth-errors.util';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -41,7 +42,7 @@ class AuthService {
     });
 
     if (authError) {
-      throw new Error(`Erreur d'inscription: ${authError.message}`);
+      throw new Error(normalizeAuthError(authError.message, 'register'));
     }
 
     if (!authData.user) {
@@ -100,7 +101,7 @@ class AuthService {
     });
 
     if (authError) {
-      throw new Error(`Erreur de connexion: ${authError.message}`);
+      throw new Error(normalizeAuthError(authError.message, 'login'));
     }
 
     if (!authData.user || !authData.session) {

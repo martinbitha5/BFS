@@ -17,7 +17,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
     if (!name || !code || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Tous les champs sont requis',
+        error: 'Veuillez remplir tous les champs requis pour créer votre compte.',
       });
     }
 
@@ -45,7 +45,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
     if (existing) {
       return res.status(409).json({
         success: false,
-        error: 'Cet email ou ce code IATA est déjà utilisé',
+        error: 'Cet email ou ce code IATA est déjà utilisé. Veuillez utiliser d\'autres identifiants ou vous connecter.',
       });
     }
 
@@ -94,7 +94,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email et mot de passe requis',
+        error: 'Veuillez saisir votre email et votre mot de passe.',
       });
     }
 
@@ -108,7 +108,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (error || !airline) {
       return res.status(401).json({
         success: false,
-        error: 'Email ou mot de passe incorrect',
+        error: 'Les identifiants saisis sont incorrects. Veuillez vérifier votre email et votre mot de passe.',
       });
     }
 
@@ -118,7 +118,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (!validPassword) {
       return res.status(401).json({
         success: false,
-        error: 'Email ou mot de passe incorrect',
+        error: 'Les identifiants saisis sont incorrects. Veuillez vérifier votre email et votre mot de passe.',
       });
     }
 
@@ -153,7 +153,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Token manquant',
+        error: 'Authentification requise. Veuillez vous connecter.',
       });
     }
 
@@ -168,7 +168,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (error || !airline) {
       return res.status(404).json({
         success: false,
-        error: 'Compagnie non trouvée',
+        error: 'Votre compte compagnie aérienne n\'a pas été trouvé. Veuillez contacter le support.',
       });
     }
 

@@ -11,6 +11,7 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     airportCode: '',
+    role: 'supervisor' as 'supervisor' | 'baggage_dispute',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,8 +30,14 @@ export default function Register() {
     setError('');
 
     // Validation
-    if (!formData.name || !formData.email || !formData.password || !formData.airportCode) {
+    if (!formData.name || !formData.email || !formData.password || !formData.role) {
       setError('Tous les champs sont requis');
+      return;
+    }
+
+    // Pour supervisor, airportCode est requis
+    if (formData.role === 'supervisor' && !formData.airportCode) {
+      setError('Le code aéroport est requis pour les superviseurs');
       return;
     }
 
@@ -47,8 +54,19 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(formData.email, formData.password, formData.name, formData.airportCode);
-      navigate('/dashboard');
+      await register(
+        formData.email, 
+        formData.password, 
+        formData.name, 
+        formData.airportCode, 
+        formData.role
+      );
+      // Ne pas rediriger automatiquement - afficher un message de succès
+      navigate('/login', { 
+        state: { 
+          message: 'Votre demande d\'inscription a été soumise. Vous recevrez un email une fois votre compte approuvé par le support.' 
+        } 
+      });
     } catch (err: any) {
       setError(err.message || 'Erreur lors de l\'inscription');
     } finally {
@@ -71,7 +89,7 @@ export default function Register() {
             <UserPlus className="w-8 h-8 text-primary-600" />
           </div>
           <h1 className="text-3xl font-bold text-white">Baggage Found Solution</h1>
-          <p className="text-white/80 mt-2">Créer un compte superviseur</p>
+          <p className="text-white/80 mt-2">Demande d'inscription</p>
         </div>
 
         {/* Message d'erreur */}
@@ -119,35 +137,60 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="airportCode" className="block text-sm font-medium text-white/85 mb-2">
-              Aéroport
+            <label htmlFor="role" className="block text-sm font-medium text-white/85 mb-2">
+              Rôle
             </label>
             <select
-              id="airportCode"
-              name="airportCode"
-              value={formData.airportCode}
+              id="role"
+              name="role"
+              value={formData.role}
               onChange={handleChange}
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
               disabled={loading}
             >
-              <option value="">Sélectionner un aéroport</option>
-              <optgroup label="Aéroports RDC (10)">
-                {getDomesticAirports().map((airport) => (
-                  <option key={airport.code} value={airport.code}>
-                    {airport.name} ({airport.code})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Destinations internationales (7)">
-                {getInternationalAirports().map((airport) => (
-                  <option key={airport.code} value={airport.code}>
-                    {airport.name}, {airport.country} ({airport.code})
-                  </option>
-                ))}
-              </optgroup>
+              <option value="supervisor">Superviseur (Aéroport spécifique)</option>
+              <option value="baggage_dispute">Litiges Bagages (Tous les aéroports)</option>
             </select>
+            <p className="mt-1 text-xs text-white/60">
+              {formData.role === 'supervisor' 
+                ? 'Accès limité à un aéroport spécifique' 
+                : 'Accès à tous les aéroports pour la gestion des litiges'}
+            </p>
           </div>
+
+          {formData.role === 'supervisor' && (
+            <div>
+              <label htmlFor="airportCode" className="block text-sm font-medium text-white/85 mb-2">
+                Aéroport
+              </label>
+              <select
+                id="airportCode"
+                name="airportCode"
+                value={formData.airportCode}
+                onChange={handleChange}
+                required={formData.role === 'supervisor'}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+                disabled={loading}
+              >
+                <option value="">Sélectionner un aéroport</option>
+                <optgroup label="Aéroports RDC (10)">
+                  {getDomesticAirports().map((airport) => (
+                    <option key={airport.code} value={airport.code}>
+                      {airport.name} ({airport.code})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Destinations internationales (7)">
+                  {getInternationalAirports().map((airport) => (
+                    <option key={airport.code} value={airport.code}>
+                      {airport.name}, {airport.country} ({airport.code})
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+          )}
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-white/85 mb-2">
@@ -210,7 +253,8 @@ export default function Register() {
           <div className="flex items-start">
             <Plane className="w-5 h-5 text-primary-300 mr-2 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-white/70">
-              Ce compte vous permettra de gérer les opérations de bagages et de passagers pour votre aéroport.
+              Votre demande d'inscription sera soumise pour approbation par le support. 
+              Vous recevrez un email une fois votre compte approuvé.
             </p>
           </div>
         </div>

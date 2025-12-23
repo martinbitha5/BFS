@@ -1,23 +1,31 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { validateBaggageScan } from '../middleware/scan-validation.middleware';
 
 const router = Router();
 
 /**
  * GET /api/v1/baggage
  * Liste de tous les bagages avec filtres optionnels
+ * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, flight, status } = req.query;
     
+    // Le middleware garantit que airport existe
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis'
+      });
+    }
+    
     let query = supabase
       .from('baggages')
-      .select('*, passengers(*)');
-
-    if (airport) {
-      query = query.eq('airport_code', airport);
-    }
+      .select('*, passengers(*)')
+      .eq('airport_code', airport); // FORCER le filtre par aéroport
     if (status) {
       query = query.eq('status', status);
     }
@@ -221,15 +229,38 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * POST /api/v1/baggage/scan
  * Scanner un bagage RFID
+ * RESTRICTION: Vérifie que le bagage appartient à l'aéroport et que le vol est programmé
  */
-router.post('/scan', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/scan', requireAirportCode, validateBaggageScan, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { tagNumber, location, scannedBy } = req.body;
+    const { tagNumber, location, scannedBy, airport_code } = req.body;
 
     if (!tagNumber) {
       return res.status(400).json({
         success: false,
         error: 'tagNumber is required'
+      });
+    }
+
+    // Récupérer le bagage pour vérifier l'aéroport
+    const { data: baggage, error: baggageError } = await supabase
+      .from('baggages')
+      .select('airport_code, flight_number, passenger_id')
+      .eq('tag_number', tagNumber)
+      .single();
+
+    if (baggageError || !baggage) {
+      return res.status(404).json({
+        success: false,
+        error: 'Bagage non trouvé'
+      });
+    }
+
+    // Vérifier que le bagage appartient à l'aéroport
+    if (baggage.airport_code !== airport_code) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ce bagage n\'appartient pas à votre aéroport'
       });
     }
 
@@ -242,6 +273,7 @@ router.post('/scan', async (req: Request, res: Response, next: NextFunction) => 
         last_scanned_by: scannedBy
       })
       .eq('tag_number', tagNumber)
+      .eq('airport_code', airport_code) // Double sécurité
       .select()
       .single();
 
