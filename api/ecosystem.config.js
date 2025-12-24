@@ -1,4 +1,17 @@
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+const path = require('path');
+const fs = require('fs');
+const dotenv = require('dotenv');
+
+// Charger les variables d'environnement depuis .env
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
+
+// Fonction pour obtenir une variable d'environnement (priorité: process.env > .env)
+function getEnv(key, defaultValue) {
+  return process.env[key] || defaultValue;
+}
 
 module.exports = {
   apps: [{
@@ -13,12 +26,12 @@ module.exports = {
     },
     env_production: {
       NODE_ENV: 'production',
-      PORT: process.env.PORT || 3000,
-      JWT_SECRET: process.env.JWT_SECRET,
-      SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
-      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
-      API_KEY: process.env.API_KEY
+      PORT: getEnv('PORT', '3000'),
+      JWT_SECRET: getEnv('JWT_SECRET'),
+      SUPABASE_URL: getEnv('SUPABASE_URL'),
+      SUPABASE_SERVICE_KEY: getEnv('SUPABASE_SERVICE_KEY'),
+      ALLOWED_ORIGINS: getEnv('ALLOWED_ORIGINS'),
+      API_KEY: getEnv('API_KEY')
     },
     error_file: './logs/pm2-error.log',
     out_file: './logs/pm2-out.log',
