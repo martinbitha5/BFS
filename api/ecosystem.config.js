@@ -2,15 +2,13 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-// Charger les variables d'environnement depuis .env
+// Charger les variables d'environnement
+// Priorité: process.env (Hostinger) > .env file > defaultValue
 const envPath = path.join(__dirname, '.env');
 let envVars = {};
 
-console.log('[ecosystem.config.js] Checking for .env file at:', envPath);
-console.log('[ecosystem.config.js] File exists:', fs.existsSync(envPath));
-
+// D'abord, charger depuis .env si le fichier existe (pour développement local)
 if (fs.existsSync(envPath)) {
-  // Charger dans process.env d'abord
   dotenv.config({ path: envPath });
   
   // Lire directement le fichier pour être sûr
@@ -25,17 +23,21 @@ if (fs.existsSync(envPath)) {
       }
     }
   });
-  console.log('[ecosystem.config.js] Loaded variables from .env:', Object.keys(envVars).join(', '));
-  console.log('[ecosystem.config.js] JWT_SECRET found:', !!envVars.JWT_SECRET);
-} else {
-  console.log('[ecosystem.config.js] WARNING: .env file not found!');
-  console.log('[ecosystem.config.js] Current directory:', __dirname);
-  console.log('[ecosystem.config.js] Files in directory:', fs.readdirSync(__dirname).join(', '));
 }
 
-// Fonction pour obtenir une variable d'environnement (priorité: process.env > .env file > defaultValue)
+// Fonction pour obtenir une variable d'environnement
+// Priorité: process.env (Hostinger) > .env file > defaultValue
 function getEnv(key, defaultValue) {
-  return process.env[key] || envVars[key] || defaultValue;
+  // process.env a la priorité (variables définies par Hostinger)
+  if (process.env[key]) {
+    return process.env[key];
+  }
+  // Sinon, utiliser le fichier .env
+  if (envVars[key]) {
+    return envVars[key];
+  }
+  // Sinon, utiliser la valeur par défaut
+  return defaultValue;
 }
 
 module.exports = {
