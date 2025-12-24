@@ -5,7 +5,12 @@ import { supabase } from '../config/database';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
-  if (process.env.NODE_ENV === 'production') {
+  // Vérifier si on est en production (soit NODE_ENV=production, soit pas de NODE_ENV défini mais pas en développement)
+  const isProduction = process.env.NODE_ENV === 'production' || (!process.env.NODE_ENV && !process.env.DEV);
+  if (isProduction) {
+    console.error('❌ ERREUR: JWT_SECRET doit être défini en production!');
+    console.error('   NODE_ENV:', process.env.NODE_ENV || 'non défini');
+    console.error('   Variables disponibles:', Object.keys(process.env).filter(k => k.includes('JWT') || k.includes('SUPABASE')).join(', '));
     throw new Error('JWT_SECRET must be set in production environment');
   }
   return 'your-secret-key-change-in-production';

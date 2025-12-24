@@ -23,7 +23,23 @@ log('📁 Répertoire actuel:', process.cwd());
 log('📁 __dirname:', __dirname);
 
 // Charger les variables d'environnement
-require('dotenv').config();
+// D'abord depuis api/.env (priorité)
+const apiEnvPath = path.join(__dirname, 'api', '.env');
+if (fs.existsSync(apiEnvPath)) {
+  require('dotenv').config({ path: apiEnvPath });
+  log('✅ Variables chargées depuis api/.env');
+} else {
+  log('⚠️  Fichier api/.env non trouvé');
+}
+
+// Puis depuis la racine (pour override)
+require('dotenv').config({ override: false });
+
+// Si NODE_ENV n'est pas défini mais qu'on est sur Hostinger, considérer comme production
+if (!process.env.NODE_ENV && process.env.PORT) {
+  process.env.NODE_ENV = 'production';
+  log('⚠️  NODE_ENV non défini, défini comme "production" (détection Hostinger)');
+}
 
 // Vérifier les variables critiques
 log('\n🔑 Variables d\'environnement:');
