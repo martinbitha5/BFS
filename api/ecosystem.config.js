@@ -4,13 +4,29 @@ const dotenv = require('dotenv');
 
 // Charger les variables d'environnement depuis .env
 const envPath = path.join(__dirname, '.env');
+let envVars = {};
+
 if (fs.existsSync(envPath)) {
+  // Charger dans process.env d'abord
   dotenv.config({ path: envPath });
+  
+  // Lire directement le fichier pour être sûr
+  const envFile = fs.readFileSync(envPath, 'utf8');
+  envFile.split('\n').forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        envVars[key.trim()] = value.trim();
+      }
+    }
+  });
 }
 
-// Fonction pour obtenir une variable d'environnement (priorité: process.env > .env)
+// Fonction pour obtenir une variable d'environnement (priorité: process.env > .env file > defaultValue)
 function getEnv(key, defaultValue) {
-  return process.env[key] || defaultValue;
+  return process.env[key] || envVars[key] || defaultValue;
 }
 
 module.exports = {
