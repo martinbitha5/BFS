@@ -6,6 +6,9 @@ const dotenv = require('dotenv');
 const envPath = path.join(__dirname, '.env');
 let envVars = {};
 
+console.log('[ecosystem.config.js] Checking for .env file at:', envPath);
+console.log('[ecosystem.config.js] File exists:', fs.existsSync(envPath));
+
 if (fs.existsSync(envPath)) {
   // Charger dans process.env d'abord
   dotenv.config({ path: envPath });
@@ -22,6 +25,12 @@ if (fs.existsSync(envPath)) {
       }
     }
   });
+  console.log('[ecosystem.config.js] Loaded variables from .env:', Object.keys(envVars).join(', '));
+  console.log('[ecosystem.config.js] JWT_SECRET found:', !!envVars.JWT_SECRET);
+} else {
+  console.log('[ecosystem.config.js] WARNING: .env file not found!');
+  console.log('[ecosystem.config.js] Current directory:', __dirname);
+  console.log('[ecosystem.config.js] Files in directory:', fs.readdirSync(__dirname).join(', '));
 }
 
 // Fonction pour obtenir une variable d'environnement (priorité: process.env > .env file > defaultValue)
