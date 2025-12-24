@@ -63,10 +63,29 @@ Module._resolveFilename = function(request, parent, isMain) {
 process.chdir(path.join(__dirname, 'api'));
 
 // Charger et démarrer le serveur API
+console.log('🚀 Démarrage du serveur API...');
+console.log('📁 Répertoire de travail:', process.cwd());
+console.log('🔑 Variables d\'environnement critiques:');
+console.log('   NODE_ENV:', process.env.NODE_ENV);
+console.log('   PORT:', process.env.PORT);
+console.log('   JWT_SECRET:', process.env.JWT_SECRET ? '✅ Défini' : '❌ MANQUANT');
+console.log('   SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Défini' : '❌ MANQUANT');
+console.log('   SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? '✅ Défini' : '❌ MANQUANT');
+
 try {
-  require(path.join(__dirname, 'api', 'dist', 'server.js'));
+  const serverPath = path.join(__dirname, 'api', 'dist', 'server.js');
+  console.log('📂 Chargement du serveur depuis:', serverPath);
+  
+  if (!fs.existsSync(serverPath)) {
+    throw new Error(`Le fichier serveur n'existe pas: ${serverPath}`);
+  }
+  
+  require(serverPath);
+  console.log('✅ Serveur chargé avec succès');
 } catch (error) {
-  console.error('Erreur lors du démarrage du serveur:', error);
+  console.error('❌ ERREUR lors du démarrage du serveur:');
+  console.error('   Message:', error.message);
+  console.error('   Stack:', error.stack);
   process.exit(1);
 }
 
