@@ -5,9 +5,11 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { apiKeyAuth } from './middleware/auth.middleware';
 import { errorHandler } from './middleware/error.middleware';
+import airlineApprovalRoutes from './routes/airline-approval.routes';
 import airlinesRoutes from './routes/airlines.routes';
 import airportsRoutes from './routes/airports.routes';
 import authRoutes from './routes/auth.routes';
+import baggageAuthorizationRoutes from './routes/baggage-authorization.routes';
 import baggageRoutes from './routes/baggage.routes';
 import birsHistoryRoutes from './routes/birs-history.routes';
 import birsRoutes from './routes/birs.routes';
@@ -72,7 +74,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/confirm', confirmRoutes); // Confirmation email - endpoint public
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/user-approval', apiKeyAuth, userApprovalRoutes); // Authentification - endpoint public
+app.use('/api/v1/user-approval', apiKeyAuth, userApprovalRoutes); // Approbation utilisateurs - nécessite auth
+app.use('/api/v1/airline-approval', apiKeyAuth, airlineApprovalRoutes); // Approbation airlines - nécessite auth
+app.use('/api/v1/baggage-authorization', apiKeyAuth, baggageAuthorizationRoutes); // Autorisation bagages supplémentaires - nécessite auth support
 app.use('/api/v1/public', publicRoutes); // ✅ NEW: Tracking passagers - endpoint public
 app.use('/api/v1/airlines', airlinesRoutes); // ✅ NEW: Auth compagnies aériennes - endpoint public
 app.use('/api/v1/birs/history', birsHistoryRoutes); // ✅ NEW: Historique BIRS pour compagnies
@@ -98,13 +102,11 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.ts:70',message:'Server started',data:{port:PORT,env:process.env.NODE_ENV||'development'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-
-  console.log(`Baggage Found Solution API Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Baggage Found Solution API Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  }
 });
 
 export default app;

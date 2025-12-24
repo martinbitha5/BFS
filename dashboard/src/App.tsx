@@ -20,6 +20,8 @@ import Privacy from './pages/Privacy';
 import RawScans from './pages/RawScans';
 import Register from './pages/Register';
 import Terms from './pages/Terms';
+import AirlineApproval from './pages/AirlineApproval';
+import BaggageAuthorization from './pages/BaggageAuthorization';
 import UserApproval from './pages/UserApproval';
 
 function App() {
@@ -160,6 +162,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <UserApproval />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/airline-approval"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AirlineApproval />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/baggage-authorization"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BaggageAuthorization />
                 </Layout>
               </ProtectedRoute>
             }

@@ -13,16 +13,14 @@ if (process.env.DATABASE_URL) {
 
   // Handle pool errors
   pool.on('error', (err) => {
-    console.error('Unexpected error on idle database client', err);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:15',message:'Database pool error',data:{error:err.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Unexpected error on idle database client', err);
+    }
   });
 } else {
-  console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:20',message:'DATABASE_URL missing',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
+  }
 }
 
 /**
@@ -32,10 +30,6 @@ if (process.env.DATABASE_URL) {
  * GET /api/v1/public/track?tag=RF123456
  */
 router.get('/track', async (req: Request, res: Response, next: NextFunction) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:25',message:'Track request received',data:{pnr:req.query.pnr,tag:req.query.tag,hasPool:!!pool},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-
   try {
     if (!pool) {
       return res.status(503).json({
@@ -239,11 +233,9 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
     });
 
   } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'public.routes.ts:217',message:'Track request error',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-
-    console.error('Erreur lors de la recherche du bagage:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Erreur lors de la recherche du bagage:', error);
+    }
     next(error);
   }
 });

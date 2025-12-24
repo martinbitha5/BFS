@@ -4,11 +4,16 @@ import jwt from 'jsonwebtoken';
 import { supabase } from '../config/database';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production environment');
+  }
+  return 'your-secret-key-change-in-production';
+})();
 
 /**
  * POST /api/v1/airlines/signup
- * Inscription d'une nouvelle compagnie aérienne
+ * Inscription d'une nouvelle compagnie aérienne (crée une demande d'approbation)
  */
 router.post('/signup', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -35,48 +40,70 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    // Vérifier si l'email ou le code existe déjà
-    const { data: existing } = await supabase
+    // Vérifier si l'email ou le code existe déjà dans airlines
+    const { data: existingAirline } = await supabase
       .from('airlines')
       .select('id')
-      .or(`email.eq.${email},code.eq.${code}`)
+      .or(`email.eq.${email},code.eq.${code.toUpperCase()}`)
       .single();
 
-    if (existing) {
+    if (existingAirline) {
       return res.status(409).json({
         success: false,
         error: 'Cet email ou ce code IATA est déjà utilisé. Veuillez utiliser d\'autres identifiants ou vous connecter.',
       });
     }
 
+    // Vérifier si une demande existe déjà
+    const { data: existingRequest } = await supabase
+      .from('airline_registration_requests')
+      .select('id, status')
+      .or(`email.eq.${email},code.eq.${code.toUpperCase()}`)
+      .single();
+
+    if (existingRequest) {
+      if (existingRequest.status === 'pending') {
+        return res.status(409).json({
+          success: false,
+          error: 'Une demande d\'inscription est déjà en attente pour cet email ou ce code IATA. Veuillez patienter l\'approbation.',
+        });
+      } else if (existingRequest.status === 'approved') {
+        return res.status(409).json({
+          success: false,
+          error: 'Ce compte a déjà été approuvé. Veuillez vous connecter.',
+        });
+      }
+    }
+
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Créer la compagnie
-    const { data: airline, error } = await supabase
-      .from('airlines')
+    // Créer une demande d'inscription (pas directement l'airline)
+    const { data: request, error } = await supabase
+      .from('airline_registration_requests')
       .insert({
         name,
         code: code.toUpperCase(),
         email,
         password: hashedPassword,
+        status: 'pending',
       })
-      .select('id, name, code, email, created_at')
+      .select('id, name, code, email, status, requested_at')
       .single();
 
     if (error) throw error;
 
-    // Générer un token JWT
-    const token = jwt.sign(
-      { id: airline.id, code: airline.code, email: airline.email },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     res.status(201).json({
       success: true,
-      airline,
-      token,
+      message: 'Votre demande d\'inscription a été soumise avec succès. Elle sera examinée par notre équipe et vous recevrez un email une fois approuvée.',
+      request: {
+        id: request.id,
+        name: request.name,
+        code: request.code,
+        email: request.email,
+        status: request.status,
+        requested_at: request.requested_at,
+      },
     });
   } catch (error) {
     next(error);
@@ -106,9 +133,34 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       .single();
 
     if (error || !airline) {
+      // Vérifier si c'est une demande en attente
+      const { data: pendingRequest } = await supabase
+        .from('airline_registration_requests')
+        .select('id, status')
+        .eq('email', email)
+        .eq('status', 'pending')
+        .single();
+
+      if (pendingRequest) {
+        return res.status(403).json({
+          success: false,
+          error: 'Votre demande d\'inscription est en attente d\'approbation. Veuillez patienter ou contacter le support pour plus d\'informations.',
+          requiresApproval: true,
+        });
+      }
+
       return res.status(401).json({
         success: false,
         error: 'Les identifiants saisis sont incorrects. Veuillez vérifier votre email et votre mot de passe.',
+      });
+    }
+
+    // Vérifier que l'airline est approuvée
+    if (!airline.approved) {
+      return res.status(403).json({
+        success: false,
+        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        requiresApproval: true,
       });
     }
 
@@ -161,7 +213,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
 
     const { data: airline, error } = await supabase
       .from('airlines')
-      .select('id, name, code, email, created_at')
+      .select('id, name, code, email, approved, created_at')
       .eq('id', decoded.id)
       .single();
 
@@ -169,6 +221,15 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(404).json({
         success: false,
         error: 'Votre compte compagnie aérienne n\'a pas été trouvé. Veuillez contacter le support.',
+      });
+    }
+
+    // Vérifier que l'airline est approuvée
+    if (!airline.approved) {
+      return res.status(403).json({
+        success: false,
+        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        requiresApproval: true,
       });
     }
 

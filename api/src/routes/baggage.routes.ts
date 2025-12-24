@@ -177,11 +177,131 @@ router.get('/track/:tagNumber', async (req, res, next) => {
 /**
  * POST /api/v1/baggage
  * Créer/enregistrer un nouveau bagage
+ * RESTRICTION: Vérifie la limite de bagages selon le boarding pass
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const baggageData = req.body;
+    const { passenger_id, tag_number, airport_code } = baggageData;
 
+    // Si un passenger_id est fourni, vérifier la limite de bagages
+    if (passenger_id) {
+      // Récupérer le passager avec son baggage_count
+      const { data: passenger, error: passengerError } = await supabase
+        .from('passengers')
+        .select('id, baggage_count, airport_code, flight_number')
+        .eq('id', passenger_id)
+        .single();
+
+      if (passengerError || !passenger) {
+        return res.status(404).json({
+          success: false,
+          error: 'Passager non trouvé'
+        });
+      }
+
+      // Vérifier que le passager appartient à l'aéroport
+      if (passenger.airport_code !== airport_code) {
+        return res.status(403).json({
+          success: false,
+          error: 'Ce passager n\'appartient pas à votre aéroport'
+        });
+      }
+
+      // Compter les bagages existants pour ce passager (non autorisés manuellement)
+      const { data: existingBaggages, error: countError } = await supabase
+        .from('baggages')
+        .select('id')
+        .eq('passenger_id', passenger_id)
+        .eq('manually_authorized', false);
+
+      if (countError && process.env.NODE_ENV !== 'production') {
+        console.error('Error counting baggages:', countError);
+      }
+
+      const currentBaggageCount = existingBaggages?.length || 0;
+
+      const declaredCount = passenger.baggage_count || 0;
+      const existingCount = currentBaggageCount || 0;
+
+      // Si le nombre de bagages existants + 1 dépasse le nombre déclaré, créer une demande d'autorisation
+      if (existingCount >= declaredCount) {
+        // Récupérer le tag RFID
+        const rfidTag = tag_number || baggageData.tag_number || baggageData.rfid_tag;
+        
+        if (!rfidTag) {
+          return res.status(400).json({
+            success: false,
+            error: 'Le tag RFID est requis pour créer une demande d\'autorisation'
+          });
+        }
+
+        // Vérifier si une demande existe déjà pour ce tag
+        const { data: existingRequest } = await supabase
+          .from('baggage_authorization_requests')
+          .select('id, status')
+          .eq('rfid_tag', rfidTag)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (existingRequest) {
+          return res.status(403).json({
+            success: false,
+            error: 'Une demande d\'autorisation est déjà en attente pour ce bagage',
+            requiresAuthorization: true,
+            authorizationRequestId: existingRequest.id,
+            declaredCount,
+            currentCount: existingCount,
+            requestedCount: existingCount + 1
+          });
+        }
+
+        // Créer une demande d'autorisation
+        if (!rfidTag) {
+          return res.status(400).json({
+            success: false,
+            error: 'Le tag RFID est requis pour créer une demande d\'autorisation'
+          });
+        }
+
+        const { data: authRequest, error: authError } = await supabase
+          .from('baggage_authorization_requests')
+          .insert({
+            passenger_id: passenger_id,
+            rfid_tag: rfidTag,
+            requested_baggage_count: existingCount + 1,
+            declared_baggage_count: declaredCount,
+            current_baggage_count: existingCount,
+            status: 'pending',
+            airport_code: airport_code,
+            flight_number: passenger.flight_number
+          })
+          .select()
+          .single();
+
+        if (authError) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Error creating authorization request:', authError);
+          }
+          return res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la création de la demande d\'autorisation'
+          });
+        }
+
+        return res.status(403).json({
+          success: false,
+          error: `Nombre de bagages dépassé. Le boarding pass indique ${declaredCount} bagage(s), mais ${existingCount + 1} bagage(s) sont demandés. Une demande d'autorisation a été créée et sera examinée par le support.`,
+          requiresAuthorization: true,
+          authorizationRequestId: authRequest.id,
+          declaredCount,
+          currentCount: existingCount,
+          requestedCount: existingCount + 1
+        });
+      }
+    }
+
+    // Si pas de dépassement ou pas de passenger_id, créer le bagage normalement
     const { data, error } = await supabase
       .from('baggages')
       .insert(baggageData)
