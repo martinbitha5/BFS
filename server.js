@@ -3,6 +3,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const Module = require('module');
 
 // Charger les variables d'environnement depuis api/.env si disponible
 const dotenv = require('dotenv');
@@ -14,19 +15,30 @@ if (fs.existsSync(apiEnvPath)) {
   dotenv.config();
 }
 
-// Changer le répertoire de travail vers api/ pour que Node.js trouve les node_modules
-process.chdir(path.join(__dirname, 'api'));
+// Ajouter api/node_modules au chemin de résolution des modules AVANT de charger le serveur
+const apiNodeModules = path.join(__dirname, 'api', 'node_modules');
+const apiDistPath = path.join(__dirname, 'api', 'dist');
 
-// Ajouter api/node_modules au chemin de résolution des modules
-const Module = require('module');
+// Modifier le mécanisme de résolution des modules pour inclure api/node_modules
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, isMain) {
+  // Si c'est un module relatif, résoudre depuis api/dist
+  if (request.startsWith('.')) {
+    const parentPath = parent?.filename || __filename;
+    if (parentPath.includes(apiDistPath)) {
+      const resolved = path.resolve(path.dirname(parentPath), request);
+      if (fs.existsSync(resolved) || fs.existsSync(resolved + '.js')) {
+        return resolved;
+      }
+    }
+  }
+  
   try {
     return originalResolveFilename(request, parent, isMain);
   } catch (err) {
     // Si le module n'est pas trouvé, essayer dans api/node_modules
-    const apiNodeModules = path.join(__dirname, 'api', 'node_modules');
-    if (fs.existsSync(path.join(apiNodeModules, request))) {
+    const modulePath = path.join(apiNodeModules, request);
+    if (fs.existsSync(modulePath) || fs.existsSync(modulePath + '.js')) {
       return originalResolveFilename(request, {
         ...parent,
         paths: [apiNodeModules, ...(parent?.paths || [])]
@@ -36,6 +48,14 @@ Module._resolveFilename = function(request, parent, isMain) {
   }
 };
 
+// Changer le répertoire de travail vers api/ pour que les chemins relatifs fonctionnent
+process.chdir(path.join(__dirname, 'api'));
+
 // Charger et démarrer le serveur API
-require(path.join(__dirname, 'api', 'dist', 'server.js'));
+try {
+  require(path.join(__dirname, 'api', 'dist', 'server.js'));
+} catch (error) {
+  console.error('Erreur lors du démarrage du serveur:', error);
+  process.exit(1);
+}
 
