@@ -3,8 +3,9 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
-    "start": "cd api && npm start",
+    "start": "node server.js",
     "build": "cd api && npm install && npm run build",
+    "postinstall": "cd api && npm install",
     "dev": "cd api && npm run dev",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
