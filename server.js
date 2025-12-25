@@ -20,19 +20,17 @@ if (fs.existsSync(apiEnvPath)) {
 dotenv.config({ override: false }); // override: false pour ne pas écraser api/.env
 
 // Vérifier que les variables critiques sont définies
-// Note: En production sur Hostinger, les variables sont chargées depuis le panneau
-// Ne pas bloquer si NODE_ENV n'est pas explicitement 'production'
-const isProduction = process.env.NODE_ENV === 'production' || process.env.PORT === '3000';
+// Note: En production sur Hostinger, les variables sont chargées depuis api/.env
+const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction && !process.env.JWT_SECRET) {
   console.error('❌ ERREUR: JWT_SECRET doit être défini en production!');
   console.error('   NODE_ENV:', process.env.NODE_ENV || 'non défini');
   console.error('   PORT:', process.env.PORT || 'non défini');
-  console.error('   Variables d\'environnement disponibles:', Object.keys(process.env).filter(k => k.includes('JWT') || k.includes('SUPABASE') || k.includes('API') || k.includes('PORT')).join(', '));
-  console.error('   Toutes les variables:', Object.keys(process.env).join(', '));
-  // Ne pas bloquer en développement, mais avertir
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
+  console.error('   Fichier api/.env existe:', fs.existsSync(apiEnvPath));
+  console.error('   Variables d\'environnement disponibles:', Object.keys(process.env).filter(k => k.includes('JWT') || k.includes('SUPABASE') || k.includes('API') || k.includes('PORT') || k.includes('NODE')).join(', '));
+  console.error('   JWT_SECRET dans process.env:', !!process.env.JWT_SECRET);
+  console.error('   Chemin api/.env:', apiEnvPath);
+  process.exit(1);
 }
 
 // Ajouter api/node_modules au chemin de résolution des modules AVANT de charger le serveur
