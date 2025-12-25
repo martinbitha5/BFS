@@ -66,6 +66,33 @@ function getEnv(key, defaultValue) {
   return defaultValue;
 }
 
+// Vérifier les variables critiques avant de créer la config PM2
+const jwtSecret = getEnv('JWT_SECRET');
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseServiceKey = getEnv('SUPABASE_SERVICE_KEY');
+
+if (!jwtSecret) {
+  console.error('[ecosystem.config.js] ⚠️  WARNING: JWT_SECRET non défini!');
+  console.error('[ecosystem.config.js] Variables disponibles:', Object.keys(envVars).join(', '));
+  console.error('[ecosystem.config.js] Variables dans process.env:', Object.keys(process.env).filter(k => k.includes('JWT') || k.includes('SUPABASE')).join(', '));
+}
+
+// Construire l'objet env_production
+const envProduction = {
+  NODE_ENV: 'production',
+  PORT: getEnv('PORT', '3000'),
+  JWT_SECRET: jwtSecret || '',
+  SUPABASE_URL: supabaseUrl || '',
+  SUPABASE_SERVICE_KEY: supabaseServiceKey || '',
+  ALLOWED_ORIGINS: getEnv('ALLOWED_ORIGINS', 'https://api.brsats.com,https://dashboard.brsats.com,https://brsats.com'),
+  API_KEY: getEnv('API_KEY', 'bfs-api-key-secure-2025')
+};
+
+console.log('[ecosystem.config.js] Configuration production:');
+console.log('[ecosystem.config.js]   JWT_SECRET:', envProduction.JWT_SECRET ? '✅ Défini (' + envProduction.JWT_SECRET.substring(0, 10) + '...)' : '❌ MANQUANT');
+console.log('[ecosystem.config.js]   SUPABASE_URL:', envProduction.SUPABASE_URL ? '✅ Défini' : '❌ MANQUANT');
+console.log('[ecosystem.config.js]   SUPABASE_SERVICE_KEY:', envProduction.SUPABASE_SERVICE_KEY ? '✅ Défini' : '❌ MANQUANT');
+
 module.exports = {
   apps: [{
     name: 'bfs-api',
@@ -77,23 +104,7 @@ module.exports = {
       NODE_ENV: 'development',
       PORT: 3000
     },
-    env_production: {
-      NODE_ENV: 'production',
-      PORT: getEnv('PORT', '3000'),
-      JWT_SECRET: getEnv('JWT_SECRET') || (() => {
-        console.error('[ecosystem.config.js] ERREUR: JWT_SECRET non défini!');
-        console.error('[ecosystem.config.js] Variables disponibles:', Object.keys(envVars).join(', '));
-        throw new Error('JWT_SECRET must be set in api/.env or Hostinger environment variables');
-      })(),
-      SUPABASE_URL: getEnv('SUPABASE_URL') || (() => {
-        throw new Error('SUPABASE_URL must be set in api/.env or Hostinger environment variables');
-      })(),
-      SUPABASE_SERVICE_KEY: getEnv('SUPABASE_SERVICE_KEY') || (() => {
-        throw new Error('SUPABASE_SERVICE_KEY must be set in api/.env or Hostinger environment variables');
-      })(),
-      ALLOWED_ORIGINS: getEnv('ALLOWED_ORIGINS', 'https://api.brsats.com,https://dashboard.brsats.com,https://brsats.com'),
-      API_KEY: getEnv('API_KEY', 'bfs-api-key-secure-2025')
-    },
+    env_production: envProduction,
     error_file: './logs/pm2-error.log',
     out_file: './logs/pm2-out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
