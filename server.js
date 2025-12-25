@@ -40,19 +40,9 @@ const apiNodeModules = path.join(__dirname, 'api', 'node_modules');
 const apiDistPath = path.join(__dirname, 'api', 'dist');
 
 // Modifier le mécanisme de résolution des modules pour inclure api/node_modules
+// Ne pas modifier la résolution des modules relatifs - laisser Node.js le faire naturellement
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, isMain) {
-  // Si c'est un module relatif, résoudre depuis api/dist
-  if (request.startsWith('.')) {
-    const parentPath = parent?.filename || __filename;
-    if (parentPath.includes(apiDistPath)) {
-      const resolved = path.resolve(path.dirname(parentPath), request);
-      if (fs.existsSync(resolved) || fs.existsSync(resolved + '.js')) {
-        return resolved;
-      }
-    }
-  }
-  
   try {
     return originalResolveFilename(request, parent, isMain);
   } catch (err) {
