@@ -1,25 +1,35 @@
 // Configuration centralisée de l'API
 // FORCER l'URL de production pour éviter les anciennes configs Render
 function getApiUrl(): string {
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  
   // En développement local, utiliser localhost
-  if (import.meta.env.MODE === 'development' || import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
     return 'http://localhost:3000';
   }
   
-  // En production, TOUJOURS utiliser api.brsats.com (ignorer VITE_API_URL si elle pointe vers Render)
+  // En production sur airline-portal.brsats.com, TOUJOURS utiliser api.brsats.com
+  // Ignorer complètement VITE_API_URL si elle contient Render
+  if (hostname.includes('brsats.com') || hostname.includes('airline-portal')) {
+    return 'https://api.brsats.com';
+  }
+  
+  // Si VITE_API_URL est définie et ne pointe PAS vers Render, l'utiliser
   const viteUrl = import.meta.env.VITE_API_URL;
-  if (viteUrl && !viteUrl.includes('onrender.com') && !viteUrl.includes('render.com')) {
+  if (viteUrl && typeof viteUrl === 'string' && !viteUrl.includes('onrender.com') && !viteUrl.includes('render.com')) {
     return viteUrl;
   }
   
-  // URL de production par défaut
+  // URL de production par défaut (TOUJOURS api.brsats.com)
   return 'https://api.brsats.com';
 }
 
 export const API_URL = getApiUrl();
 
-console.log('[API Config] Mode:', import.meta.env.MODE);
-console.log('[API Config] Hostname:', window.location.hostname);
-console.log('[API Config] VITE_API_URL from env:', import.meta.env.VITE_API_URL);
-console.log('[API Config] Final API URL:', API_URL);
+// Logs pour debug
+if (typeof window !== 'undefined') {
+  console.log('[API Config] Mode:', import.meta.env.MODE);
+  console.log('[API Config] Hostname:', window.location.hostname);
+  console.log('[API Config] Final API URL:', API_URL);
+}
 
