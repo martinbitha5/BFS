@@ -31,8 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files
-.env
 .env*.local
+# Note: .env à la racine est maintenant pour la production Hostinger (sans secrets)
 
 # typescript
 *.tsbuildinfo
