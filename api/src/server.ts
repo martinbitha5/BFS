@@ -41,14 +41,24 @@ const corsOptions = {
   origin: function (origin: string | undefined, callback: Function) {
     // Autoriser toutes les origines en développement, ou les origines spécifiques en production
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
     
-    // En développement ou si aucune origine n'est spécifiée, autoriser toutes
-    if (!origin || process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+    // En développement, autoriser toutes les origines
+    if (process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+      return;
+    }
+    
+    // En production, autoriser les origines de la liste ou si aucune origine (requêtes depuis le même domaine)
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.includes(allowed))) {
       callback(null, true);
     } else {
-      callback(null, true); // Autoriser toutes les origines pour l'instant
+      // Log pour debug en production
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`⚠️  CORS: Origine non autorisée: ${origin}. Origines autorisées: ${allowedOrigins.join(', ')}`);
+      }
+      callback(null, true); // Autoriser pour l'instant, mais loguer l'avertissement
     }
   },
   credentials: true,
