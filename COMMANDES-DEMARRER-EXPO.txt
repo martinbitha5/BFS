@@ -1,0 +1,29 @@
+# 🚀 Commandes pour démarrer l'application mobile Expo
+
+# Étape 1: Aller dans le dossier du projet
+cd "/home/goblaire/Bureau/Nouveau dossier/BFS"
+
+# Étape 2: Vérifier que les dépendances sont installées
+npm install
+
+# Étape 3: Vérifier que l'URL API est correcte dans .env
+cat .env | grep EXPO_PUBLIC_API_URL
+# Devrait afficher: EXPO_PUBLIC_API_URL=https://api.brsats.com
+
+# Étape 4: Tuer les processus Expo existants (si nécessaire)
+pkill -f "expo\|metro" 2>/dev/null || true
+
+# Étape 5: Démarrer Expo
+npx expo start --clear
+
+# OU si vous préférez avec tunnel (pour accès depuis l'extérieur)
+# npx expo start --tunnel --clear
+
+# Une fois Expo démarré, vous verrez:
+# - Un QR code à scanner avec Expo Go
+# - Des options: w (web), a (Android), i (iOS), r (reload), etc.
+
+# Pour ouvrir dans le navigateur web, appuyez sur: w
+# Pour ouvrir sur Android, appuyez sur: a
+# Pour ouvrir sur iOS, appuyez sur: i
+

@@ -271,6 +271,22 @@ async function createUsersInBatches(users: TestUser[]): Promise<TestUser[]> {
               });
           }
           
+          // Vérifier que le token existe et est valide
+          if (!user.token) {
+            log(`⚠️  Utilisateur ${user.email} réutilisé mais pas de token, réauthentification...`, 'warn');
+            // Réessayer l'authentification pour obtenir un nouveau token
+            const { data: retrySessionData } = await supabase.auth.signInWithPassword({
+              email: user.email,
+              password: user.password,
+            });
+            if (retrySessionData?.session) {
+              user.token = retrySessionData.session.access_token;
+            } else {
+              log(`❌ Impossible d'obtenir un token pour ${user.email}`, 'error');
+              continue;
+            }
+          }
+          
           createdUsers.push(user);
           reusedCount++;
           continue;
@@ -431,14 +447,43 @@ async function testRoleRestrictions(users: TestUser[]): Promise<void> {
   // Tester chaque rôle
   for (const role of CONFIG.ROLES) {
     const roleUsers = users.filter(u => u.role === role && u.approved && u.token);
-    if (roleUsers.length === 0) continue;
+    if (roleUsers.length === 0) {
+      log(`⚠️  Aucun utilisateur ${role} avec token disponible pour les tests`, 'warn');
+      continue;
+    }
     
     const testUser = roleUsers[0];
-    log(`Test des restrictions pour le rôle: ${role}`, 'info');
+    
+    // Vérifier que le token existe avant de tester
+    if (!testUser.token) {
+      log(`⚠️  Utilisateur ${testUser.email} n'a pas de token, réauthentification...`, 'warn');
+      try {
+        const { data: sessionData } = await supabase.auth.signInWithPassword({
+          email: testUser.email,
+          password: testUser.password,
+        });
+        if (sessionData?.session) {
+          testUser.token = sessionData.session.access_token;
+        } else {
+          log(`❌ Impossible d'obtenir un token pour ${testUser.email}, test ignoré`, 'error');
+          continue;
+        }
+      } catch (error: any) {
+        log(`❌ Erreur lors de la réauthentification de ${testUser.email}: ${error.message}`, 'error');
+        continue;
+      }
+    }
+    
+    log(`Test des restrictions pour le rôle: ${role} (utilisateur: ${testUser.email}, token: ${testUser.token ? 'présent' : 'absent'})`, 'info');
     
     // Test 1: Accès aux passagers (checkin et supervisor uniquement)
     const startTime = Date.now();
     try {
+      if (!testUser.token) {
+        recordTest(`Rôle ${role}: Accès aux passagers`, false, 'Token manquant');
+        continue;
+      }
+      
       const response = await fetch(`${CONFIG.API_URL}/api/v1/passengers?airport=${testUser.airportCode}`, {
         headers: {
           'Authorization': `Bearer ${testUser.token}`,
@@ -447,7 +492,7 @@ async function testRoleRestrictions(users: TestUser[]): Promise<void> {
       });
       
       const shouldHaveAccess = ['checkin', 'supervisor'].includes(role);
-      const hasAccess = response.status !== 403;
+      const hasAccess = response.status === 200 || response.status === 404; // 200 ou 404 (pas de données) = accès autorisé
       
       recordTest(
         `Rôle ${role}: Accès aux passagers`,
@@ -566,14 +611,35 @@ async function testAirportRestrictions(users: TestUser[]): Promise<void> {
   const mainAirports = ['FIH', 'GOM', 'KIN'];
   
   for (const airport of mainAirports) {
-    // Trouver un agent checkin de cet aéroport
-    const checkinUser = users.find(u => u.role === 'checkin' && u.airportCode === airport && u.approved && u.token);
+    // Trouver un agent checkin de cet aéroport (sans exiger le token, on le récupérera si nécessaire)
+    let checkinUser = users.find(u => u.role === 'checkin' && u.airportCode === airport && u.approved);
     if (!checkinUser) {
       log(`⚠️  Aucun agent checkin trouvé pour ${airport}, test ignoré`, 'warn');
       continue;
     }
     
-    log(`Test des restrictions pour l'aéroport: ${airport} (agent: ${checkinUser.email})`, 'info');
+    // Vérifier et obtenir un token si nécessaire
+    if (!checkinUser.token) {
+      log(`⚠️  Agent ${checkinUser.email} n'a pas de token, réauthentification...`, 'warn');
+      try {
+        const { data: sessionData } = await supabase.auth.signInWithPassword({
+          email: checkinUser.email,
+          password: checkinUser.password,
+        });
+        if (sessionData?.session) {
+          checkinUser.token = sessionData.session.access_token;
+          log(`✅ Token obtenu pour ${checkinUser.email}`, 'success');
+        } else {
+          log(`❌ Impossible d'obtenir un token pour ${checkinUser.email}, test ignoré`, 'error');
+          continue;
+        }
+      } catch (error: any) {
+        log(`❌ Erreur lors de la réauthentification de ${checkinUser.email}: ${error.message}`, 'error');
+        continue;
+      }
+    }
+    
+    log(`Test des restrictions pour l'aéroport: ${airport} (agent: ${checkinUser.email}, token: ${checkinUser.token ? 'présent' : 'absent'})`, 'info');
     
     // Test 1: Accès aux données de son propre aéroport (devrait être autorisé)
     try {
