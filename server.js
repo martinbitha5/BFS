@@ -77,7 +77,29 @@ try {
   console.log('📂 Chargement du serveur depuis:', serverPath);
   
   if (!fs.existsSync(serverPath)) {
-    throw new Error(`Le fichier serveur n'existe pas: ${serverPath}`);
+    console.error('❌ ERREUR: Le fichier serveur n\'existe pas:', serverPath);
+    console.error('📦 Tentative de build automatique...');
+    
+    // Essayer de builder automatiquement
+    const { execSync } = require('child_process');
+    try {
+      console.log('🔨 Exécution de npm run build...');
+      execSync('npm run build', { 
+        cwd: __dirname, 
+        stdio: 'inherit',
+        env: { ...process.env, NODE_ENV: 'production' }
+      });
+      
+      // Vérifier à nouveau
+      if (!fs.existsSync(serverPath)) {
+        throw new Error('Le build a échoué - le fichier dist/server.js n\'existe toujours pas');
+      }
+      console.log('✅ Build réussi !');
+    } catch (buildError) {
+      console.error('❌ ERREUR lors du build automatique:');
+      console.error('   Message:', buildError.message);
+      throw new Error(`Impossible de builder l'API. Vérifiez que TypeScript est installé et que le code compile correctement.`);
+    }
   }
   
   require(serverPath);
