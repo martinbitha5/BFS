@@ -10,7 +10,7 @@ const Module = require('module');
 // Mais on charge aussi depuis .env si disponible pour le développement local
 const dotenv = require('dotenv');
 
-// Charger depuis api/.env en PRIORITÉ (car c'est là que sont les variables complètes)
+// Charger depuis api/.env en PRIORITÉ (car c'est là que sont les variables de production)
 const apiEnvPath = path.join(__dirname, 'api', '.env');
 if (fs.existsSync(apiEnvPath)) {
   const result = dotenv.config({ path: apiEnvPath }); // Charger d'abord depuis api/.env
@@ -19,10 +19,12 @@ if (fs.existsSync(apiEnvPath)) {
   } else {
     console.log('✅ Variables chargées depuis api/.env:', Object.keys(result.parsed || {}).join(', '));
   }
+} else {
+  console.warn('⚠️  Fichier api/.env non trouvé:', apiEnvPath);
 }
 
-// Puis charger depuis la racine (pour les variables Hostinger qui peuvent override)
-dotenv.config({ override: false }); // override: false pour ne pas écraser api/.env
+// NE PAS charger depuis la racine car il contient l'ancienne config Render
+// Les variables Hostinger sont déjà dans process.env et ne doivent pas être écrasées
 
 // Vérifier que les variables critiques sont définies
 // Note: En production sur Hostinger, les variables sont chargées depuis api/.env
