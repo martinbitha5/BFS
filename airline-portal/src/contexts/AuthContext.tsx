@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-
-// URL de l'API depuis les variables d'environnement
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'development' || import.meta.env.DEV 
-    ? 'http://localhost:3000' 
-    : 'https://api.brsats.com');
+import { API_URL } from '../config/api';
 
 interface Airline {
   id: string;

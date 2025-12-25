@@ -1,15 +1,10 @@
 import axios from 'axios';
 import { Calendar, CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { API_URL } from '../config/api';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-
-// URL de l'API depuis les variables d'environnement
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'development' || import.meta.env.DEV 
-    ? 'http://localhost:3000' 
-    : 'https://api.brsats.com');
 
 interface BIRSReport {
   id: string;
