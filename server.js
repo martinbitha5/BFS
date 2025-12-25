@@ -13,7 +13,12 @@ const dotenv = require('dotenv');
 // Charger depuis api/.env en PRIORITÉ (car c'est là que sont les variables complètes)
 const apiEnvPath = path.join(__dirname, 'api', '.env');
 if (fs.existsSync(apiEnvPath)) {
-  dotenv.config({ path: apiEnvPath }); // Charger d'abord depuis api/.env
+  const result = dotenv.config({ path: apiEnvPath }); // Charger d'abord depuis api/.env
+  if (result.error) {
+    console.error('❌ Erreur lors du chargement de api/.env:', result.error);
+  } else {
+    console.log('✅ Variables chargées depuis api/.env:', Object.keys(result.parsed || {}).join(', '));
+  }
 }
 
 // Puis charger depuis la racine (pour les variables Hostinger qui peuvent override)
