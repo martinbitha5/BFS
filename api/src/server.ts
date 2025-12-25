@@ -101,11 +101,12 @@ app.use((req, res) => {
 // Error handling (must be last)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+// Écouter sur toutes les interfaces (0.0.0.0) pour permettre à Nginx de se connecter
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Baggage Found Solution API Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌐 Server ready to accept connections`);
+  console.log(`🌐 Server ready to accept connections on 0.0.0.0:${PORT}`);
 });
 
 export default app;
