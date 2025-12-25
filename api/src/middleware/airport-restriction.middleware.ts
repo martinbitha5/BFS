@@ -13,7 +13,7 @@ interface AirportRestrictedRequest extends Request {
 
 /**
  * Middleware pour extraire et valider l'aéroport de l'utilisateur
- * À utiliser avec un système d'authentification
+ * Vérifie l'authentification Bearer et s'assure que l'utilisateur accède uniquement à son aéroport
  */
 export const requireAirportCode = async (
   req: AirportRestrictedRequest,
@@ -34,25 +34,65 @@ export const requireAirportCode = async (
       });
     }
 
+    // Vérifier l'authentification Bearer pour obtenir l'utilisateur
+    const authHeader = req.headers.authorization;
+    let userId: string | undefined;
+    let userAirportCode: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      
+      // Vérifier le token avec Supabase
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (!authError && user) {
+        userId = user.id;
+        
+        // Récupérer l'aéroport de l'utilisateur depuis la base de données
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('airport_code')
+          .eq('id', user.id)
+          .single();
+        
+        if (!userError && userData) {
+          userAirportCode = userData.airport_code;
+          
+          // Vérifier que l'aéroport demandé correspond à l'aéroport de l'utilisateur
+          if (userAirportCode !== airportCode) {
+            return res.status(403).json({
+              success: false,
+              error: `Accès refusé : Vous n'avez pas accès aux données de l'aéroport ${airportCode}. Votre aéroport est ${userAirportCode}`
+            });
+          }
+        }
+      }
+    } else {
+      // Si pas d'authentification Bearer, vérifier x-user-id comme fallback
+      const userIdFromHeader = req.headers['x-user-id'] as string || req.body.user_id as string;
+      if (userIdFromHeader) {
+        userId = userIdFromHeader;
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('airport_code')
+          .eq('id', userId)
+          .single();
+
+        if (!error && user) {
+          userAirportCode = user.airport_code;
+          if (userAirportCode !== airportCode) {
+            return res.status(403).json({
+              success: false,
+              error: 'Accès refusé : Vous n\'avez pas accès aux données de cet aéroport'
+            });
+          }
+        }
+      }
+    }
+
     // Stocker dans la requête pour utilisation ultérieure
     req.userAirportCode = airportCode;
-
-    // Si on a un user_id (depuis l'auth), vérifier qu'il correspond à cet aéroport
-    const userId = req.headers['x-user-id'] as string || req.body.user_id as string;
     if (userId) {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('airport_code')
-        .eq('id', userId)
-        .single();
-
-      if (!error && user && user.airport_code !== airportCode) {
-        return res.status(403).json({
-          success: false,
-          error: 'Accès refusé : Vous n\'avez pas accès aux données de cet aéroport'
-        });
-      }
-
       req.userId = userId;
     }
 

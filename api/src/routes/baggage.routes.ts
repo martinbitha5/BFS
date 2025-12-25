@@ -281,7 +281,7 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
 
         if (authError) {
           if (process.env.NODE_ENV !== 'production') {
-            console.error('Error creating authorization request:', authError);
+          console.error('Error creating authorization request:', authError);
           }
           return res.status(500).json({
             success: false,

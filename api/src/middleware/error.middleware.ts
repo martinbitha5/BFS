@@ -8,7 +8,7 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   if (process.env.NODE_ENV !== 'production') {
-    console.error('Error:', err);
+  console.error('Error:', err);
   }
 
   // Determine status code - default to 500 if not set

@@ -1,0 +1,15 @@
+Ligne 766 à remplacer dans brs-workflow.routes.ts:
+
+ANCIENNE LIGNE (incorrecte):
+stats.todayBaggages = allBaggages?.filter(b => new Date(b.scanned_at) >= today.toISOString()).length || 0;
+
+NOUVELLE LIGNE (correcte):
+stats.todayBaggages = allBaggages?.filter(b => { if (!b.scanned_at) return false; return new Date(b.scanned_at) >= today; }).length || 0;
+
+COMMANDE À EXÉCUTER SUR LE SERVEUR:
+cd ~/bfs-api/src/routes
+nano brs-workflow.routes.ts
+
+Cherchez la ligne 766 et remplacez-la par la nouvelle ligne ci-dessus.
+Appuyez sur Ctrl+O pour sauvegarder, puis Ctrl+X pour quitter.
+

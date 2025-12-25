@@ -14,12 +14,12 @@ if (process.env.DATABASE_URL) {
   // Handle pool errors
   pool.on('error', (err) => {
     if (process.env.NODE_ENV !== 'production') {
-      console.error('Unexpected error on idle database client', err);
+    console.error('Unexpected error on idle database client', err);
     }
   });
 } else {
   if (process.env.NODE_ENV !== 'production') {
-    console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
+  console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
   }
 }
 
@@ -234,7 +234,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
 
   } catch (error: any) {
     if (process.env.NODE_ENV !== 'production') {
-      console.error('Erreur lors de la recherche du bagage:', error);
+    console.error('Erreur lors de la recherche du bagage:', error);
     }
     next(error);
   }

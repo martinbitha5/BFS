@@ -1,0 +1,68 @@
+========================================
+COMMANDES POUR DÉPLOYER SUR HOSTINGER
+Serveur: u922527895@145.223.86.157:65002
+========================================
+
+ÉTAPE 1: Connexion SSH
+-----------------------
+ssh -p 65002 u922527895@145.223.86.157
+
+
+ÉTAPE 2: Installation des prérequis (UNE SEULE FOIS)
+------------------------------------------------------
+# Créer le dossier
+mkdir -p ~/bfs-api
+cd ~/bfs-api
+
+# Uploader le fichier install-hostinger.sh depuis votre machine locale:
+# (Depuis votre machine locale, dans le dossier api/)
+scp -P 65002 install-hostinger.sh u922527895@145.223.86.157:~/bfs-api/
+
+# Sur le serveur, exécuter:
+chmod +x install-hostinger.sh
+./install-hostinger.sh
+
+
+ÉTAPE 3: Uploader les fichiers de l'API
+----------------------------------------
+# Depuis votre machine locale (dans le dossier api/), exécutez:
+./upload-to-hostinger.sh
+
+# OU manuellement avec SCP:
+scp -P 65002 -r src/ u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 package.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 package-lock.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 tsconfig.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 ecosystem.config.js u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 deploy.sh u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 nginx-brsats.conf u922527895@145.223.86.157:~/bfs-api/
+
+
+ÉTAPE 4: Déployer l'API
+------------------------
+# Sur le serveur:
+cd ~/bfs-api
+chmod +x deploy.sh
+./deploy.sh
+
+
+ÉTAPE 5: Configurer Nginx
+--------------------------
+# Sur le serveur:
+sudo cp nginx-brsats.conf /etc/nginx/sites-available/api.brsats.com
+sudo ln -s /etc/nginx/sites-available/api.brsats.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+
+ÉTAPE 6: Configurer SSL
+------------------------
+sudo apt-get install certbot python3-certbot-nginx
+sudo certbot --nginx -d api.brsats.com
+
+
+ÉTAPE 7: Vérifier
+------------------
+curl https://api.brsats.com/health
+pm2 logs bfs-api
+

@@ -1,0 +1,50 @@
+═══════════════════════════════════════════════════════════
+🚀 COMMANDES POUR REDÉMARRER L'API SUR HOSTINGER
+═══════════════════════════════════════════════════════════
+
+API trouvée dans: ~/domains/api.brsats.com/public_html/api/
+
+═══════════════════════════════════════════════════════════
+ÉTAPE PAR ÉTAPE:
+═══════════════════════════════════════════════════════════
+
+1. Aller dans le dossier de l'API:
+   cd ~/domains/api.brsats.com/public_html/api
+
+2. Vérifier que vous êtes au bon endroit:
+   ls -la
+   # Vous devriez voir: package.json, ecosystem.config.js, src/, etc.
+
+3. Vérifier si dist/server.js existe:
+   ls -la dist/server.js
+   
+   Si ça dit "No such file", alors rebuild:
+   npm run build
+
+4. Démarrer l'API avec PM2:
+   pm2 start ecosystem.config.js --env production
+   pm2 save
+
+5. Vérifier que ça fonctionne:
+   pm2 status
+   pm2 logs bfs-api --lines 20
+
+6. Tester l'API:
+   curl http://localhost:3000/health
+   # Devrait retourner: {"status":"ok","timestamp":"..."}
+
+═══════════════════════════════════════════════════════════
+SI ÇA NE FONCTIONNE PAS:
+═══════════════════════════════════════════════════════════
+
+Vérifier les variables d'environnement:
+   cat .env | grep -E "PORT|NODE_ENV|JWT_SECRET|SUPABASE|ALLOWED_ORIGINS"
+
+Vérifier les logs d'erreur:
+   pm2 logs bfs-api --err --lines 50
+
+Vérifier que le port 3000 n'est pas utilisé:
+   netstat -tulpn | grep 3000
+
+═══════════════════════════════════════════════════════════
+

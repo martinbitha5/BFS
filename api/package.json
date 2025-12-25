@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "test": "jest",
     "clear-data": "ts-node scripts/clear-test-data.ts",
-    "clear-all": "ts-node scripts/clear-all-data.ts"
+    "clear-all": "ts-node scripts/clear-all-data.ts",
+    "test-massive": "ts-node scripts/test-massive-flow.ts",
+    "test-portals": "ts-node scripts/test-portals.ts"
   },
   "keywords": [
     "baggage",

@@ -1,0 +1,110 @@
+========================================
+DÉPLOIEMENT API SUR HOSTINGER CLOUD PRO
+Domaine: api.brsats.com
+========================================
+
+ÉTAPE 1: Connexion SSH
+-----------------------
+ssh root@votre-serveur.hostinger.com
+# ou
+ssh votre-utilisateur@votre-serveur.hostinger.com
+
+
+ÉTAPE 2: Configuration initiale (UNE SEULE FOIS)
+-------------------------------------------------
+cd /var/www
+git clone votre-repo-url BFS
+# OU uploader les fichiers via FTP/SFTP
+
+cd BFS/api
+chmod +x setup-hostinger.sh
+./setup-hostinger.sh
+
+# Suivre les instructions pour PM2 startup
+
+
+ÉTAPE 3: Vérifier le fichier .env
+----------------------------------
+# Le fichier .env doit contenir:
+cat .env
+
+# Vérifiez que ces variables sont présentes:
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_KEY
+# - PORT=3000
+# - NODE_ENV=production
+# - ALLOWED_ORIGINS
+
+
+ÉTAPE 4: Déployer l'API
+------------------------
+chmod +x deploy.sh
+./deploy.sh
+
+# Ou manuellement:
+npm install
+npm run build
+pm2 start ecosystem.config.js --env production
+pm2 save
+
+
+ÉTAPE 5: Configurer Nginx
+--------------------------
+# Copier la configuration Nginx
+sudo cp nginx-brsats.conf /etc/nginx/sites-available/api.brsats.com
+
+# Créer le lien symbolique
+sudo ln -s /etc/nginx/sites-available/api.brsats.com /etc/nginx/sites-enabled/
+
+# Tester la configuration
+sudo nginx -t
+
+# Recharger Nginx
+sudo systemctl reload nginx
+
+
+ÉTAPE 6: Configurer SSL (Let's Encrypt)
+----------------------------------------
+sudo apt-get update
+sudo apt-get install certbot python3-certbot-nginx
+
+# Obtenir le certificat SSL
+sudo certbot --nginx -d api.brsats.com
+
+# Suivre les instructions à l'écran
+
+
+ÉTAPE 7: Vérifier le déploiement
+---------------------------------
+# Tester l'API
+curl https://api.brsats.com/health
+
+# Devrait retourner: {"status":"ok","timestamp":"..."}
+
+# Voir les logs
+pm2 logs bfs-api
+
+# Voir le statut
+pm2 status
+
+
+COMMANDES UTILES
+----------------
+# Redémarrer l'API
+pm2 restart bfs-api
+
+# Voir les logs en temps réel
+pm2 logs bfs-api --lines 50
+
+# Arrêter l'API
+pm2 stop bfs-api
+
+# Démarrer l'API
+pm2 start bfs-api
+
+# Voir les logs Nginx
+sudo tail -f /var/log/nginx/api.brsats.com.error.log
+
+# Redémarrer Nginx
+sudo systemctl restart nginx
+

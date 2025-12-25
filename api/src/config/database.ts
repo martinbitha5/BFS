@@ -10,9 +10,9 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'placeholder-key';
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
   if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️  WARNING: Supabase configuration missing.');
-    console.warn('   Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in your .env file.');
-    console.warn('   Routes requiring Supabase will fail with connection errors.');
+  console.warn('⚠️  WARNING: Supabase configuration missing.');
+  console.warn('   Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in your .env file.');
+  console.warn('   Routes requiring Supabase will fail with connection errors.');
   }
 }
 

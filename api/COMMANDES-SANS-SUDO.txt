@@ -1,0 +1,70 @@
+========================================
+COMMANDES POUR HOSTINGER SANS SUDO
+========================================
+
+ÉTAPE 1: Connectez-vous
+------------------------
+ssh -p 65002 u922527895@145.223.86.157
+
+
+ÉTAPE 2: Créer le dossier et uploader install-sans-sudo.sh
+------------------------------------------------------------
+mkdir -p ~/bfs-api
+cd ~/bfs-api
+
+# Depuis votre machine locale, uploader le script:
+scp -P 65002 install-sans-sudo.sh u922527895@145.223.86.157:~/bfs-api/
+
+
+ÉTAPE 3: Installer Node.js et PM2 (SANS SUDO)
+-----------------------------------------------
+cd ~/bfs-api
+chmod +x install-sans-sudo.sh
+./install-sans-sudo.sh
+
+# Si vous êtes dans la même session, charger NVM:
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm use 18
+
+
+ÉTAPE 4: Uploader les fichiers de l'API
+----------------------------------------
+# Depuis votre machine locale:
+cd "/home/goblaire/Bureau/Nouveau dossier/BFS/api"
+
+scp -P 65002 -r src/ u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 package.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 package-lock.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 tsconfig.json u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 ecosystem.config.js u922527895@145.223.86.157:~/bfs-api/
+scp -P 65002 deploy.sh u922527895@145.223.86.157:~/bfs-api/
+
+
+ÉTAPE 5: Déployer l'API
+------------------------
+# Sur le serveur, s'assurer que NVM est chargé:
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm use 18
+
+cd ~/bfs-api
+chmod +x deploy.sh
+./deploy.sh
+
+
+ÉTAPE 6: Vérifier
+-----------------
+# Tester l'API localement
+curl http://localhost:3000/health
+
+# Voir les logs
+pm2 logs bfs-api
+
+# Voir le statut
+pm2 status
+
+
+NOTE: Pour Nginx et SSL, vous devrez peut-être contacter le support Hostinger
+car ces configurations nécessitent généralement des droits administrateur.
+
