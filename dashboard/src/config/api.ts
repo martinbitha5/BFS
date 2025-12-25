@@ -1,12 +1,10 @@
 import axios from 'axios';
 
 // Configuration API - Hostinger Cloud Pro (brsats.com)
-// En développement, utiliser localhost. En production, utiliser l'URL configurée ou api.brsats.com
-// Temporairement en HTTP jusqu'à ce que le certificat SSL soit configuré
-// FORCER HTTP même si VITE_API_URL est défini en HTTPS
+// En développement, utiliser localhost. En production, utiliser HTTPS avec api.brsats.com
 const API_BASE_URL = import.meta.env.MODE === 'development' || import.meta.env.DEV 
   ? 'http://localhost:3000' 
-  : (import.meta.env.VITE_API_URL?.replace('https://', 'http://') || 'http://api.brsats.com');
+  : (import.meta.env.VITE_API_URL || 'https://api.brsats.com');
 
 // Log pour debug (à retirer en production)
 if (import.meta.env.MODE === 'development') {
