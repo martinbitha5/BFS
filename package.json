@@ -3,7 +3,7 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
-    "start": "node start.js",
+    "start": "node server.js",
     "build": "cd api && npm install --include=dev && npm run build",
     "postinstall": "cd api && npm install --include=dev && npm run build",
     "dev": "cd api && npm run dev",
