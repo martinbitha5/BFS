@@ -163,69 +163,111 @@ async function testDashboardSupervisorAuth() {
 async function testDashboardAccessRestrictions() {
   log('Test Dashboard: Restrictions d\'accès...', 'info');
   
-  // Créer un utilisateur checkin (ne devrait pas avoir accès au dashboard)
-  const testEmail = `test-checkin-${Date.now()}@bfs-test.com`;
-  const testPassword = 'Test123456!';
+  // Tester que les agents opérationnels (checkin, baggage, boarding, arrival) ne peuvent PAS se connecter au Dashboard
+  const operationalRoles = ['checkin', 'baggage', 'boarding', 'arrival'];
   
-  try {
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: testEmail,
-      password: testPassword,
-      email_confirm: true,
-    });
+  for (const role of operationalRoles) {
+    const testEmail = `test-${role}-${Date.now()}@bfs-test.com`;
+    const testPassword = 'Test123456!';
     
-    if (authError) {
-      recordTest('Dashboard: Création utilisateur checkin', false, authError.message);
-      return;
-    }
-    
-    const { error: userError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: testEmail,
-        full_name: 'Test Check-in',
-        airport_code: 'FIH',
-        role: 'checkin',
-        approved: true,
+        password: testPassword,
+        email_confirm: true,
       });
-    
-    if (userError) {
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      recordTest('Dashboard: Création profil checkin', false, userError.message);
-      return;
-    }
-    
-    // Tester la connexion (devrait fonctionner mais avec restrictions)
-    const loginResponse = await fetch(`${API_URL}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: testEmail, password: testPassword }),
-    });
-    
-    if (loginResponse.status === 200) {
-      const loginData = await loginResponse.json() as LoginResponse;
-      const token = loginData.data?.token || loginData.token;
       
-      // Tester l'accès aux routes d'approbation (devrait être refusé)
-      const approvalResponse = await fetch(`${API_URL}/api/v1/user-approval/requests`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      if (authError) {
+        recordTest(`Dashboard: Création utilisateur ${role}`, false, authError.message);
+        continue;
+      }
+      
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: testEmail,
+          full_name: `Test ${role}`,
+          airport_code: 'FIH',
+          role: role as any,
+          approved: true,
+        });
+      
+      if (userError) {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        recordTest(`Dashboard: Création profil ${role}`, false, userError.message);
+        continue;
+      }
+      
+      // Tester la connexion au Dashboard (devrait être REFUSÉE avec 403)
+      const loginResponse = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, password: testPassword }),
       });
+      
+      // Les agents opérationnels ne devraient PAS pouvoir se connecter au Dashboard
+      const isBlocked = loginResponse.status === 403;
+      const responseData = loginResponse.status === 403 ? await loginResponse.json().catch(() => ({})) : null;
       
       recordTest(
-        'Dashboard: Accès refusé aux approbations (rôle checkin)',
-        approvalResponse.status === 403,
-        approvalResponse.status !== 403 ? `Status ${approvalResponse.status} au lieu de 403` : undefined
+        `Dashboard: Accès refusé pour rôle ${role} (agents opérationnels)`,
+        isBlocked,
+        !isBlocked ? `Status ${loginResponse.status} - Les agents ${role} ne devraient pas pouvoir se connecter au Dashboard` : undefined,
+        { role, status: loginResponse.status, response: responseData }
       );
       
       // Nettoyer
       await supabase.from('users').delete().eq('id', authData.user.id);
       await supabase.auth.admin.deleteUser(authData.user.id);
-    } else {
-      recordTest('Dashboard: Restrictions d\'accès', false, `Login status ${loginResponse.status}`);
+    } catch (error: any) {
+      recordTest(`Dashboard: Test accès ${role}`, false, error.message);
+    }
+  }
+  
+  // Tester qu'un supervisor PEUT se connecter
+  const supervisorEmail = `test-supervisor-restriction-${Date.now()}@bfs-test.com`;
+  const supervisorPassword = 'Test123456!';
+  
+  try {
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: supervisorEmail,
+      password: supervisorPassword,
+      email_confirm: true,
+    });
+    
+    if (!authError) {
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: supervisorEmail,
+          full_name: 'Test Supervisor',
+          airport_code: 'FIH',
+          role: 'supervisor',
+          approved: true,
+        });
+      
+      if (!userError) {
+        const loginResponse = await fetch(`${API_URL}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: supervisorEmail, password: supervisorPassword }),
+        });
+        
+        recordTest(
+          'Dashboard: Accès autorisé pour supervisor',
+          loginResponse.status === 200,
+          loginResponse.status !== 200 ? `Status ${loginResponse.status} - Supervisor devrait pouvoir se connecter` : undefined
+        );
+        
+        // Nettoyer
+        await supabase.from('users').delete().eq('id', authData.user.id);
+        await supabase.auth.admin.deleteUser(authData.user.id);
+      }
     }
   } catch (error: any) {
-    recordTest('Dashboard: Restrictions d\'accès', false, error.message);
+    // Ignorer les erreurs de nettoyage
   }
 }
 

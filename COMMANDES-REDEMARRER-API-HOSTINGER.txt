@@ -1,0 +1,38 @@
+# 🔄 Commandes pour redémarrer l'API sur Hostinger
+
+# Étape 1: Vérifier que vous êtes dans le bon répertoire
+cd ~/domains/api.brsats.com/public_html/api
+
+# Étape 2: Vérifier que le code est à jour
+git pull origin main
+
+# Étape 3: Vérifier que le build existe
+ls -la dist/server.js
+
+# Si dist/server.js n'existe pas, rebuild:
+npm run build
+
+# Étape 4: Vérifier que ecosystem.config.js existe
+ls -la ecosystem.config.js
+
+# Étape 5: Vérifier les variables d'environnement
+cat .env | grep -E "JWT_SECRET|SUPABASE_URL|PORT"
+
+# Étape 6: Démarrer l'API avec PM2
+pm2 start ecosystem.config.js --env production
+
+# Étape 7: Sauvegarder la configuration PM2 pour qu'elle persiste après redémarrage
+pm2 save
+
+# Étape 8: Vérifier le statut
+pm2 status
+
+# Étape 9: Voir les logs pour vérifier que tout fonctionne
+pm2 logs bfs-api --lines 30
+
+# Étape 10: Tester l'API localement
+curl http://localhost:3000/health
+
+# Étape 11: Tester l'API depuis l'extérieur
+curl https://api.brsats.com/health
+

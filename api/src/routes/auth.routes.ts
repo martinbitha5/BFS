@@ -185,6 +185,17 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
+    // RESTRICTION: Seuls supervisor, baggage_dispute et support peuvent accéder au Dashboard
+    // Les agents opérationnels (checkin, baggage, boarding, arrival) utilisent l'application mobile/portail
+    const dashboardRoles = ['supervisor', 'baggage_dispute', 'support'];
+    if (!dashboardRoles.includes(userData.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé : Ce compte est réservé aux agents opérationnels. Veuillez utiliser l\'application mobile dédiée.',
+        role: userData.role
+      });
+    }
+
     // Vérifier que l'utilisateur est approuvé (pour supervisor et baggage_dispute)
     if (['supervisor', 'baggage_dispute'].includes(userData.role) && !userData.approved) {
       return res.status(403).json({
