@@ -2,12 +2,22 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
+// S'assurer que le répertoire courant existe
+try {
+  process.cwd();
+} catch (e) {
+  // Si le répertoire courant n'existe plus, utiliser __dirname
+  process.chdir(__dirname);
+}
+
 // Charger les variables d'environnement
 // Priorité: process.env (Hostinger) > .env file > defaultValue
 const envPath = path.join(__dirname, '.env');
 let envVars = {};
 
 // D'abord, charger depuis .env si le fichier existe (pour développement local)
+console.log('[ecosystem.config.js] Current directory:', process.cwd());
+console.log('[ecosystem.config.js] __dirname:', __dirname);
 console.log('[ecosystem.config.js] Checking for .env at:', envPath);
 console.log('[ecosystem.config.js] File exists:', fs.existsSync(envPath));
 
