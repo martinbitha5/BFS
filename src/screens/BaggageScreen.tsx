@@ -323,10 +323,13 @@ ${passenger ? `Passager: ${passenger.fullName}` : 'Passager non enregistré'}
             );
 
             // Ajouter à la file de synchronisation
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BaggageScreen.tsx:327',message:'Adding baggage to sync queue',data:{tableName:'baggages',recordId:rfidTag,operation:'CREATE',passengerId:passenger.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             await databaseServiceInstance.addToSyncQueue({
               tableName: 'baggages',
               recordId: rfidTag,
-              operation: 'insert',
+              operation: 'CREATE',
               data: JSON.stringify({ passengerId: passenger.id, rfidTag }),
               retryCount: 0,
               userId: user.id,

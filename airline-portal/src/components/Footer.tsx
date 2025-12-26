@@ -60,8 +60,8 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:support@bfs-system.com" className="text-xs text-white/70 hover:text-white">
-                  support@bfs-system.com
+                <a href="mailto:support@brsats.com" className="text-xs text-white/70 hover:text-white">
+                  support@brsats.com
                 </a>
               </li>
             </ul>

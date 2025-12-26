@@ -9,42 +9,39 @@ const router = Router();
  * Statistiques pour un aéroport spécifique
  * RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport
  */
-router.get('/airport/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasFullAccess?: boolean; userAirportCode?: string }, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.params;
-    const userAirport = req.query.airport as string;
+    const hasFullAccess = (req as any).hasFullAccess;
 
-    // Vérifier que l'utilisateur demande les stats de son propre aéroport
-    if (userAirport && userAirport !== airport) {
-      return res.status(403).json({
-        success: false,
-        error: 'Accès refusé : Vous ne pouvez accéder qu\'aux statistiques de votre aéroport'
-      });
-    }
-
+    // Si l'aéroport demandé est ALL, ne pas filtrer par aéroport
     const today = new Date().toISOString().split('T')[0];
+    const filterAirport = airport.toUpperCase() === 'ALL' && hasFullAccess;
 
     // Récupérer tous les passagers
-    const { data: passengers, error: passError } = await supabase
-      .from('passengers')
-      .select('*')
-      .eq('airport_code', airport);
+    let passQuery = supabase.from('passengers').select('*');
+    if (!filterAirport) {
+      passQuery = passQuery.eq('airport_code', airport.toUpperCase());
+    }
+    const { data: passengers, error: passError } = await passQuery;
 
     if (passError) throw passError;
 
     // Récupérer tous les bagages
-    const { data: baggages, error: bagError } = await supabase
-      .from('baggages')
-      .select('*')
-      .eq('airport_code', airport);
+    let bagQuery = supabase.from('baggages').select('*');
+    if (!filterAirport) {
+      bagQuery = bagQuery.eq('airport_code', airport.toUpperCase());
+    }
+    const { data: baggages, error: bagError } = await bagQuery;
 
     if (bagError) throw bagError;
 
     // Récupérer les statuts d'embarquement (via jointure avec passengers)
-    const { data: boardingStatuses, error: boardError } = await supabase
-      .from('boarding_status')
-      .select('*, passengers!inner(airport_code)')
-      .eq('passengers.airport_code', airport);
+    let boardQuery = supabase.from('boarding_status').select('*, passengers!inner(airport_code)');
+    if (!filterAirport) {
+      boardQuery = boardQuery.eq('passengers.airport_code', airport.toUpperCase());
+    }
+    const { data: boardingStatuses, error: boardError } = await boardQuery;
 
     if (boardError) throw boardError;
 

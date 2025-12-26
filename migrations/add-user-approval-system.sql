@@ -5,11 +5,13 @@
 -- ========================================
 
 -- Ajouter les colonnes d'approbation à la table users
+-- Note: is_approved est utilisé pour la cohérence avec l'API
 ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES users(id),
-ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
 
 -- Ajouter le nouveau rôle "baggage_dispute" pour les litiges bagages
 ALTER TABLE users 
@@ -62,6 +64,11 @@ CREATE TRIGGER trigger_user_registration_requests_updated_at
 -- RLS pour user_registration_requests
 ALTER TABLE user_registration_requests ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les anciennes policies si elles existent
+DROP POLICY IF EXISTS "Support can view all registration requests" ON user_registration_requests;
+DROP POLICY IF EXISTS "Users can view own registration request" ON user_registration_requests;
+DROP POLICY IF EXISTS "Support can manage registration requests" ON user_registration_requests;
+
 -- Les utilisateurs support peuvent voir toutes les demandes
 CREATE POLICY "Support can view all registration requests"
 ON user_registration_requests FOR SELECT
@@ -70,7 +77,7 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 
@@ -91,20 +98,20 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 
 -- Mettre à jour les utilisateurs existants comme approuvés (pour migration)
 UPDATE users 
-SET approved = true, approved_at = created_at
-WHERE approved IS NULL OR approved = false;
+SET is_approved = true, approved_at = created_at
+WHERE is_approved IS NULL OR is_approved = false;
 
 -- Commentaires
 COMMENT ON TABLE user_registration_requests IS 'Demandes d''inscription en attente d''approbation pour superviseurs et litiges bagages';
 COMMENT ON COLUMN user_registration_requests.status IS 'Statut: pending (en attente), approved (approuvé), rejected (rejeté)';
 COMMENT ON COLUMN user_registration_requests.role IS 'Rôle demandé: supervisor (aéroport spécifique) ou baggage_dispute (tous les aéroports)';
-COMMENT ON COLUMN users.approved IS 'Indique si l''utilisateur a été approuvé par le support';
+COMMENT ON COLUMN users.is_approved IS 'Indique si l''utilisateur a été approuvé par le support';
 COMMENT ON COLUMN users.approved_by IS 'ID de l''utilisateur support qui a approuvé';
 COMMENT ON COLUMN users.rejection_reason IS 'Raison du rejet si l''utilisateur a été rejeté';
 

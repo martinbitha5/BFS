@@ -7,23 +7,20 @@ const router = Router();
 
 // GET /api/v1/birs/international-baggages - Liste des bagages internationaux
 // RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
-router.get('/international-baggages', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/international-baggages', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { airport, status, flight } = req.query;
-
-    // Le middleware garantit que airport existe et correspond à l'utilisateur
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
+    const { status, flight } = req.query;
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
 
     let query = supabase
       .from('international_baggages')
-      .select('*')
-      .eq('airport_code', airport) // FORCER le filtre par aéroport
-      .order('scanned_at', { ascending: false });
+      .select('*');
+    
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    if (airportCode) {
+      query = query.eq('airport_code', airportCode);
+    }
+    query = query.order('scanned_at', { ascending: false });
 
     if (status) {
       query = query.eq('status', status);
@@ -45,23 +42,19 @@ router.get('/international-baggages', requireAirportCode, async (req: Request, r
 
 // GET /api/v1/birs/reports - Liste des rapports BIRS
 // RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
-router.get('/reports', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reports', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { airport } = req.query;
-
-    // Le middleware garantit que airport existe
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
 
     let query = supabase
       .from('birs_reports')
-      .select('*')
-      .eq('airport_code', airport) // FORCER le filtre par aéroport
-      .order('uploaded_at', { ascending: false });
+      .select('*');
+    
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    if (airportCode) {
+      query = query.eq('airport_code', airportCode);
+    }
+    query = query.order('uploaded_at', { ascending: false });
 
     const { data, error } = await query;
 
@@ -79,24 +72,23 @@ router.get('/reports', requireAirportCode, async (req: Request, res: Response, n
 
 // GET /api/v1/birs/reports/:id - Détails d'un rapport BIRS
 // RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
-router.get('/reports/:id', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reports/:id', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const airport = req.query.airport as string;
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
+    const hasFullAccess = (req as any).hasFullAccess;
 
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
-
-    const { data: report, error: reportError } = await supabase
+    let query = supabase
       .from('birs_reports')
       .select('*')
-      .eq('id', id)
-      .eq('airport_code', airport) // FORCER le filtre par aéroport
-      .single();
+      .eq('id', id);
+
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    if (airportCode && !hasFullAccess) {
+      query = query.eq('airport_code', airportCode);
+    }
+
+    const { data: report, error: reportError } = await query.single();
 
     if (reportError) {
       if (reportError.code === 'PGRST116') {
@@ -108,15 +100,13 @@ router.get('/reports/:id', requireAirportCode, async (req: Request, res: Respons
       throw reportError;
     }
 
-    // Double vérification de sécurité
-    if (report && report.airport_code !== airport) {
+    // Vérification de sécurité si l'utilisateur n'a pas accès total
+    if (!hasFullAccess && airportCode && report && report.airport_code !== airportCode) {
       return res.status(403).json({
         success: false,
         error: 'Accès refusé : Ce rapport n\'appartient pas à votre aéroport'
       });
     }
-
-    if (reportError) throw reportError;
 
     // Récupérer les items du rapport
     const { data: items, error: itemsError } = await supabase

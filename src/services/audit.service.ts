@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { AuditLog, AuditAction } from '../types/audit.types';
+import { AuditLogLocal, AuditAction } from '../types/audit.types';
 
 class AuditService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -40,7 +40,7 @@ class AuditService {
     userEmail: string,
     airportCode: string,
     action: AuditAction,
-    entityType: AuditLog['entityType'],
+    entityType: AuditLogLocal['entityType'],
     details: string,
     entityId?: string
   ): Promise<void> {
@@ -104,7 +104,7 @@ class AuditService {
   /**
    * Récupère les logs d'audit pour un utilisateur
    */
-  async getAuditLogsByUser(userId: string, limit: number = 100): Promise<AuditLog[]> {
+  async getAuditLogsByUser(userId: string, limit: number = 100): Promise<AuditLogLocal[]> {
     if (!this.db) {
       throw new Error('Audit service not initialized');
     }
@@ -135,7 +135,7 @@ class AuditService {
   /**
    * Récupère tous les logs d'audit (pour superviseur)
    */
-  async getAllAuditLogs(limit: number = 500): Promise<AuditLog[]> {
+  async getAllAuditLogs(limit: number = 500): Promise<AuditLogLocal[]> {
     if (!this.db) {
       console.warn('Audit service not initialized - returning empty array');
       return [];
@@ -172,7 +172,7 @@ class AuditService {
   /**
    * Récupère les logs d'audit pour un aéroport spécifique
    */
-  async getAuditLogsByAirport(airportCode: string, limit: number = 500): Promise<AuditLog[]> {
+  async getAuditLogsByAirport(airportCode: string, limit: number = 500): Promise<AuditLogLocal[]> {
     if (!this.db) {
       console.warn('Audit service not initialized - returning empty array');
       return [];
@@ -209,7 +209,7 @@ class AuditService {
   /**
    * Récupère les logs d'audit par action
    */
-  async getAuditLogsByAction(action: AuditAction, limit: number = 100): Promise<AuditLog[]> {
+  async getAuditLogsByAction(action: AuditAction, limit: number = 100): Promise<AuditLogLocal[]> {
     if (!this.db) {
       throw new Error('Audit service not initialized');
     }
@@ -240,7 +240,7 @@ class AuditService {
   /**
    * Récupère les logs d'audit par date
    */
-  async getAuditLogsByDate(date: string, limit: number = 100): Promise<AuditLog[]> {
+  async getAuditLogsByDate(date: string, limit: number = 100): Promise<AuditLogLocal[]> {
     if (!this.db) {
       throw new Error('Audit service not initialized');
     }

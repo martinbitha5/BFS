@@ -52,6 +52,11 @@ CREATE TRIGGER trigger_baggage_auth_requests_updated_at
 -- RLS pour baggage_authorization_requests
 ALTER TABLE baggage_authorization_requests ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les anciennes policies si elles existent
+DROP POLICY IF EXISTS "Support can view all baggage authorization requests" ON baggage_authorization_requests;
+DROP POLICY IF EXISTS "Users can view airport baggage authorization requests" ON baggage_authorization_requests;
+DROP POLICY IF EXISTS "Support can manage baggage authorization requests" ON baggage_authorization_requests;
+
 -- Les utilisateurs support peuvent voir toutes les demandes
 CREATE POLICY "Support can view all baggage authorization requests"
 ON baggage_authorization_requests FOR SELECT
@@ -60,7 +65,7 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 
@@ -83,7 +88,7 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 

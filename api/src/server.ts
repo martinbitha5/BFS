@@ -25,6 +25,8 @@ import rushRoutes from './routes/rush.routes';
 import statsRoutes from './routes/stats.routes';
 import syncRawScansRoutes from './routes/sync-raw-scans.routes';
 import userApprovalRoutes from './routes/user-approval.routes';
+import usersRoutes from './routes/users.routes';
+import auditRoutes from './routes/audit.routes';
 
 dotenv.config();
 
@@ -101,6 +103,8 @@ app.use('/api/v1/rush', apiKeyAuth, rushRoutes);
 app.use('/api/v1/raw-scans', apiKeyAuth, rawScansRoutes); // ✅ NEW: Raw scans
 app.use('/api/v1/sync-raw-scans', apiKeyAuth, syncRawScansRoutes); // ✅ NEW: Sync raw scans to create passengers/baggages
 app.use('/api/v1/export', apiKeyAuth, exportRoutes); // ✅ NEW: Export with parsing
+app.use('/api/v1/users', apiKeyAuth, usersRoutes); // ✅ NEW: Gestion des utilisateurs
+app.use('/api/v1/audit', apiKeyAuth, auditRoutes); // ✅ NEW: Logs d'audit
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
 
 // 404 handler (must come before error handler)

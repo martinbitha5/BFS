@@ -243,10 +243,13 @@ export default function ArrivalScreen({ navigation }: Props) {
       );
 
       // Ajouter à la file de synchronisation
+      // #region agent log
+      console.log('[DEBUG-FIX] ArrivalScreen - Adding to sync queue:', JSON.stringify({tableName:'baggages',recordId:baggage.id,operation:'UPDATE',status:'arrived'}));
+      // #endregion
       await databaseServiceInstance.addToSyncQueue({
         tableName: 'baggages',
         recordId: baggage.id,
-        operation: 'update',
+        operation: 'UPDATE',
         data: JSON.stringify({ id: baggage.id, status: 'arrived' }),
         retryCount: 0,
         userId: user.id,

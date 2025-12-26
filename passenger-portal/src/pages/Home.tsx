@@ -130,7 +130,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <a
-                href="mailto:support@bfs-system.com"
+                href="mailto:support@brsats.com"
                 className="inline-flex items-center justify-center px-6 py-2 bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30 transition-colors rounded text-sm font-medium"
               >
                 {t('home.help.contact')}

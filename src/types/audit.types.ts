@@ -1,15 +1,32 @@
-export interface AuditLog {
+// Interface pour les logs d'audit locaux (SQLite)
+export interface AuditLogLocal {
   id: string;
   userId: string;
   userEmail: string;
   airportCode: string;
   action: string;
-  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system';
+  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system' | 'user';
   entityId?: string;
   details: string;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;
+}
+
+// Interface pour les logs d'audit Supabase (PostgreSQL)
+export interface AuditLog {
+  id: string;
+  action: string;
+  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system' | 'user';
+  entityId?: string;
+  description?: string;
+  userId?: string;
+  airportCode: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  // Champs enrichis par l'API
+  userName?: string;
+  userEmail?: string;
 }
 
 export type AuditAction =

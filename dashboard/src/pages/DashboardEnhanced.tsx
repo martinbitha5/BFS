@@ -1,6 +1,7 @@
 import { Activity, AlertTriangle, Barcode, CheckCircle, Clock, Database, MapPin, Package, Plane, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import AlertsPanel from '../components/AlertsPanel';
 import StatCard from '../components/StatCard';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -226,6 +227,9 @@ export default function DashboardEnhanced() {
           <p className="text-red-800">{error}</p>
         </div>
       )}
+
+      {/* Panneau d'Alertes en temps réel */}
+      <AlertsPanel className="animate-fade-in" />
 
       {stats && (
         <>

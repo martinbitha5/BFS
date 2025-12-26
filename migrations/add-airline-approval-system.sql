@@ -54,6 +54,11 @@ CREATE TRIGGER trigger_airline_registration_requests_updated_at
 -- RLS pour airline_registration_requests
 ALTER TABLE airline_registration_requests ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les anciennes policies si elles existent
+DROP POLICY IF EXISTS "Support can view all airline registration requests" ON airline_registration_requests;
+DROP POLICY IF EXISTS "Airlines can view own registration request" ON airline_registration_requests;
+DROP POLICY IF EXISTS "Support can manage airline registration requests" ON airline_registration_requests;
+
 -- Les utilisateurs support peuvent voir toutes les demandes
 CREATE POLICY "Support can view all airline registration requests"
 ON airline_registration_requests FOR SELECT
@@ -62,7 +67,7 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 
@@ -83,7 +88,7 @@ USING (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
     AND u.role = 'support'
-    AND u.approved = true
+    AND u.is_approved = true
   )
 );
 

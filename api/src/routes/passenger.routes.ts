@@ -9,22 +9,19 @@ const router = Router();
  * Récupérer tous les passagers avec filtres optionnels
  * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
  */
-router.get('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { airport, flight, status } = req.query;
-    
-    // Le middleware garantit que airport existe et correspond à l'utilisateur
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
+    const { flight } = req.query;
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
     
     let query = supabase
       .from('passengers')
-      .select('*, baggages(*), boarding_status(*)')
-      .eq('airport_code', airport); // FORCER le filtre par aéroport
+      .select('*, baggages(*), boarding_status(*)');
+    
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    if (airportCode) {
+      query = query.eq('airport_code', airportCode);
+    }
     if (flight) {
       query = query.eq('flight_number', flight);
     }
@@ -64,24 +61,23 @@ router.get('/', requireAirportCode, async (req: Request, res: Response, next: Ne
  * Récupérer un passager spécifique
  * RESTRICTION: Vérifie que le passager appartient à l'aéroport de l'utilisateur
  */
-router.get('/:id', requireAirportCode, async (req, res, next) => {
+router.get('/:id', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res, next) => {
   try {
     const { id } = req.params;
-    const airport = req.query.airport as string || req.body.airport_code as string;
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
+    const hasFullAccess = (req as any).hasFullAccess;
 
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
-
-    const { data, error } = await supabase
+    let query = supabase
       .from('passengers')
       .select('*, baggages(*), boarding_status(*)')
-      .eq('id', id)
-      .eq('airport_code', airport) // FORCER le filtre par aéroport
-      .single();
+      .eq('id', id);
+
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    if (airportCode && !hasFullAccess) {
+      query = query.eq('airport_code', airportCode);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -93,22 +89,12 @@ router.get('/:id', requireAirportCode, async (req, res, next) => {
       throw error;
     }
 
-    // Double vérification de sécurité
-    if (data && data.airport_code !== airport) {
+    // Vérification de sécurité si l'utilisateur n'a pas accès total
+    if (!hasFullAccess && airportCode && data && data.airport_code !== airportCode) {
       return res.status(403).json({
         success: false,
         error: 'Accès refusé : Ce passager n\'appartient pas à votre aéroport'
       });
-    }
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          error: 'Passenger not found'
-        });
-      }
-      throw error;
     }
 
     res.json({

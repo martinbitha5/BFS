@@ -23,6 +23,9 @@ import Terms from './pages/Terms';
 import AirlineApproval from './pages/AirlineApproval';
 import BaggageAuthorization from './pages/BaggageAuthorization';
 import UserApproval from './pages/UserApproval';
+import Users from './pages/Users';
+import AuditLogs from './pages/AuditLogs';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -182,6 +185,36 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <BaggageAuthorization />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Users />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AuditLogs />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }

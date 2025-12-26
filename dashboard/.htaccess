@@ -50,3 +50,4 @@
     ExpiresByType application/font-woff "access plus 1 year"
     ExpiresByType application/font-woff2 "access plus 1 year"
 </IfModule>
+

@@ -59,8 +59,8 @@ export default function Support() {
                     <Mail className="w-5 h-5 text-white/70" />
                     <div>
                       <p className="text-sm text-white/70">{t('support.contact.email')}</p>
-                      <a href="mailto:support@bfs-system.com" className="font-medium text-white hover:underline">
-                        support@bfs-system.com
+                      <a href="mailto:support@brsats.com" className="font-medium text-white hover:underline">
+                        support@brsats.com
                       </a>
                     </div>
                   </div>

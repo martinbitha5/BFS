@@ -35,7 +35,7 @@ const requireSupport = async (req: Request, res: Response, next: NextFunction) =
     // Vérifier que l'utilisateur est support et approuvé
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, approved')
+      .select('role, is_approved')
       .eq('id', user.id)
       .single();
 
@@ -46,7 +46,7 @@ const requireSupport = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    if (userData.role !== 'support' || !userData.approved) {
+    if (userData.role !== 'support' || !userData.is_approved) {
       return res.status(403).json({
         success: false,
         error: 'Accès refusé : Seuls les utilisateurs support approuvés peuvent accéder à cette fonctionnalité'
@@ -187,7 +187,7 @@ router.post('/requests/:id/approve', requireSupport, async (req: Request, res: R
     const { error: approveError } = await supabase
       .from('users')
       .update({
-        approved: true,
+        is_approved: true,
         approved_at: new Date().toISOString(),
         approved_by: supportUserId
       })
@@ -259,7 +259,7 @@ router.post('/requests/:id/reject', requireSupport, async (req: Request, res: Re
       const { error: rejectError } = await supabase
         .from('users')
         .update({
-          approved: false,
+          is_approved: false,
           rejection_reason: rejection_reason
         })
         .eq('id', request.auth_user_id);

@@ -8,8 +8,29 @@ import { supabase } from '../config/database';
 
 interface AirportRestrictedRequest extends Request {
   userAirportCode?: string;
+  userActualAirportCode?: string; // L'aéroport réel de l'utilisateur (depuis la BDD)
+  hasFullAccess?: boolean; // true si l'utilisateur a accès à tous les aéroports
   userId?: string;
 }
+
+/**
+ * Normalise le code aéroport (gère les doublons comme "ALL,ALL" -> "ALL")
+ */
+const normalizeAirportCode = (code: string | string[] | undefined): string | undefined => {
+  if (!code) return undefined;
+  
+  // Si c'est un tableau, prendre le premier élément
+  if (Array.isArray(code)) {
+    return code[0]?.toUpperCase();
+  }
+  
+  // Si c'est une chaîne avec des virgules (doublons de query params), prendre la première valeur
+  if (typeof code === 'string' && code.includes(',')) {
+    return code.split(',')[0].trim().toUpperCase();
+  }
+  
+  return code.toUpperCase();
+};
 
 /**
  * Middleware pour extraire et valider l'aéroport de l'utilisateur
@@ -21,11 +42,12 @@ export const requireAirportCode = async (
   next: NextFunction
 ) => {
   try {
-    // Récupérer l'aéroport depuis les query params, body, ou headers
-    const airportCode = 
-      req.query.airport as string ||
+    // Récupérer et normaliser l'aéroport depuis les query params, body, ou headers
+    const airportCode = normalizeAirportCode(
+      req.query.airport as string | string[] ||
       req.body.airport_code as string ||
-      req.headers['x-airport-code'] as string;
+      req.headers['x-airport-code'] as string
+    );
 
     if (!airportCode) {
       return res.status(400).json({
@@ -38,28 +60,34 @@ export const requireAirportCode = async (
     const authHeader = req.headers.authorization;
     let userId: string | undefined;
     let userAirportCode: string | undefined;
+    let hasFullAccess = false;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      
+
       // Vérifier le token avec Supabase
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       
       if (!authError && user) {
         userId = user.id;
         
-        // Récupérer l'aéroport de l'utilisateur depuis la base de données
+        // Récupérer l'aéroport et le rôle de l'utilisateur depuis la base de données
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('airport_code')
+          .select('airport_code, role')
           .eq('id', user.id)
           .single();
         
         if (!userError && userData) {
-          userAirportCode = userData.airport_code;
+          userAirportCode = userData.airport_code?.toUpperCase();
+          
+          // L'utilisateur a accès total si son airport_code est 'ALL' 
+          // OU si son rôle est 'support' (support technique a accès global)
+          hasFullAccess = userAirportCode === 'ALL' || userData.role === 'support';
           
           // Vérifier que l'aéroport demandé correspond à l'aéroport de l'utilisateur
-          if (userAirportCode !== airportCode) {
+          // OU que l'utilisateur a accès à tous les aéroports
+          if (!hasFullAccess && userAirportCode !== airportCode) {
             return res.status(403).json({
               success: false,
               error: `Accès refusé : Vous n'avez pas accès aux données de l'aéroport ${airportCode}. Votre aéroport est ${userAirportCode}`
@@ -74,13 +102,18 @@ export const requireAirportCode = async (
         userId = userIdFromHeader;
         const { data: user, error } = await supabase
           .from('users')
-          .select('airport_code')
+          .select('airport_code, role')
           .eq('id', userId)
           .single();
 
         if (!error && user) {
-          userAirportCode = user.airport_code;
-          if (userAirportCode !== airportCode) {
+          userAirportCode = user.airport_code?.toUpperCase();
+          
+          // L'utilisateur a accès total si son airport_code est 'ALL' 
+          // OU si son rôle est 'support'
+          hasFullAccess = userAirportCode === 'ALL' || user.role === 'support';
+          
+          if (!hasFullAccess && userAirportCode !== airportCode) {
             return res.status(403).json({
               success: false,
               error: 'Accès refusé : Vous n\'avez pas accès aux données de cet aéroport'
@@ -91,7 +124,10 @@ export const requireAirportCode = async (
     }
 
     // Stocker dans la requête pour utilisation ultérieure
-    req.userAirportCode = airportCode;
+    // Si l'utilisateur a accès total et demande 'ALL', ne pas filtrer par aéroport
+    req.userAirportCode = hasFullAccess && airportCode === 'ALL' ? undefined : airportCode;
+    req.userActualAirportCode = userAirportCode;
+    req.hasFullAccess = hasFullAccess;
     if (userId) {
       req.userId = userId;
     }

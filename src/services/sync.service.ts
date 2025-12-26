@@ -141,6 +141,10 @@ class SyncService {
 
         console.log(`[Sync] 🔍 Config: API_URL=${apiUrl ? 'SET' : 'MISSING'}, API_KEY=${apiKey ? 'SET' : 'EMPTY'}`);
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sync.service.ts:syncItem',message:'Sync item received',data:{tableName:item.tableName,recordId:item.recordId,operation:item.operation,retryCount:item.retryCount},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+
         if (!apiUrl) {
             throw new Error('Configuration API manquante (API_URL non définie)');
         }
@@ -171,6 +175,10 @@ class SyncService {
             default:
                 throw new Error(`Table non supportée: ${item.tableName}`);
         }
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sync.service.ts:afterSwitch',message:'HTTP method determined',data:{tableName:item.tableName,operation:item.operation,httpMethod:method,endpoint:endpoint},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
 
         console.log(`[Sync] 📡 Requête: ${method} ${endpoint}`);
         console.log(`[Sync] 📦 Données:`, JSON.stringify(data, null, 2));

@@ -92,7 +92,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
         full_name: name,
         airport_code: finalAirportCode,
         role,
-        approved: false // Non approuvé par défaut
+        is_approved: false // Non approuvé par défaut
       })
       .select()
       .single();
@@ -197,7 +197,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // Vérifier que l'utilisateur est approuvé (pour supervisor et baggage_dispute)
-    if (['supervisor', 'baggage_dispute'].includes(userData.role) && !userData.approved) {
+    if (['supervisor', 'baggage_dispute'].includes(userData.role) && !userData.is_approved) {
       return res.status(403).json({
         success: false,
         error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',

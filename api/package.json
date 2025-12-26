@@ -10,6 +10,8 @@
     "test": "jest",
     "clear-data": "ts-node scripts/clear-test-data.ts",
     "clear-all": "ts-node scripts/clear-all-data.ts",
+    "clear-auth-users": "ts-node scripts/clear-auth-users.ts",
+    "create-support-dashboard-user": "ts-node scripts/create-support-dashboard-user.ts",
     "test-massive": "ts-node scripts/test-massive-flow.ts",
     "test-portals": "ts-node scripts/test-portals.ts"
   },

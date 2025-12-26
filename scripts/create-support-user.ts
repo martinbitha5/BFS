@@ -83,7 +83,7 @@ async function createSupportUser() {
         full_name: fullName,
         airport_code: 'ALL', // Accès à tous les aéroports
         role: 'support',
-        approved: true, // Approuvé automatiquement
+        is_approved: true, // Approuvé automatiquement
         approved_at: new Date().toISOString(),
       })
       .select()
@@ -103,7 +103,7 @@ async function createSupportUser() {
     console.log(`   Email: ${userData.email}`);
     console.log(`   Nom: ${userData.full_name}`);
     console.log(`   Rôle: ${userData.role}`);
-    console.log(`   Approuvé: ${userData.approved}`);
+    console.log(`   Approuvé: ${userData.is_approved}`);
     console.log(`   Aéroport: ${userData.airport_code}\n`);
 
     console.log('🎉 Vous pouvez maintenant vous connecter au dashboard avec cet email et mot de passe');

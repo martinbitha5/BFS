@@ -10,22 +10,20 @@ const router = Router();
  * Liste de tous les bagages avec filtres optionnels
  * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
  */
-router.get('/', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { airport, flight, status } = req.query;
-    
-    // Le middleware garantit que airport existe
-    if (!airport) {
-      return res.status(400).json({
-        success: false,
-        error: 'Code aéroport requis'
-      });
-    }
+    const { flight, status } = req.query;
+    const airportCode = req.userAirportCode; // Peut être undefined si accès total
     
     let query = supabase
       .from('baggages')
-      .select('*, passengers(*)')
-      .eq('airport_code', airport); // FORCER le filtre par aéroport
+      .select('*, passengers(*)');
+    
+    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
+    // ou si un aéroport spécifique est demandé (autre que ALL)
+    if (airportCode) {
+      query = query.eq('airport_code', airportCode);
+    }
     if (status) {
       query = query.eq('status', status);
     }

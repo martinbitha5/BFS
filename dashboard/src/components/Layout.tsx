@@ -1,8 +1,9 @@
-import { AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, Settings, ShieldCheck, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Footer from './Footer';
+import GlobalSearch from './GlobalSearch';
 import Logo from './Logo';
 
 interface LayoutProps {
@@ -54,6 +55,15 @@ export default function Layout({ children }: LayoutProps) {
     },
     { path: '/raw-scans', label: 'Scans Bruts', icon: Barcode },
     { path: '/export', label: 'Export', icon: Download },
+    {
+      label: 'Administration',
+      icon: Users,
+      children: [
+        { path: '/users', label: 'Utilisateurs', icon: Users },
+        { path: '/audit-logs', label: 'Historique', icon: Activity },
+        { path: '/settings', label: 'Paramètres', icon: Settings },
+      ]
+    },
   ];
 
   // Menu d'approbations (uniquement pour le support)
@@ -248,6 +258,11 @@ export default function Layout({ children }: LayoutProps) {
         >
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
+        
+        {/* Barre de recherche globale */}
+        <div className="fixed top-4 right-4 z-40">
+          <GlobalSearch />
+        </div>
         
         <div className="flex-1 container mx-auto py-6 px-6 mt-16 md:mt-0">
           {children}

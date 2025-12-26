@@ -122,7 +122,7 @@ export default function About() {
                   <div className="mt-4 pt-4 border-t border-white/20">
                     <p className="text-sm">
                       Contact : <a href="mailto:contact@bfs-system.com" className="text-primary-300 hover:text-primary-200">contact@bfs-system.com</a><br />
-                      Support : <a href="mailto:support@bfs-system.com" className="text-primary-300 hover:text-primary-200">support@bfs-system.com</a>
+                      Support : <a href="mailto:support@brsats.com" className="text-primary-300 hover:text-primary-200">support@brsats.com</a>
                     </p>
                   </div>
                 </section>
@@ -229,7 +229,7 @@ export default function About() {
                   <div className="mt-4 pt-4 border-t border-white/20">
                     <p className="text-sm">
                       Contact: <a href="mailto:contact@bfs-system.com" className="text-primary-300 hover:text-primary-200">contact@bfs-system.com</a><br />
-                      Support: <a href="mailto:support@bfs-system.com" className="text-primary-300 hover:text-primary-200">support@bfs-system.com</a>
+                      Support: <a href="mailto:support@brsats.com" className="text-primary-300 hover:text-primary-200">support@brsats.com</a>
                     </p>
                   </div>
                 </section>

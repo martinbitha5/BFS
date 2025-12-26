@@ -1,15 +1,17 @@
+// Interface pour les logs d'audit Supabase (PostgreSQL)
 export interface AuditLog {
   id: string;
-  userId: string;
-  userEmail: string;
-  airportCode: string;
   action: string;
-  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system';
+  entityType: 'passenger' | 'baggage' | 'international_baggage' | 'boarding' | 'export' | 'system' | 'user';
   entityId?: string;
-  details: string;
-  ipAddress?: string;
-  userAgent?: string;
+  description?: string;
+  userId?: string;
+  airportCode: string;
+  metadata?: Record<string, any>;
   createdAt: string;
+  // Champs enrichis par l'API
+  userName?: string;
+  userEmail?: string;
 }
 
 export type AuditAction =

@@ -316,7 +316,7 @@ export default function TrackResult() {
                       {t('track.help.text')}
                     </p>
                     <a
-                      href="mailto:support@bfs-system.com"
+                      href="mailto:support@brsats.com"
                       className="block w-full text-center bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
                     >
                       {t('track.help.button')}

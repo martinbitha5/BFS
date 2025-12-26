@@ -1,27 +1,7 @@
 import { Request, Response, Router, NextFunction } from 'express';
-import { Pool } from 'pg';
+import { supabase } from '../config/database';
 
 const router = Router();
-
-// Initialize database pool only if DATABASE_URL is configured
-let pool: Pool | null = null;
-
-if (process.env.DATABASE_URL) {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-  });
-
-  // Handle pool errors
-  pool.on('error', (err) => {
-    if (process.env.NODE_ENV !== 'production') {
-    console.error('Unexpected error on idle database client', err);
-    }
-  });
-} else {
-  if (process.env.NODE_ENV !== 'production') {
-  console.warn('DATABASE_URL not configured. Public tracking routes will not work.');
-  }
-}
 
 /**
  * Route publique pour tracker un bagage
@@ -31,13 +11,6 @@ if (process.env.DATABASE_URL) {
  */
 router.get('/track', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!pool) {
-      return res.status(503).json({
-        success: false,
-        error: 'Service de base de données non disponible. Veuillez configurer DATABASE_URL.'
-      });
-    }
-
     const { pnr, tag } = req.query;
 
     if (!pnr && !tag) {
@@ -47,173 +20,182 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    let query: string;
-    let params: any[];
+    let baggage: any = null;
+    let baggageType = 'national';
 
+    // 1. Rechercher dans les bagages nationaux
     if (pnr) {
       // Rechercher par PNR - trouver le passager et ses bagages
-      query = `
-        SELECT 
-          b.id,
-          b.tag_number as bag_id,
-          b.status,
-          b.weight,
-          b.current_location,
-          b.last_scanned_at,
-          p.full_name as passenger_name,
-          p.pnr,
-          p.flight_number,
-          p.departure as origin,
-          p.arrival as destination,
-          'national' as baggage_type
-        FROM baggages b
-        INNER JOIN passengers p ON b.passenger_id = p.id
-        WHERE UPPER(p.pnr) = UPPER($1)
-        ORDER BY b.created_at DESC
-        LIMIT 1
-      `;
-      params = [pnr];
-    } else {
-      // Rechercher par tag RFID - d'abord dans bagages nationaux
-      query = `
-        SELECT 
-          b.id,
-          b.tag_number as bag_id,
-          b.status,
-          b.weight,
-          b.current_location,
-          b.last_scanned_at,
-          p.full_name as passenger_name,
-          p.pnr,
-          p.flight_number,
-          p.departure as origin,
-          p.arrival as destination,
-          'national' as baggage_type
-        FROM baggages b
-        INNER JOIN passengers p ON b.passenger_id = p.id
-        WHERE UPPER(b.tag_number) = UPPER($1)
-        ORDER BY b.created_at DESC
-        LIMIT 1
-      `;
-      params = [tag];
+      const { data: nationalBaggage, error: nationalError } = await supabase
+        .from('baggages')
+        .select(`
+          id,
+          tag_number,
+          status,
+          weight,
+          current_location,
+          last_scanned_at,
+          passengers!inner (
+            full_name,
+            pnr,
+            flight_number,
+            departure,
+            arrival
+          )
+        `)
+        .eq('passengers.pnr', (pnr as string).toUpperCase())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (nationalBaggage && !nationalError) {
+        const passenger = (nationalBaggage as any).passengers;
+        baggage = {
+          bag_id: nationalBaggage.tag_number,
+          status: nationalBaggage.status,
+          weight: nationalBaggage.weight,
+          current_location: nationalBaggage.current_location,
+          last_scanned_at: nationalBaggage.last_scanned_at,
+          passenger_name: passenger.full_name,
+          pnr: passenger.pnr,
+          flight_number: passenger.flight_number,
+          origin: passenger.departure,
+          destination: passenger.arrival
+        };
+        baggageType = 'national';
+      }
+    } else if (tag) {
+      // Rechercher par tag RFID dans bagages nationaux
+      const { data: nationalBaggage, error: nationalError } = await supabase
+        .from('baggages')
+        .select(`
+          id,
+          tag_number,
+          status,
+          weight,
+          current_location,
+          last_scanned_at,
+          passengers!inner (
+            full_name,
+            pnr,
+            flight_number,
+            departure,
+            arrival
+          )
+        `)
+        .ilike('tag_number', (tag as string).toUpperCase())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (nationalBaggage && !nationalError) {
+        const passenger = (nationalBaggage as any).passengers;
+        baggage = {
+          bag_id: nationalBaggage.tag_number,
+          status: nationalBaggage.status,
+          weight: nationalBaggage.weight,
+          current_location: nationalBaggage.current_location,
+          last_scanned_at: nationalBaggage.last_scanned_at,
+          passenger_name: passenger.full_name,
+          pnr: passenger.pnr,
+          flight_number: passenger.flight_number,
+          origin: passenger.departure,
+          destination: passenger.arrival
+        };
+        baggageType = 'national';
+      }
     }
 
-    let result = await pool.query(query, params);
+    // 2. Si aucun bagage national trouvé, chercher dans bagages internationaux
+    if (!baggage) {
+      const searchField = pnr ? 'pnr' : 'rfid_tag';
+      const searchValue = pnr ? (pnr as string).toUpperCase() : (tag as string).toUpperCase();
 
-    // Si aucun bagage national trouvé et recherche par tag, chercher dans bagages internationaux
-    if (result.rows.length === 0 && tag) {
-      const internationalQuery = `
-        SELECT 
-          ib.id,
-          ib.rfid_tag as bag_id,
-          ib.status,
-          ib.weight,
-          ib.airport_code as current_location,
-          ib.scanned_at as last_scanned_at,
-          COALESCE(ib.passenger_name, 'Passager international') as passenger_name,
-          ib.pnr,
-          ib.flight_number,
-          NULL as origin,
-          NULL as destination,
-          'international' as baggage_type
-        FROM international_baggages ib
-        WHERE UPPER(ib.rfid_tag) = UPPER($1)
-        ORDER BY ib.created_at DESC
-        LIMIT 1
-      `;
-      result = await pool.query(internationalQuery, [tag]);
+      const { data: internationalBaggage, error: intlError } = await supabase
+        .from('international_baggages')
+        .select('*')
+        .ilike(searchField, searchValue)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (internationalBaggage && !intlError) {
+        baggage = {
+          bag_id: internationalBaggage.rfid_tag,
+          status: internationalBaggage.status,
+          weight: internationalBaggage.weight,
+          current_location: internationalBaggage.airport_code,
+          last_scanned_at: internationalBaggage.scanned_at,
+          passenger_name: internationalBaggage.passenger_name || 'Passager international',
+          pnr: internationalBaggage.pnr,
+          flight_number: internationalBaggage.flight_number,
+          origin: null,
+          destination: null
+        };
+        baggageType = 'international';
+      }
     }
 
-    // Si aucun bagage trouvé et recherche par PNR, chercher aussi dans bagages internationaux
-    if (result.rows.length === 0 && pnr) {
-      const internationalQuery = `
-        SELECT 
-          ib.id,
-          ib.rfid_tag as bag_id,
-          ib.status,
-          ib.weight,
-          ib.airport_code as current_location,
-          ib.scanned_at as last_scanned_at,
-          COALESCE(ib.passenger_name, 'Passager international') as passenger_name,
-          ib.pnr,
-          ib.flight_number,
-          NULL as origin,
-          NULL as destination,
-          'international' as baggage_type
-        FROM international_baggages ib
-        WHERE UPPER(ib.pnr) = UPPER($1)
-        ORDER BY ib.created_at DESC
-        LIMIT 1
-      `;
-      result = await pool.query(internationalQuery, [pnr]);
+    // 3. Si toujours rien, chercher dans les rapports BIRS
+    if (!baggage) {
+      const searchField = pnr ? 'pnr' : 'bag_id';
+      const searchValue = pnr ? (pnr as string).toUpperCase() : (tag as string).toUpperCase();
+
+      const { data: birsItems, error: birsError } = await supabase
+        .from('birs_report_items')
+        .select(`
+          id,
+          bag_id,
+          weight,
+          passenger_name,
+          pnr,
+          received,
+          loaded,
+          created_at,
+          birs_reports!inner (
+            flight_number,
+            origin,
+            destination
+          )
+        `)
+        .ilike(searchField, searchValue)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (birsItems && !birsError) {
+        const birsReport = (birsItems as any).birs_reports;
+        // Déterminer le statut basé sur les champs received/loaded
+        let status = 'scanned';
+        if (birsItems.received) {
+          status = 'arrived';
+        } else if (birsItems.loaded) {
+          status = 'in_transit';
+        }
+
+        baggage = {
+          bag_id: birsItems.bag_id,
+          status: status,
+          weight: birsItems.weight,
+          current_location: birsReport.destination,
+          last_scanned_at: birsItems.created_at,
+          passenger_name: birsItems.passenger_name || 'Passager international',
+          pnr: birsItems.pnr,
+          flight_number: birsReport.flight_number,
+          origin: birsReport.origin,
+          destination: birsReport.destination
+        };
+        baggageType = 'birs';
+      }
     }
 
-    // Si toujours aucun bagage trouvé, chercher dans les rapports BIRS (bagages arrivés)
-    if (result.rows.length === 0 && tag) {
-      const birsQuery = `
-        SELECT 
-          bri.id,
-          bri.bag_id,
-          CASE 
-            WHEN bri.received IS NOT NULL THEN 'arrived'
-            WHEN bri.loaded IS NOT NULL THEN 'in_transit'
-            ELSE 'scanned'
-          END as status,
-          bri.weight,
-          br.destination as current_location,
-          bri.created_at as last_scanned_at,
-          COALESCE(bri.passenger_name, 'Passager international') as passenger_name,
-          bri.pnr,
-          br.flight_number,
-          br.origin,
-          br.destination,
-          'birs' as baggage_type
-        FROM birs_report_items bri
-        INNER JOIN birs_reports br ON bri.birs_report_id = br.id
-        WHERE UPPER(bri.bag_id) = UPPER($1)
-        ORDER BY bri.created_at DESC
-        LIMIT 1
-      `;
-      result = await pool.query(birsQuery, [tag]);
-    }
-
-    // Si toujours aucun bagage trouvé et recherche par PNR, chercher dans les rapports BIRS
-    if (result.rows.length === 0 && pnr) {
-      const birsQuery = `
-        SELECT 
-          bri.id,
-          bri.bag_id,
-          CASE 
-            WHEN bri.received IS NOT NULL THEN 'arrived'
-            WHEN bri.loaded IS NOT NULL THEN 'in_transit'
-            ELSE 'scanned'
-          END as status,
-          bri.weight,
-          br.destination as current_location,
-          bri.created_at as last_scanned_at,
-          COALESCE(bri.passenger_name, 'Passager international') as passenger_name,
-          bri.pnr,
-          br.flight_number,
-          br.origin,
-          br.destination,
-          'birs' as baggage_type
-        FROM birs_report_items bri
-        INNER JOIN birs_reports br ON bri.birs_report_id = br.id
-        WHERE UPPER(bri.pnr) = UPPER($1)
-        ORDER BY bri.created_at DESC
-        LIMIT 1
-      `;
-      result = await pool.query(birsQuery, [pnr]);
-    }
-
-    if (result.rows.length === 0) {
+    // 4. Aucun bagage trouvé
+    if (!baggage) {
       return res.status(404).json({
         success: false,
         error: 'Aucun bagage trouvé avec ces informations. Vérifiez votre PNR ou numéro de bagage.'
       });
     }
-
-    const baggage = result.rows[0];
 
     return res.json({
       success: true,
@@ -228,13 +210,13 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
         origin: baggage.origin,
         destination: baggage.destination,
         weight: baggage.weight,
-        baggage_type: baggage.baggage_type
+        baggage_type: baggageType
       }
     });
 
   } catch (error: any) {
     if (process.env.NODE_ENV !== 'production') {
-    console.error('Erreur lors de la recherche du bagage:', error);
+      console.error('Erreur lors de la recherche du bagage:', error);
     }
     next(error);
   }

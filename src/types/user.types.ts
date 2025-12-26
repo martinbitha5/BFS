@@ -1,4 +1,4 @@
-export type UserRole = 'checkin' | 'baggage' | 'boarding' | 'arrival' | 'supervisor';
+export type UserRole = 'checkin' | 'baggage' | 'boarding' | 'arrival' | 'supervisor' | 'baggage_dispute' | 'support';
 
 export interface User {
   id: string;
@@ -6,6 +6,11 @@ export interface User {
   fullName: string;
   airportCode: string;
   role: UserRole;
+  isApproved?: boolean;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
+  lastLogin?: string;
   createdAt: string;
   updatedAt: string;
 }
