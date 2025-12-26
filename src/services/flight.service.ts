@@ -256,6 +256,158 @@ class FlightService {
 
     return null;
   }
+
+  /**
+   * Vérifie si un vol est programmé pour aujourd'hui via l'API
+   * @param flightNumber - Numéro de vol extrait du boarding pass
+   * @param airportCode - Code aéroport de l'agent
+   * @returns { isValid: boolean, flight?: AvailableFlight, reason?: string }
+   */
+  async validateFlightForToday(
+    flightNumber: string,
+    airportCode: string,
+    departure?: string,
+    arrival?: string
+  ): Promise<{ isValid: boolean; flight?: AvailableFlight; reason?: string }> {
+    try {
+      const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
+      const apiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
+
+      console.log('[FlightService] 🔍 Validation vol:', {
+        flightNumber,
+        airportCode,
+        departure,
+        arrival,
+      });
+
+      if (!apiUrl) {
+        console.warn('[FlightService] ⚠️ API URL non configurée - validation locale uniquement');
+        // Fallback: valider localement avec les vols du jour
+        return this.validateFlightLocally(flightNumber, airportCode);
+      }
+
+      const url = `${apiUrl}/api/v1/flights/validate-boarding`;
+      console.log('[FlightService] 📡 Appel API:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey || '',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          flightNumber,
+          airportCode,
+          departure,
+          arrival,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('[FlightService] ❌ Erreur HTTP:', response.status);
+        // En cas d'erreur API, fallback local
+        return this.validateFlightLocally(flightNumber, airportCode);
+      }
+
+      const result = await response.json();
+      console.log('[FlightService] 📥 Résultat validation:', result);
+
+      if (result.isValid && result.flight) {
+        return {
+          isValid: true,
+          flight: {
+            flightNumber: result.flight.flightNumber,
+            airline: result.flight.airline || '',
+            airlineCode: result.flight.airlineCode || '',
+            departure: result.flight.departure,
+            arrival: result.flight.arrival,
+            scheduledTime: result.flight.scheduledTime,
+            source: 'scheduled',
+          },
+        };
+      }
+
+      return {
+        isValid: false,
+        reason: result.reason || `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui.`,
+      };
+    } catch (error) {
+      console.error('[FlightService] ❌ Erreur validation vol:', error);
+      // En cas d'erreur, fallback local
+      return this.validateFlightLocally(flightNumber, airportCode);
+    }
+  }
+
+  /**
+   * Validation locale des vols (fallback si API indisponible)
+   */
+  private async validateFlightLocally(
+    flightNumber: string,
+    airportCode: string
+  ): Promise<{ isValid: boolean; flight?: AvailableFlight; reason?: string }> {
+    console.log('[FlightService] 🔄 Validation locale du vol...');
+
+    try {
+      // Charger les vols disponibles du jour
+      const availableFlights = await this.getAvailableFlights(airportCode);
+
+      if (availableFlights.length === 0) {
+        // Aucun vol programmé = on autorise pour ne pas bloquer l'agent
+        console.log('[FlightService] ⚠️ Aucun vol programmé - Autorisation par défaut');
+        return {
+          isValid: true,
+          reason: 'Aucun vol programmé - scan autorisé',
+        };
+      }
+
+      // Chercher le vol correspondant
+      const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+      const matchingFlight = availableFlights.find((flight) => {
+        const dbFlightNumber = flight.flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+        return (
+          dbFlightNumber === normalizedFlightNumber ||
+          dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1')
+        );
+      });
+
+      if (matchingFlight) {
+        return {
+          isValid: true,
+          flight: matchingFlight,
+        };
+      }
+
+      return {
+        isValid: false,
+        reason: `Le vol ${flightNumber} n'est pas dans la liste des vols du jour.`,
+      };
+    } catch (error) {
+      console.error('[FlightService] Erreur validation locale:', error);
+      // En cas d'erreur, on autorise pour ne pas bloquer l'agent
+      return {
+        isValid: true,
+        reason: 'Erreur de validation - scan autorisé',
+      };
+    }
+  }
+
+  /**
+   * Vérifie si un vol est dans la liste des vols du jour (sans API)
+   */
+  isFlightScheduledLocally(flightNumber: string, scheduledFlights: AvailableFlight[]): boolean {
+    if (scheduledFlights.length === 0) {
+      return true; // Aucun vol programmé = pas de restriction
+    }
+
+    const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+    return scheduledFlights.some((flight) => {
+      const dbFlightNumber = flight.flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+      return (
+        dbFlightNumber === normalizedFlightNumber ||
+        dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1')
+      );
+    });
+  }
 }
 
 export const flightService = new FlightService();

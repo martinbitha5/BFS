@@ -7,10 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
+import { authServiceInstance, flightService, parserService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { BoardingStatus } from '../types/boarding.types';
-import { Passenger } from '../types/passenger.types';
+import { Passenger, PassengerData } from '../types/passenger.types';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
@@ -58,7 +58,57 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // ✅ NOUVEAU SYSTÈME: Chercher dans raw_scans par raw_data (pas de parsing)
+      // ✅ ÉTAPE 1: Parser le boarding pass pour extraire le numéro de vol
+      let parsedData: PassengerData | null = null;
+      let flightNumber = '';
+      let departure = '';
+      let arrival = '';
+
+      try {
+        parsedData = parserService.parse(data);
+        flightNumber = parsedData.flightNumber || '';
+        departure = parsedData.departure || '';
+        arrival = parsedData.arrival || '';
+        console.log('[BOARDING] Vol extrait du boarding pass:', flightNumber, departure, '->', arrival);
+      } catch (parseError) {
+        console.warn('[BOARDING] Impossible de parser le boarding pass:', parseError);
+      }
+
+      // ✅ ÉTAPE 2: Valider que le vol est programmé pour aujourd'hui
+      if (flightNumber) {
+        console.log('[BOARDING] 🔍 Validation du vol...');
+        const validation = await flightService.validateFlightForToday(
+          flightNumber,
+          user.airportCode,
+          departure,
+          arrival
+        );
+
+        if (!validation.isValid) {
+          await playErrorSound();
+          setToastMessage(`❌ Vol non autorisé !\n${validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.'}`);
+          setToastType('error');
+          setShowToast(true);
+          resetScanner();
+          return;
+        }
+
+        console.log('[BOARDING] ✅ Vol validé:', validation.flight?.flightNumber || flightNumber);
+      } else {
+        console.warn('[BOARDING] ⚠️ Impossible d\'extraire le numéro de vol - vérification ignorée');
+      }
+
+      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
+      if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
+        await playErrorSound();
+        setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);
+        setToastType('error');
+        setShowToast(true);
+        resetScanner();
+        return;
+      }
+
+      // ✅ ÉTAPE 4: Chercher dans raw_scans par raw_data
       const { rawScanService } = await import('../services');
       const existingScan = await rawScanService.findByRawData(data);
       
@@ -85,7 +135,7 @@ export default function BoardingScreen({ navigation }: Props) {
         return;
       }
 
-      // ✅ Mettre à jour le statut boarding dans raw_scans
+      // ✅ ÉTAPE 5: Mettre à jour le statut boarding dans raw_scans
       const result = await rawScanService.createOrUpdateRawScan({
         rawData: data,
         scanType: 'boarding_pass',
@@ -99,21 +149,21 @@ export default function BoardingScreen({ navigation }: Props) {
       await logAudit(
         'BOARD_PASSENGER',
         'boarding',
-        `Embarquement confirmé - Scan #${result.scanCount}`,
+        `Embarquement confirmé - Vol: ${flightNumber || 'N/A'} - Scan #${result.scanCount}`,
         result.id
       );
 
-      // Créer un objet Passenger simplifié pour l'affichage (sans parsing détaillé)
+      // Créer un objet Passenger pour l'affichage (avec les données parsées si disponibles)
       const displayPassenger: Passenger = {
         id: existingScan.id,
-        pnr: 'En attente parsing web',
-        fullName: 'Passager embarqué',
-        firstName: '',
-        lastName: '',
-        flightNumber: 'Voir dashboard',
-        route: `${user.airportCode}-...`,
-        departure: user.airportCode,
-        arrival: 'En attente',
+        pnr: parsedData?.pnr || 'En attente parsing web',
+        fullName: parsedData?.fullName || 'Passager embarqué',
+        firstName: parsedData?.firstName || '',
+        lastName: parsedData?.lastName || '',
+        flightNumber: flightNumber || 'Voir dashboard',
+        route: departure && arrival ? `${departure}-${arrival}` : `${user.airportCode}-...`,
+        departure: departure || user.airportCode,
+        arrival: arrival || 'En attente',
         baggageCount: 0,
         checkedInAt: (existingScan.checkinAt || new Date().toISOString()) as string,
         checkedInBy: (existingScan.checkinBy || user.id) as string,
@@ -123,7 +173,7 @@ export default function BoardingScreen({ navigation }: Props) {
       };
 
       // Créer un statut boarding simplifié
-      const boardingStatus: BoardingStatus = {
+      const boardingStatusData: BoardingStatus = {
         id: result.id,
         passengerId: existingScan.id,
         boarded: true,
@@ -135,12 +185,12 @@ export default function BoardingScreen({ navigation }: Props) {
 
       // Stocker pour affichage
       setLastPassenger(displayPassenger);
-      setBoardingStatus(boardingStatus);
+      setBoardingStatus(boardingStatusData);
       
       // Jouer le son de succès
       await playSuccessSound();
       
-      const successMessage = `✅ Embarquement confirmé ! (Scan #${result.scanCount})`;
+      const successMessage = `✅ Embarquement confirmé ! (Vol: ${flightNumber || 'N/A'})`;
       
       setToastMessage(successMessage);
       setToastType('success');

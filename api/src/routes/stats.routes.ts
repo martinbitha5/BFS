@@ -1,8 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 
 const router = Router();
+
 
 /**
  * GET /api/v1/stats/airport/:airport
@@ -68,6 +69,215 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
         todayBaggages,
         flightsCount: uniqueFlights.length,
         uniqueFlights,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/stats/recent/:airport
+ * Données récentes parsées (passagers, bagages, activités)
+ * Pour affichage détaillé dans le dashboard
+ */
+router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { airport } = req.params;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const today = new Date().toISOString().split('T')[0];
+    const filterByAirport = airport.toUpperCase() !== 'ALL';
+
+    // 1. Passagers récents (aujourd'hui) avec infos parsées
+    let passQuery = supabase
+      .from('passengers')
+      .select(`
+        id, 
+        pnr, 
+        full_name, 
+        flight_number, 
+        departure, 
+        arrival, 
+        baggage_count,
+        checked_in_at
+      `)
+      .gte('checked_in_at', today)
+      .order('checked_in_at', { ascending: false })
+      .limit(limit);
+    
+    if (filterByAirport) {
+      passQuery = passQuery.eq('airport_code', airport.toUpperCase());
+    }
+    
+    const { data: recentPassengers, error: passError } = await passQuery;
+
+    if (passError) throw passError;
+
+    // 2. Bagages récents - requête simplifiée
+    let bagQuery = supabase
+      .from('baggages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (filterByAirport) {
+      bagQuery = bagQuery.eq('airport_code', airport.toUpperCase());
+    }
+    
+    const { data: recentBaggages, error: bagError } = await bagQuery;
+
+    // Ignorer les erreurs de bagages pour ne pas bloquer la route
+    if (bagError) {
+      console.warn('Baggage query error:', bagError.message);
+    }
+
+    // 3. Activités récentes (audit log) - requête simplifiée
+    let actQuery = supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (filterByAirport) {
+      actQuery = actQuery.eq('airport_code', airport.toUpperCase());
+    }
+    
+    const { data: recentActivities, error: actError } = await actQuery;
+
+    // Transformer les données pour l'affichage
+    const formattedPassengers = recentPassengers?.map(p => ({
+      id: p.id,
+      pnr: p.pnr,
+      fullName: p.full_name,
+      flightNumber: p.flight_number,
+      route: `${p.departure} → ${p.arrival}`,
+      baggageCount: p.baggage_count || 0,
+      checkedInAt: p.checked_in_at,
+    })) || [];
+
+    const formattedBaggages = recentBaggages?.map(b => ({
+      id: b.id,
+      tag: b.tag_number || b.rfid_tag || b.id,
+      status: b.status || 'unknown',
+      passengerId: b.passenger_id,
+      createdAt: b.created_at,
+    })) || [];
+
+    const formattedActivities = recentActivities?.map(a => ({
+      id: a.id,
+      action: a.action,
+      entityType: a.entity_type,
+      details: a.details,
+      createdAt: a.created_at,
+      userId: a.user_id,
+    })) || [];
+
+    res.json({
+      success: true,
+      data: {
+        recentPassengers: formattedPassengers,
+        recentBaggages: formattedBaggages,
+        recentActivities: formattedActivities,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/stats/flights/:airport
+ * Vols du jour avec statistiques détaillées par vol
+ */
+router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { airport } = req.params;
+    const today = new Date().toISOString().split('T')[0];
+    const filterByAirport = airport.toUpperCase() !== 'ALL';
+
+    // Récupérer les vols programmés aujourd'hui
+    let flightQuery = supabase
+      .from('flight_schedule')
+      .select('*')
+      .eq('scheduled_date', today)
+      .order('scheduled_time', { ascending: true });
+    
+    if (filterByAirport) {
+      flightQuery = flightQuery.eq('airport_code', airport.toUpperCase());
+    }
+    
+    const { data: scheduledFlights, error: flightError } = await flightQuery;
+
+    if (flightError) throw flightError;
+
+    // Pour chaque vol, récupérer les stats de passagers et bagages
+    const flightsWithStats = await Promise.all(
+      (scheduledFlights || []).map(async (flight) => {
+        // Compter les passagers de ce vol
+        let passCountQuery = supabase
+          .from('passengers')
+          .select('*', { count: 'exact', head: true })
+          .eq('flight_number', flight.flight_number);
+        
+        if (filterByAirport) {
+          passCountQuery = passCountQuery.eq('airport_code', airport.toUpperCase());
+        }
+        
+        const { count: passengerCount } = await passCountQuery;
+
+        // Compter les passagers embarqués
+        let boardedQuery = supabase
+          .from('boarding_status')
+          .select('passenger_id, passengers!inner(flight_number, airport_code)')
+          .eq('boarded', true)
+          .eq('passengers.flight_number', flight.flight_number);
+        
+        if (filterByAirport) {
+          boardedQuery = boardedQuery.eq('passengers.airport_code', airport.toUpperCase());
+        }
+        
+        const { data: boardedData } = await boardedQuery;
+
+        // Compter les bagages de ce vol
+        let bagCountQuery = supabase
+          .from('baggages')
+          .select('*', { count: 'exact', head: true })
+          .eq('flight_number', flight.flight_number);
+        
+        if (filterByAirport) {
+          bagCountQuery = bagCountQuery.eq('airport_code', airport.toUpperCase());
+        }
+        
+        const { count: baggageCount } = await bagCountQuery;
+
+        return {
+          id: flight.id,
+          flightNumber: flight.flight_number,
+          airline: flight.airline,
+          airlineCode: flight.airline_code,
+          departure: flight.departure,
+          arrival: flight.arrival,
+          scheduledTime: flight.scheduled_time,
+          status: flight.status,
+          flightType: flight.flight_type || 'departure',
+          baggageRestriction: flight.baggage_restriction || 'block',
+          stats: {
+            totalPassengers: passengerCount || 0,
+            boardedPassengers: boardedData?.length || 0,
+            totalBaggages: baggageCount || 0,
+            boardingProgress: passengerCount ? Math.round(((boardedData?.length || 0) / passengerCount) * 100) : 0,
+          }
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        flights: flightsWithStats,
+        totalFlights: flightsWithStats.length,
         timestamp: new Date().toISOString()
       }
     });

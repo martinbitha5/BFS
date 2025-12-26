@@ -172,7 +172,7 @@ export default function Passengers() {
                   Synchronisation...
                 </>
               ) : (
-                '🔄 Synchroniser les scans'
+                'Synchroniser les scans'
               )}
             </button>
             <button

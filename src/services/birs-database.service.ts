@@ -4,11 +4,11 @@
 
 import * as SQLite from 'expo-sqlite';
 import {
-    BirsReport,
-    BirsReportItem,
-    BirsStatistics,
-    InternationalBaggage,
-    InternationalBaggageStatus
+  BirsReport,
+  BirsReportItem,
+  BirsStatistics,
+  InternationalBaggage,
+  InternationalBaggageStatus
 } from '../types/birs.types';
 
 class BirsDatabaseService {
@@ -302,6 +302,63 @@ class BirsDatabaseService {
       [reportId]
     );
 
+    return results.map(r => this.mapBirsReportItem(r));
+  }
+
+  /**
+   * Cherche un item BIRS par son bag_id (numéro de tag)
+   * Utilisé pour vérifier si un bagage international est attendu
+   */
+  async getBirsReportItemByBagId(bagId: string): Promise<BirsReportItem | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    // Normaliser le bag_id (enlever espaces, prendre les 10 derniers chiffres)
+    const normalizedBagId = bagId.trim().replace(/\s+/g, '');
+    
+    // Chercher une correspondance exacte ou partielle
+    const result = await this.db.getFirstAsync<any>(
+      `SELECT bri.*, br.flight_date, br.flight_number as report_flight_number
+       FROM birs_report_items bri
+       JOIN birs_reports br ON bri.birs_report_id = br.id
+       WHERE bri.bag_id = ? 
+       OR bri.bag_id LIKE ?
+       OR ? LIKE '%' || bri.bag_id || '%'
+       ORDER BY br.flight_date DESC
+       LIMIT 1`,
+      [normalizedBagId, `%${normalizedBagId}%`, normalizedBagId]
+    );
+
+    if (!result) return null;
+
+    return this.mapBirsReportItem(result);
+  }
+
+  /**
+   * Cherche tous les items BIRS non réconciliés pour un vol aujourd'hui
+   * Utilisé pour la validation des bagages internationaux à l'arrivée
+   */
+  async getExpectedInternationalBaggages(flightNumber?: string): Promise<BirsReportItem[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    let query = `
+      SELECT bri.* 
+      FROM birs_report_items bri
+      JOIN birs_reports br ON bri.birs_report_id = br.id
+      WHERE bri.international_baggage_id IS NULL
+      AND br.flight_date = ?
+    `;
+    const params: any[] = [today];
+    
+    if (flightNumber) {
+      query += ` AND br.flight_number = ?`;
+      params.push(flightNumber.trim().toUpperCase());
+    }
+    
+    query += ` ORDER BY bri.passenger_name`;
+    
+    const results = await this.db.getAllAsync<any>(query, params);
     return results.map(r => this.mapBirsReportItem(r));
   }
 

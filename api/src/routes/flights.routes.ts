@@ -19,6 +19,9 @@ function toCamelCase(data: any) {
     scheduledTime: data.scheduled_time,
     airportCode: data.airport_code,
     status: data.status,
+    flightType: data.flight_type || 'departure',
+    baggageRestriction: data.baggage_restriction || 'block',
+    restrictionNote: data.restriction_note || null,
     createdAt: data.created_at,
     createdBy: data.created_by,
     updatedAt: data.updated_at
@@ -115,6 +118,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       scheduled_time: flightData.scheduledTime || null,
       airport_code: flightData.airportCode || 'FIH',
       status: flightData.status || 'scheduled',
+      flight_type: flightData.flightType || 'departure',
+      baggage_restriction: flightData.baggageRestriction || 'block',
+      restriction_note: flightData.restrictionNote || null,
       created_by: (req as any).user?.id || null
     };
 
@@ -158,6 +164,9 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (updates.scheduledTime !== undefined) dbUpdates.scheduled_time = updates.scheduledTime;
     if (updates.status) dbUpdates.status = updates.status;
     if (updates.airportCode) dbUpdates.airport_code = updates.airportCode;
+    if (updates.flightType) dbUpdates.flight_type = updates.flightType;
+    if (updates.baggageRestriction) dbUpdates.baggage_restriction = updates.baggageRestriction;
+    if (updates.restrictionNote !== undefined) dbUpdates.restriction_note = updates.restrictionNote;
 
     const { data, error } = await supabase
       .from('flight_schedule')
@@ -226,6 +235,149 @@ router.get('/available/:airportCode', async (req, res, next) => {
       count: data?.length || 0,
       data: toCamelCase(data || [])
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/flights/check/:flightNumber
+ * Vérifie si un vol est programmé pour aujourd'hui
+ * Utilisé par l'app mobile pour valider les boarding pass avant scan
+ * 
+ * @param flightNumber - Numéro de vol (ex: ET80, 9U404)
+ * @query airport - Code aéroport (optionnel, filtre supplémentaire)
+ * @returns { isScheduled: boolean, flight: Flight | null }
+ */
+router.get('/check/:flightNumber', async (req, res, next) => {
+  try {
+    const { flightNumber } = req.params;
+    const { airport } = req.query;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Normaliser le numéro de vol (enlever espaces, majuscules)
+    const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+
+    console.log(`[FlightCheck] Vérification vol: ${normalizedFlightNumber} pour ${today}`);
+
+    // Rechercher le vol programmé pour aujourd'hui
+    let query = supabase
+      .from('flight_schedule')
+      .select('*')
+      .eq('scheduled_date', today)
+      .in('status', ['scheduled', 'boarding', 'departed']);
+
+    // Filtrer par aéroport si fourni
+    if (airport) {
+      query = query.eq('airport_code', airport);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Chercher une correspondance (avec ou sans espaces/zéros)
+    const matchingFlight = data?.find(flight => {
+      const dbFlightNumber = flight.flight_number.trim().toUpperCase().replace(/\s+/g, '');
+      // Correspondance exacte ou avec zéros optionnels (ET80 = ET0080, 9U404 = 9U0404)
+      return dbFlightNumber === normalizedFlightNumber ||
+        dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1');
+    });
+
+    if (matchingFlight) {
+      console.log(`[FlightCheck] ✅ Vol trouvé: ${matchingFlight.flight_number}`);
+      res.json({
+        success: true,
+        isScheduled: true,
+        flight: toCamelCase(matchingFlight)
+      });
+    } else {
+      console.log(`[FlightCheck] ❌ Vol non programmé: ${normalizedFlightNumber}`);
+      res.json({
+        success: true,
+        isScheduled: false,
+        flight: null,
+        message: `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui (${today})`
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/flights/validate-boarding
+ * Valide un boarding pass en vérifiant si le vol est programmé aujourd'hui
+ * 
+ * @body { flightNumber: string, airportCode: string }
+ * @returns { isValid: boolean, flight?: Flight, reason?: string }
+ */
+router.post('/validate-boarding', async (req, res, next) => {
+  try {
+    const { flightNumber, airportCode, departure, arrival } = req.body;
+
+    if (!flightNumber) {
+      return res.status(400).json({
+        success: false,
+        isValid: false,
+        reason: 'Numéro de vol requis'
+      });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+
+    console.log(`[ValidateBoarding] Validation: ${normalizedFlightNumber} @ ${airportCode}`);
+
+    // Rechercher le vol programmé
+    let query = supabase
+      .from('flight_schedule')
+      .select('*')
+      .eq('scheduled_date', today)
+      .in('status', ['scheduled', 'boarding']);
+
+    // Filtrer par aéroport si fourni
+    if (airportCode) {
+      query = query.or(`departure.eq.${airportCode},arrival.eq.${airportCode}`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Chercher correspondance
+    const matchingFlight = data?.find(flight => {
+      const dbFlightNumber = flight.flight_number.trim().toUpperCase().replace(/\s+/g, '');
+      return dbFlightNumber === normalizedFlightNumber ||
+        dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1');
+    });
+
+    if (matchingFlight) {
+      // Vérifier aussi que l'aéroport correspond si spécifié
+      if (airportCode && departure && arrival) {
+        if (matchingFlight.departure !== departure && matchingFlight.arrival !== arrival) {
+          // Aéroports ne correspondent pas
+          return res.json({
+            success: true,
+            isValid: false,
+            reason: `Le vol ${flightNumber} ne correspond pas à votre aéroport (${airportCode})`
+          });
+        }
+      }
+
+      console.log(`[ValidateBoarding] ✅ Vol valide: ${matchingFlight.flight_number}`);
+      res.json({
+        success: true,
+        isValid: true,
+        flight: toCamelCase(matchingFlight)
+      });
+    } else {
+      console.log(`[ValidateBoarding] ❌ Vol non valide: ${normalizedFlightNumber}`);
+      res.json({
+        success: true,
+        isValid: false,
+        reason: `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui. Veuillez vérifier le numéro de vol ou contacter un superviseur.`
+      });
+    }
   } catch (error) {
     next(error);
   }

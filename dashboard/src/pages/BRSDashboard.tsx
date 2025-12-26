@@ -228,7 +228,7 @@ export default function BRSDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-white/60 text-sm">Taux Moyen</p>
-                  <p className="text-2xl font-bold text-blue-400">{stats.averageReconciliationRate.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold text-blue-400">{(stats.averageReconciliationRate ?? 0).toFixed(1)}%</p>
                   <p className="text-xs text-blue-300/70 mt-1">Réconciliation</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-blue-400" />
@@ -280,7 +280,7 @@ export default function BRSDashboard() {
                 Vols Actifs Aujourd'hui
               </h3>
               <div className="space-y-2">
-                {stats.activeFlights.length > 0 ? (
+                {stats.activeFlights && stats.activeFlights.length > 0 ? (
                   stats.activeFlights.map((flight, index) => (
                     <div key={index} className="bg-black/20 rounded-lg p-3 flex items-center justify-between">
                       <div className="flex items-center space-x-2">

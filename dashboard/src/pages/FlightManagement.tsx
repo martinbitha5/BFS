@@ -3,7 +3,7 @@
  * Permet au superviseur d'ajouter, modifier et supprimer des vols
  */
 
-import { Edit, Plane, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Edit, Plane, PlaneLanding, PlaneTakeoff, Plus, Search, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,9 @@ interface Flight {
   scheduledDate: string;
   scheduledTime?: string;
   status: 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled';
+  flightType: 'departure' | 'arrival';
+  baggageRestriction: 'block' | 'allow_with_payment' | 'allow';
+  restrictionNote?: string;
   airportCode: string;
   createdAt: string;
 }
@@ -121,7 +124,7 @@ export default function FlightManagement() {
         <div className="mt-4 bg-blue-900/30 backdrop-blur-md border border-blue-400/30 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
-              <span className="text-blue-300 text-lg">ℹ️</span>
+              <span className="text-blue-300 text-lg">i</span>
             </div>
             <div>
               <h3 className="text-sm font-semibold text-blue-200 mb-1">Programmation par jour</h3>
@@ -225,13 +228,16 @@ export default function FlightManagement() {
                   Vol
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                  Compagnie
+                  Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Route
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Heure
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
+                  Restriction Bagage
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
                   Statut
@@ -246,17 +252,28 @@ export default function FlightManagement() {
                 <tr key={flight.id} className="hover:bg-black/25 backdrop-blur-md border border-white/20 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Plane className="h-5 w-5 text-blue-300" />
+                      <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                        flight.flightType === 'departure' ? 'bg-blue-900/40' : 'bg-green-900/40'
+                      }`}>
+                        {flight.flightType === 'departure' 
+                          ? <PlaneTakeoff className="h-5 w-5 text-blue-300" />
+                          : <PlaneLanding className="h-5 w-5 text-green-300" />
+                        }
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">{flight.flightNumber}</div>
-                        <div className="text-sm text-white/70">{flight.airlineCode}</div>
+                        <div className="text-sm text-white/70">{flight.airline}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-white">{flight.airline}</div>
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      flight.flightType === 'departure' 
+                        ? 'bg-blue-900/40 text-blue-200' 
+                        : 'bg-green-900/40 text-green-200'
+                    }`}>
+                      {flight.flightType === 'departure' ? 'Départ' : 'Arrivée'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm font-medium text-white">
@@ -269,11 +286,31 @@ export default function FlightManagement() {
                     {flight.scheduledTime || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        flight.baggageRestriction === 'block' 
+                          ? 'bg-red-900/40 text-red-200' 
+                          : flight.baggageRestriction === 'allow_with_payment'
+                          ? 'bg-yellow-900/40 text-yellow-200'
+                          : 'bg-green-900/40 text-green-200'
+                      }`}>
+                        {flight.baggageRestriction === 'block' ? 'Bloquer' :
+                         flight.baggageRestriction === 'allow_with_payment' ? 'Paiement' :
+                         'Autoriser'}
+                      </span>
+                      {flight.baggageRestriction !== 'allow' && (
+                        <span title="Restriction active">
+                          <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                      flight.status === 'boarding' ? 'bg-yellow-900/40 backdrop-blur-sm text-yellow-800' :
-                      flight.status === 'departed' ? 'bg-green-900/40 backdrop-blur-sm text-green-800' :
-                      flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-lg text-white/90' :
+                      flight.status === 'boarding' ? 'bg-yellow-900/40 backdrop-blur-sm text-yellow-200' :
+                      flight.status === 'departed' ? 'bg-green-900/40 backdrop-blur-sm text-green-200' :
+                      flight.status === 'arrived' ? 'bg-white/85 backdrop-blur-lg text-gray-900' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {flight.status === 'scheduled' ? 'Programmé' :
@@ -421,6 +458,9 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
     scheduledDate: flight?.scheduledDate || new Date().toISOString().split('T')[0],
     scheduledTime: flight?.scheduledTime || '',
     status: (flight?.status || 'scheduled') as 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled',
+    flightType: (flight?.flightType || 'departure') as 'departure' | 'arrival',
+    baggageRestriction: (flight?.baggageRestriction || 'block') as 'block' | 'allow_with_payment' | 'allow',
+    restrictionNote: flight?.restrictionNote || '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -550,6 +590,98 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+            </div>
+
+            {/* Type de vol et Restriction Bagage */}
+            <div className="border-t border-white/20 pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <Plane className="w-4 h-4" />
+                Type de vol & Restrictions
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white/85 mb-1">
+                    Type de vol *
+                  </label>
+                  <select
+                    required
+                    value={formData.flightType}
+                    onChange={(e) => setFormData({ ...formData, flightType: e.target.value as 'departure' | 'arrival' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="departure">Vol Départ</option>
+                    <option value="arrival">Vol Arrivée</option>
+                  </select>
+                  <p className="text-xs text-white/60 mt-1">
+                    {formData.flightType === 'departure' 
+                      ? 'Scan bagages au départ (check-in, embarquement)'
+                      : 'Scan bagages à l\'arrivée (récupération)'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white/85 mb-1">
+                    Restriction Bagage Non Enregistré *
+                  </label>
+                  <select
+                    required
+                    value={formData.baggageRestriction}
+                    onChange={(e) => setFormData({ ...formData, baggageRestriction: e.target.value as 'block' | 'allow_with_payment' | 'allow' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="block">Bloquer (investigation)</option>
+                    <option value="allow_with_payment">Autoriser avec paiement</option>
+                    <option value="allow">Autoriser sans restriction</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Explication de la restriction */}
+              <div className={`mt-3 p-3 rounded-lg ${
+                formData.baggageRestriction === 'block' 
+                  ? 'bg-red-900/30 border border-red-400/30' 
+                  : formData.baggageRestriction === 'allow_with_payment'
+                  ? 'bg-yellow-900/30 border border-yellow-400/30'
+                  : 'bg-green-900/30 border border-green-400/30'
+              }`}>
+                <p className="text-xs text-white/80">
+                  {formData.baggageRestriction === 'block' && (
+                    <>
+                      <strong className="text-red-300">Mode Strict:</strong> Les bagages non enregistrés seront bloqués pour investigation. 
+                      L'agent sera alerté de la suspicion de fraude.
+                    </>
+                  )}
+                  {formData.baggageRestriction === 'allow_with_payment' && (
+                    <>
+                      <strong className="text-yellow-300">Mode Paiement:</strong> Les bagages non enregistrés pourront passer après paiement. 
+                      L'agent devra enregistrer le paiement.
+                    </>
+                  )}
+                  {formData.baggageRestriction === 'allow' && (
+                    <>
+                      <strong className="text-green-300">Mode Libre:</strong> Tous les bagages sont acceptés sans restriction.
+                      <span className="text-yellow-200"> Non recommandé pour les vols commerciaux.</span>
+                    </>
+                  )}
+                </p>
+              </div>
+
+              {/* Note de restriction (optionnel) */}
+              {formData.baggageRestriction !== 'allow' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-white/85 mb-1">
+                    Note de restriction (optionnel)
+                  </label>
+                  <textarea
+                    placeholder="Ex: Vérifier les documents d'identité, contacter le superviseur..."
+                    value={formData.restrictionNote}
+                    onChange={(e) => setFormData({ ...formData, restrictionNote: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

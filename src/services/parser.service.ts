@@ -2687,20 +2687,62 @@ class ParserService {
       };
     }
     
-    // Chercher un pattern de 12 chiffres consécutifs
-    const longMatch = rawData.match(/(\d{12})/);
-    if (longMatch) {
-      const fullNumber = longMatch[1];
-      const baseNumber = fullNumber.substring(0, 10);
-      const count = parseInt(fullNumber.substring(10, 12), 10);
+    // ============================================
+    // FORMAT RÉEL DES ÉTIQUETTES BAGAGES:
+    // Tag scanné: 9071366379001 (13 chiffres)
+    // - 9071366379 = Base (10 chiffres)
+    // - 001 = Séquence (ce bagage est le 1er)
+    // 
+    // Pour 3 bagages avec base 9071366379:
+    // - Bagage 1: 9071366379 (ou 9071366379001)
+    // - Bagage 2: 9071366380 (ou 9071366380002)
+    // - Bagage 3: 9071366381 (ou 9071366381003)
+    // ============================================
+
+    // Chercher un pattern de 13 chiffres consécutifs (base 10 + séquence 3)
+    const tag13Match = rawData.match(/(\d{10})(\d{3})/);
+    if (tag13Match) {
+      const baseNumber = tag13Match[1];
+      const sequence = parseInt(tag13Match[2], 10);
       
-      if (count > 0 && count <= 10) {
+      // La séquence nous dit combien de bagages au total (ex: 003 = 3ème bagage donc au moins 3)
+      // Mais on ne peut pas savoir le total exact depuis un seul tag
+      // On utilise la séquence comme estimation du nombre de bagages
+      if (sequence > 0 && sequence <= 20) {
+        const expectedTags: string[] = [];
+        const baseNum = parseInt(baseNumber, 10);
+        
+        // Générer les tags attendus (base + 0, base + 1, ..., base + sequence - 1)
+        for (let i = 0; i < sequence; i++) {
+          expectedTags.push((baseNum + i).toString());
+        }
+        
+        console.log(`[PARSER] Format 13 chiffres détecté: base=${baseNumber}, séquence=${sequence}`);
+        console.log(`[PARSER] Tags attendus: ${expectedTags.join(', ')}`);
+        
+        return {
+          count: sequence,
+          baseNumber,
+          expectedTags,
+        };
+      }
+    }
+
+    // Chercher un pattern de 12 chiffres consécutifs (base 10 + count 2)
+    const longMatch = rawData.match(/(\d{10})(\d{2})(?!\d)/);
+    if (longMatch) {
+      const baseNumber = longMatch[1];
+      const count = parseInt(longMatch[2], 10);
+      
+      if (count > 0 && count <= 20) {
         const expectedTags: string[] = [];
         const baseNum = parseInt(baseNumber, 10);
         
         for (let i = 0; i < count; i++) {
           expectedTags.push((baseNum + i).toString());
         }
+        
+        console.log(`[PARSER] Format 12 chiffres détecté: base=${baseNumber}, count=${count}`);
         
         return {
           count,
@@ -2710,26 +2752,18 @@ class ParserService {
       }
     }
     
-    // Fallback : chercher un pattern 10 chiffres + 2 chiffres non suivis d'un chiffre
-    const baggageMatch = rawData.match(/(\d{10})(\d{2})(?![0-9])/);
-    if (baggageMatch) {
-      const baseNumber = baggageMatch[1];
-      const count = parseInt(baggageMatch[2], 10);
-
-      if (count > 0 && count <= 10) {
-        const expectedTags: string[] = [];
-        const baseNum = parseInt(baseNumber, 10);
-
-        for (let i = 0; i < count; i++) {
-          expectedTags.push((baseNum + i).toString());
-        }
-
-        return {
-          count,
-          baseNumber,
-          expectedTags,
-        };
-      }
+    // Fallback: chercher juste 10 chiffres (base uniquement, 1 bagage)
+    const base10Match = rawData.match(/(\d{10})(?!\d)/);
+    if (base10Match) {
+      const baseNumber = base10Match[1];
+      
+      console.log(`[PARSER] Format 10 chiffres détecté: base=${baseNumber}, 1 bagage par défaut`);
+      
+      return {
+        count: 1,
+        baseNumber,
+        expectedTags: [baseNumber],
+      };
     }
 
     return undefined;
@@ -2737,7 +2771,14 @@ class ParserService {
 
   /**
    * Parse les données d'une étiquette de bagage RFID
-   * Format: NME:MOHILO LOUVE | 4071 ET201605 | ET73/22NOV | PNR:HHJWNG | GMA→FIH
+   * 
+   * Format numérique simple (le plus courant):
+   * 9071366379001 (13 chiffres)
+   * - 9071366379 = Base (10 chiffres)
+   * - 001 = Séquence (ce bagage est le 1er sur X)
+   * 
+   * Format avec texte:
+   * NME:MOHILO LOUVE | 4071 ET201605 | ET73/22NOV | PNR:HHJWNG | GMA→FIH
    */
   parseBaggageTag(rawData: string): BaggageTagData {
     const result: BaggageTagData = {
@@ -2745,6 +2786,39 @@ class ParserService {
       rfidTag: rawData.trim(),
       rawData,
     };
+
+    const trimmedData = rawData.trim();
+
+    // ============================================
+    // CAS 1: Tag numérique simple (13 chiffres)
+    // Format: 9071366379001 = base(10) + séquence(3)
+    // ============================================
+    if (/^\d{13}$/.test(trimmedData)) {
+      const baseNumber = trimmedData.substring(0, 10);
+      const sequence = parseInt(trimmedData.substring(10, 13), 10);
+      
+      result.rfidTag = baseNumber; // On stocke juste la base comme tag
+      result.baggageSequence = sequence;
+      
+      console.log(`[PARSER TAG] Format 13 chiffres: base=${baseNumber}, séquence=${sequence}`);
+      return result;
+    }
+
+    // ============================================
+    // CAS 2: Tag numérique simple (10 chiffres)
+    // Format: 9071366379 = base uniquement
+    // ============================================
+    if (/^\d{10}$/.test(trimmedData)) {
+      result.rfidTag = trimmedData;
+      result.baggageSequence = 1; // Par défaut, c'est le 1er bagage
+      
+      console.log(`[PARSER TAG] Format 10 chiffres: base=${trimmedData}`);
+      return result;
+    }
+
+    // ============================================
+    // CAS 3: Tag avec texte (format Ethiopian, etc.)
+    // ============================================
 
     // 1. Extraire le nom du passager (NME: ou NME:)
     const nameMatch = rawData.match(/NME[:\s]+([A-Z\s]+)/i);
@@ -2769,10 +2843,17 @@ class ParserService {
       if (tagEtMatch) {
         result.rfidTag = `ET${tagEtMatch[1]}`;
       } else {
-        // Chercher juste un numéro (4071 ou 4071136262) - mais seulement si c'est le contenu principal
-        // Si les données sont très courtes (juste un numéro), c'est probablement le tag
-        const trimmedData = rawData.trim();
-        if (trimmedData.length <= 20 && /^\d{4,}$/.test(trimmedData)) {
+        // Chercher juste un numéro long (10-13 chiffres)
+        const longNumMatch = trimmedData.match(/(\d{10,13})/);
+        if (longNumMatch) {
+          const numStr = longNumMatch[1];
+          if (numStr.length === 13) {
+            result.rfidTag = numStr.substring(0, 10);
+            result.baggageSequence = parseInt(numStr.substring(10, 13), 10);
+          } else {
+            result.rfidTag = numStr.substring(0, 10);
+          }
+        } else if (trimmedData.length <= 20 && /^\d{4,}$/.test(trimmedData)) {
           // C'est un nombre pur, utiliser directement comme tag RFID
           result.rfidTag = trimmedData;
         } else {

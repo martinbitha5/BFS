@@ -41,6 +41,53 @@ interface RecentActivity {
   status: 'success' | 'warning' | 'error';
 }
 
+interface RecentPassenger {
+  id: string;
+  pnr: string;
+  fullName: string;
+  flightNumber: string;
+  route: string;
+  airline: string;
+  baggageCount: number;
+  seatNumber?: string;
+  cabinClass?: string;
+  checkedInAt: string;
+}
+
+interface RecentBaggage {
+  id: string;
+  rfidTag: string;
+  status: string;
+  weight?: number;
+  checkedAt: string;
+  arrivedAt?: string;
+  passenger?: {
+    fullName: string;
+    pnr: string;
+    flightNumber: string;
+    route: string;
+  };
+}
+
+interface FlightWithStats {
+  id: string;
+  flightNumber: string;
+  airline: string;
+  airlineCode: string;
+  departure: string;
+  arrival: string;
+  scheduledTime: string;
+  status: string;
+  flightType: string;
+  baggageRestriction: string;
+  stats: {
+    totalPassengers: number;
+    boardedPassengers: number;
+    totalBaggages: number;
+    boardingProgress: number;
+  };
+}
+
 export default function DashboardEnhanced() {
   const { user } = useAuth();
   const [stats, setStats] = useState<AirportStats | null>(null);
@@ -50,6 +97,9 @@ export default function DashboardEnhanced() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [recentPassengers, setRecentPassengers] = useState<RecentPassenger[]>([]);
+  const [recentBaggages, setRecentBaggages] = useState<RecentBaggage[]>([]);
+  const [flightsWithStats, setFlightsWithStats] = useState<FlightWithStats[]>([]);
 
   const fetchStats = async () => {
     if (!user?.airport_code) return;
@@ -57,20 +107,50 @@ export default function DashboardEnhanced() {
     try {
       setLoading(true);
       setError('');
+      
+      // 1. Statistiques principales
       const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
       setStats(response.data.data);
 
-      // Fetch raw scans statistics
+      // 2. Raw scans statistics
       try {
         const rawScansResponse = await api.get(`/api/v1/raw-scans/stats?airport=${user.airport_code}`);
         setRawScansStats(rawScansResponse.data.data);
       } catch (rawScansErr) {
         console.error('Error fetching raw scans stats:', rawScansErr);
-        // Continue même si raw scans stats échoue
       }
 
-      // Activités récentes réelles (pour l'instant vide - sera implémenté avec un endpoint dédié)
-      setRecentActivities([]);
+      // 3. Données récentes parsées (passagers, bagages, activités)
+      try {
+        const recentResponse = await api.get(`/api/v1/stats/recent/${user.airport_code}?limit=10`);
+        if (recentResponse.data.data) {
+          setRecentPassengers(recentResponse.data.data.recentPassengers || []);
+          setRecentBaggages(recentResponse.data.data.recentBaggages || []);
+          
+          // Transformer les activités pour l'affichage
+          const activities = (recentResponse.data.data.recentActivities || []).map((a: any) => ({
+            id: a.id,
+            type: a.entityType === 'passenger' ? 'boarding' : a.entityType === 'baggage' ? 'baggage' : 'flight',
+            message: a.details || a.action,
+            timestamp: new Date(a.createdAt),
+            status: a.action.includes('ERROR') ? 'error' : a.action.includes('SUSPECT') ? 'warning' : 'success'
+          }));
+          setRecentActivities(activities);
+        }
+      } catch (recentErr) {
+        console.error('Error fetching recent data:', recentErr);
+      }
+
+      // 4. Vols avec statistiques détaillées
+      try {
+        const flightsResponse = await api.get(`/api/v1/stats/flights/${user.airport_code}`);
+        if (flightsResponse.data.data) {
+          setFlightsWithStats(flightsResponse.data.data.flights || []);
+        }
+      } catch (flightsErr) {
+        console.error('Error fetching flights stats:', flightsErr);
+      }
+
     } catch (err: any) {
       console.error('Error fetching stats:', err);
       setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
@@ -259,7 +339,7 @@ export default function DashboardEnhanced() {
             <StatCard
               title="Vols actifs"
               value={stats.flightsCount}
-              subtitle={`${stats.uniqueFlights.length} vols uniques`}
+              subtitle={`${stats.uniqueFlights?.length || 0} vols uniques`}
               icon={Plane}
               color="blue"
             />
@@ -420,7 +500,7 @@ export default function DashboardEnhanced() {
                 <h3 className="text-base sm:text-lg font-medium text-white">Activités récentes</h3>
               </div>
               <div className="space-y-2 sm:space-y-3 max-h-[200px] sm:max-h-[250px] overflow-y-auto">
-                {recentActivities.map((activity) => (
+                {recentActivities.length > 0 ? recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 p-3 bg-black/25 backdrop-blur-md border border-white/20 rounded-lg hover:bg-white/85 backdrop-blur-lg transition">
                     <div className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(activity.status)}`}>
                       {getActivityIcon(activity.type)}
@@ -430,37 +510,289 @@ export default function DashboardEnhanced() {
                       <p className="text-xs text-white/70 mt-1">{formatTimestamp(activity.timestamp)}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-white/60 text-center py-4">Aucune activité récente</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Liste des vols - Responsive */}
-          {
-            stats.uniqueFlights.length > 0 && (
-              <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden">
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-black/25 backdrop-blur-md">
-                  <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
-                    <Plane className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary-600" />
-                    Vols actifs ({stats.flightsCount})
-                  </h3>
-                </div>
-                <div className="px-4 sm:px-6 py-3 sm:py-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                    {stats.uniqueFlights.map((flight) => (
-                      <div
-                        key={flight}
-                        className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:scale-105 transition-all duration-200 cursor-pointer"
-                      >
-                        <Plane className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                        {flight}
-                      </div>
+          {/* Passagers récents avec infos parsées */}
+          {recentPassengers.length > 0 && (
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden animate-fade-in">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/20 bg-gradient-to-r from-blue-900/30 to-blue-800/20">
+                <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-400" />
+                  Passagers récents ({recentPassengers.length})
+                  <span className="ml-2 text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">Données parsées</span>
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-white/10">
+                  <thead className="bg-black/20">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Passager</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">PNR</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Vol</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Route</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Bagages</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Check-in</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {recentPassengers.map((passenger) => (
+                      <tr key={passenger.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8 bg-blue-900/40 rounded-full flex items-center justify-center">
+                              <Users className="h-4 w-4 text-blue-300" />
+                            </div>
+                            <div className="ml-3">
+                              <p className="text-sm font-medium text-white">{passenger.fullName}</p>
+                              {passenger.seatNumber && (
+                                <p className="text-xs text-white/60">Siège: {passenger.seatNumber}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm font-mono text-blue-300 bg-blue-900/30 px-2 py-1 rounded">{passenger.pnr}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-white">{passenger.flightNumber}</span>
+                          {passenger.airline && (
+                            <p className="text-xs text-white/60">{passenger.airline}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm text-white/80">{passenger.route}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            passenger.baggageCount > 0 ? 'bg-green-900/40 text-green-300' : 'bg-gray-900/40 text-gray-400'
+                          }`}>
+                            <Package className="w-3 h-3 mr-1" />
+                            {passenger.baggageCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-white/60">
+                          {new Date(passenger.checkedInAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Bagages récents avec infos parsées */}
+          {recentBaggages.length > 0 && (
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden animate-fade-in">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/20 bg-gradient-to-r from-green-900/30 to-green-800/20">
+                <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-400" />
+                  Bagages récents ({recentBaggages.length})
+                  <span className="ml-2 text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">Données parsées</span>
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-white/10">
+                  <thead className="bg-black/20">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Tag RFID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Passager</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Vol</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Statut</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Poids</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Heure</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {recentBaggages.map((baggage) => (
+                      <tr key={baggage.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm font-mono text-green-300 bg-green-900/30 px-2 py-1 rounded">{baggage.rfidTag}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {baggage.passenger ? (
+                            <div>
+                              <p className="text-sm font-medium text-white">{baggage.passenger.fullName}</p>
+                              <p className="text-xs text-white/60">PNR: {baggage.passenger.pnr}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-white/50">Non associé</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {baggage.passenger ? (
+                            <div>
+                              <span className="text-sm font-semibold text-white">{baggage.passenger.flightNumber}</span>
+                              <p className="text-xs text-white/60">{baggage.passenger.route}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-white/50">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            baggage.status === 'arrived' ? 'bg-green-900/40 text-green-300' :
+                            baggage.status === 'checked' ? 'bg-blue-900/40 text-blue-300' :
+                            baggage.status === 'in_transit' ? 'bg-yellow-900/40 text-yellow-300' :
+                            'bg-gray-900/40 text-gray-400'
+                          }`}>
+                            {baggage.status === 'arrived' ? 'Arrivé' :
+                             baggage.status === 'checked' ? 'Enregistré' :
+                             baggage.status === 'in_transit' ? 'En transit' :
+                             baggage.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white/80">
+                          {baggage.weight ? `${baggage.weight} kg` : '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-white/60">
+                          {new Date(baggage.checkedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Vols du jour avec statistiques détaillées */}
+          {flightsWithStats.length > 0 && (
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden animate-fade-in">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/20 bg-gradient-to-r from-purple-900/30 to-purple-800/20">
+                <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
+                  <Plane className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-purple-400" />
+                  Vols du jour ({flightsWithStats.length})
+                  <span className="ml-2 text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">Statistiques temps réel</span>
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                {flightsWithStats.map((flight) => (
+                  <div
+                    key={flight.id}
+                    className={`bg-black/20 border rounded-lg p-4 hover:scale-[1.02] transition-all duration-200 ${
+                      flight.flightType === 'departure' ? 'border-blue-500/30' : 'border-green-500/30'
+                    }`}
+                  >
+                    {/* En-tête du vol */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <div className={`p-2 rounded-full mr-3 ${
+                          flight.flightType === 'departure' ? 'bg-blue-900/40' : 'bg-green-900/40'
+                        }`}>
+                          <Plane className={`w-5 h-5 ${
+                            flight.flightType === 'departure' ? 'text-blue-400' : 'text-green-400'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-white">{flight.flightNumber}</p>
+                          <p className="text-xs text-white/60">{flight.airline}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          flight.flightType === 'departure' 
+                            ? 'bg-blue-900/40 text-blue-300' 
+                            : 'bg-green-900/40 text-green-300'
+                        }`}>
+                          {flight.flightType === 'departure' ? 'Départ' : 'Arrivée'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Route */}
+                    <div className="flex items-center justify-center mb-3 text-white/80">
+                      <span className="font-semibold">{flight.departure}</span>
+                      <span className="mx-2">→</span>
+                      <span className="font-semibold">{flight.arrival}</span>
+                      {flight.scheduledTime && (
+                        <span className="ml-3 text-xs text-white/50">
+                          <Clock className="w-3 h-3 inline mr-1" />
+                          {flight.scheduledTime}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Statistiques */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="text-center bg-black/20 rounded p-2">
+                        <p className="text-lg font-bold text-white">{flight.stats.totalPassengers}</p>
+                        <p className="text-xs text-white/60">Passagers</p>
+                      </div>
+                      <div className="text-center bg-black/20 rounded p-2">
+                        <p className="text-lg font-bold text-green-400">{flight.stats.boardedPassengers}</p>
+                        <p className="text-xs text-white/60">Embarqués</p>
+                      </div>
+                      <div className="text-center bg-black/20 rounded p-2">
+                        <p className="text-lg font-bold text-blue-400">{flight.stats.totalBaggages}</p>
+                        <p className="text-xs text-white/60">Bagages</p>
+                      </div>
+                    </div>
+
+                    {/* Barre de progression embarquement */}
+                    <div className="mb-2">
+                      <div className="flex justify-between text-xs text-white/60 mb-1">
+                        <span>Embarquement</span>
+                        <span>{flight.stats.boardingProgress}%</span>
+                      </div>
+                      <div className="w-full bg-black/30 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            flight.stats.boardingProgress >= 100 ? 'bg-green-500' :
+                            flight.stats.boardingProgress >= 50 ? 'bg-blue-500' :
+                            'bg-yellow-500'
+                          }`}
+                          style={{ width: `${Math.min(flight.stats.boardingProgress, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Restriction bagage */}
+                    {flight.baggageRestriction !== 'allow' && (
+                      <div className={`text-xs p-2 rounded flex items-center ${
+                        flight.baggageRestriction === 'block' 
+                          ? 'bg-red-900/30 text-red-300' 
+                          : 'bg-yellow-900/30 text-yellow-300'
+                      }`}>
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        {flight.baggageRestriction === 'block' ? 'Bagages non enregistrés: BLOQUER' : 'Bagages non enregistrés: Paiement requis'}
+                      </div>
+                    )}
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Liste simple des vols (fallback si pas de stats détaillées) */}
+          {flightsWithStats.length === 0 && stats.uniqueFlights && stats.uniqueFlights.length > 0 && (
+            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-lg overflow-hidden">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-black/25 backdrop-blur-md">
+                <h3 className="text-base sm:text-lg font-medium text-white flex items-center">
+                  <Plane className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary-600" />
+                  Vols actifs ({stats.flightsCount})
+                </h3>
+              </div>
+              <div className="px-4 sm:px-6 py-3 sm:py-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                  {stats.uniqueFlights.map((flight) => (
+                    <div
+                      key={flight}
+                      className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-xs sm:text-sm font-medium bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:scale-105 transition-all duration-200 cursor-pointer"
+                    >
+                      <Plane className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      {flight}
+                    </div>
+                  ))}
                 </div>
               </div>
-            )
-          }
+            </div>
+          )}
 
           {/* Statistiques détaillées en footer - Responsive */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

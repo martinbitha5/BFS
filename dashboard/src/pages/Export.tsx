@@ -201,7 +201,7 @@ export default function Export() {
         const rawScansRes = await api.get(url);
         const rawScans = rawScansRes.data.data || [];
         
-        console.log(`📥 ${rawScans.length} raw scans récupérés`);
+        console.log(`${rawScans.length} raw scans récupérés`);
         
         // Vérifier qu'il y a des données
         if (rawScans.length === 0) {
@@ -213,7 +213,7 @@ export default function Export() {
           return;
         }
         
-        // PARSING SOPHISTIQUÉ DANS LE WEB ! 🚀
+        // PARSING SOPHISTIQUÉ DANS LE WEB
         console.log('🧠 Parsing sophistiqué dans le dashboard web...');
         const parsedPassengers = rawScans
           .filter((scan: any) => scan.scan_type === 'boarding_pass')
@@ -229,7 +229,7 @@ export default function Export() {
                 route: `${parsed.departure}→${parsed.arrival}`,
                 format: parsed.format,
               };
-              console.log('👤 Passager:', passengerLog);
+              console.log('Passager:', passengerLog);
               
               return {
                 pnr: parsed.pnr || 'UNKNOWN',

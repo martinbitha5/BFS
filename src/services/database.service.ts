@@ -107,6 +107,117 @@ class DatabaseService {
     return null;
   }
 
+  /**
+   * Cherche un passager par son nom complet
+   * Utilise une recherche insensible à la casse
+   */
+  async getPassengerByName(fullName: string): Promise<Passenger | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    // Normaliser le nom pour la recherche (majuscules, sans espaces multiples)
+    const normalizedName = fullName.trim().toUpperCase().replace(/\s+/g, ' ');
+
+    const result = await this.db.getFirstAsync<Passenger>(
+      'SELECT * FROM passengers WHERE UPPER(full_name) = ? OR UPPER(full_name) LIKE ?',
+      [normalizedName, `%${normalizedName}%`]
+    );
+
+    if (result) {
+      return {
+        ...result,
+        synced: Boolean(result.synced),
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Cherche un passager par tag de bagage attendu
+   * 
+   * Format du tag scanné: 9071366379001 (13 chiffres)
+   * - 9071366379 = Base (10 chiffres)
+   * - 001 = Séquence (ce bagage est le 1er)
+   * 
+   * Pour un passager avec 3 bagages et base 9071366379:
+   * - Bagage 1: base 9071366379, tag = 9071366379 ou 9071366379001
+   * - Bagage 2: base 9071366380, tag = 9071366380 ou 9071366380002
+   * - Bagage 3: base 9071366381, tag = 9071366381 ou 9071366381003
+   * 
+   * @param rfidTag - Le tag RFID scanné (ex: "9071366379001" ou "9071366379")
+   * @returns Le passager trouvé ou null
+   */
+  async getPassengerByExpectedTag(rfidTag: string): Promise<Passenger | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const cleanTag = rfidTag.trim();
+    
+    // Extraire la base du tag scanné
+    // Si 13 chiffres: les 10 premiers sont la base, les 3 derniers sont la séquence
+    // Si 10 chiffres: c'est directement la base
+    let scannedBase: string;
+    let scannedSequence: number | null = null;
+    
+    if (cleanTag.length === 13 && /^\d{13}$/.test(cleanTag)) {
+      scannedBase = cleanTag.substring(0, 10);
+      scannedSequence = parseInt(cleanTag.substring(10, 13), 10);
+      console.log(`[DB] Tag 13 chiffres détecté: base=${scannedBase}, séquence=${scannedSequence}`);
+    } else if (cleanTag.length === 10 && /^\d{10}$/.test(cleanTag)) {
+      scannedBase = cleanTag;
+      console.log(`[DB] Tag 10 chiffres détecté: base=${scannedBase}`);
+    } else {
+      // Format non reconnu, essayer quand même avec les 10 premiers chiffres
+      const numericPart = cleanTag.replace(/\D/g, '');
+      if (numericPart.length >= 10) {
+        scannedBase = numericPart.substring(0, 10);
+        console.log(`[DB] Tag format inconnu, extraction base: ${scannedBase}`);
+      } else {
+        console.log(`[DB] ❌ Format de tag non reconnu: ${cleanTag}`);
+        return null;
+      }
+    }
+    
+    const scannedBaseNum = parseInt(scannedBase, 10);
+    if (isNaN(scannedBaseNum)) {
+      console.log(`[DB] ❌ Base non numérique: ${scannedBase}`);
+      return null;
+    }
+    
+    // Récupérer tous les passagers avec un numéro de base de bagage
+    const passengers = await this.db.getAllAsync<any>(
+      'SELECT * FROM passengers WHERE baggage_base_number IS NOT NULL AND baggage_count > 0'
+    );
+
+    for (const passenger of passengers) {
+      const baseNumber = passenger.baggage_base_number;
+      const baggageCount = passenger.baggage_count || 0;
+      
+      if (!baseNumber || baggageCount === 0) continue;
+
+      const passengerBaseNum = parseInt(baseNumber, 10);
+      if (isNaN(passengerBaseNum)) continue;
+
+      // Vérifier si le tag scanné correspond à un des bagages attendus
+      // Les tags attendus vont de baseNumber à baseNumber + (baggageCount - 1)
+      for (let i = 0; i < baggageCount; i++) {
+        const expectedBaseNum = passengerBaseNum + i;
+        
+        // Le tag scanné correspond si sa base correspond
+        if (scannedBaseNum === expectedBaseNum) {
+          console.log(`[DB] ✅ Tag ${cleanTag} correspond au passager ${passenger.full_name}`);
+          console.log(`[DB]    Base passager: ${baseNumber}, Bagage #${i + 1}/${baggageCount}`);
+          return {
+            ...passenger,
+            synced: Boolean(passenger.synced),
+          };
+        }
+      }
+    }
+
+    console.log(`[DB] ❌ Aucun passager trouvé avec le tag: ${cleanTag} (base: ${scannedBase})`);
+    return null;
+  }
+
   async getPassengerById(id: string): Promise<Passenger | null> {
     if (!this.db) throw new Error('Database not initialized');
 

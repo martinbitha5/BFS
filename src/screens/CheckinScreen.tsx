@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
+import { authServiceInstance, flightService, parserService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { PassengerData } from '../types/passenger.types';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
@@ -88,8 +88,62 @@ export default function CheckinScreen({ navigation }: Props) {
         return;
       }
 
-      // ✅ NOUVEAU SYSTÈME : Stockage brut sans parsing
-      // Importer le service de scan brut
+      // ✅ ÉTAPE 1: Parser le boarding pass pour extraire le numéro de vol
+      let parsedData: PassengerData | null = null;
+      let flightNumber = '';
+      let departure = '';
+      let arrival = '';
+
+      try {
+        parsedData = parserService.parse(data);
+        flightNumber = parsedData.flightNumber || '';
+        departure = parsedData.departure || '';
+        arrival = parsedData.arrival || '';
+        console.log('[CHECK-IN] Vol extrait du boarding pass:', flightNumber, departure, '->', arrival);
+      } catch (parseError) {
+        console.warn('[CHECK-IN] Impossible de parser le boarding pass:', parseError);
+        // On continue quand même, le vol sera vérifié côté serveur
+      }
+
+      // ✅ ÉTAPE 2: Valider que le vol est programmé pour aujourd'hui
+      if (flightNumber) {
+        console.log('[CHECK-IN] 🔍 Validation du vol...');
+        const validation = await flightService.validateFlightForToday(
+          flightNumber,
+          user.airportCode,
+          departure,
+          arrival
+        );
+
+        if (!validation.isValid) {
+          await playErrorSound();
+          setToastMessage(`❌ Vol non autorisé !\n${validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.'}`);
+          setToastType('error');
+          setShowToast(true);
+          setProcessing(false);
+          setScanned(false);
+          setShowScanner(true);
+          return;
+        }
+
+        console.log('[CHECK-IN] ✅ Vol validé:', validation.flight?.flightNumber || flightNumber);
+      } else {
+        console.warn('[CHECK-IN] ⚠️ Impossible d\'extraire le numéro de vol - vérification ignorée');
+      }
+
+      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
+      if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
+        await playErrorSound();
+        setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);
+        setToastType('error');
+        setShowToast(true);
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
+      }
+
+      // ✅ ÉTAPE 4: Stockage brut du scan
       const { rawScanService } = await import('../services');
 
       // Vérifier si ce scan existe déjà avec le statut check-in
@@ -117,16 +171,12 @@ export default function CheckinScreen({ navigation }: Props) {
       await logAudit(
         'CHECKIN_PASSENGER',
         'passenger',
-        `Scan check-in ${result.isNew ? 'nouveau' : 'mise à jour statut'} - Scan #${result.scanCount}`,
+        `Scan check-in ${result.isNew ? 'nouveau' : 'mise à jour statut'} - Vol: ${flightNumber || 'N/A'} - Scan #${result.scanCount}`,
         result.id
       );
 
-      // ✅ La synchronisation est gérée automatiquement par raw-scan.service.ts
-      // Pas besoin d'ajouter manuellement à la sync queue ici
-
-      // Créer un objet PassengerData simplifié pour l'affichage
-      // (sans parsing, juste les données brutes)
-      const displayData: PassengerData = {
+      // ✅ Créer un objet PassengerData pour l'affichage (avec les données parsées si disponibles)
+      const displayData: PassengerData = parsedData || {
         pnr: 'En attente',
         fullName: 'Données enregistrées',
         firstName: '',
@@ -146,7 +196,7 @@ export default function CheckinScreen({ navigation }: Props) {
 
       // Message selon si c'est nouveau ou mise à jour
       const message = result.isNew
-        ? `✅ Check-in enregistré ! (Scan #${result.scanCount})`
+        ? `✅ Check-in enregistré ! (Vol: ${flightNumber || 'N/A'})`
         : `✅ Check-in mis à jour ! (Scan #${result.scanCount})`;
 
       setToastMessage(message);
