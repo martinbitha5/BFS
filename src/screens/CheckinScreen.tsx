@@ -117,12 +117,21 @@ export default function CheckinScreen({ navigation }: Props) {
 
         if (!validation.isValid) {
           await playErrorSound();
-          setToastMessage(`❌ Vol non autorisé !\n${validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.'}`);
-          setToastType('error');
-          setShowToast(true);
           setProcessing(false);
           setScanned(false);
-          setShowScanner(true);
+          
+          // Utiliser Alert native qui reste affichée
+          Alert.alert(
+            'VOL NON AUTORISÉ',
+            validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.',
+            [
+              {
+                text: 'Nouveau scan',
+                onPress: () => setShowScanner(true),
+              },
+            ],
+            { cancelable: false }
+          );
           return;
         }
 

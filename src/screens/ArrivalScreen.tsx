@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
+import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, databaseServiceInstance } from '../services';
@@ -21,6 +22,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Arrival'>;
 export default function ArrivalScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentFlight } = useFlightContext();
   const [permission, requestPermission] = useCameraPermissions();
   const [baggage, setBaggage] = useState<Baggage | null>(null);
   const [passenger, setPassenger] = useState<Passenger | null>(null);
@@ -150,19 +152,6 @@ export default function ArrivalScreen({ navigation }: Props) {
         console.log('[ARRIVAL] ⚠️ BAGAGE SUSPECT - Tag non trouvé ni localement ni dans BIRS:', rfidTag);
         await playErrorSound();
         
-        // Afficher une alerte de blocage
-        setToastMessage(
-          `🚨 BAGAGE SUSPECT !\n\n` +
-          `Tag: ${rfidTag}\n\n` +
-          `Ce bagage n'est PAS enregistré dans le système\n` +
-          `(ni local, ni international/BIRS).\n\n` +
-          `⚠️ ACTIONS REQUISES:\n` +
-          `• Bloquer le bagage pour investigation\n` +
-          `• OU faire payer le passager (suspicion de fraude)`
-        );
-        setToastType('error');
-        setShowToast(true);
-        
         // Enregistrer l'action d'audit pour le bagage suspect
         const { logAudit } = await import('../utils/audit.util');
         await logAudit(
@@ -172,7 +161,28 @@ export default function ArrivalScreen({ navigation }: Props) {
           rfidTag
         );
         
-        resetScanner();
+        // Afficher une Alert native qui reste visible
+        setProcessing(false);
+        Alert.alert(
+          'BAGAGE SUSPECT - FRAUDE',
+          `Tag: ${rfidTag}\n\n` +
+          `Ce bagage n'est PAS enregistré dans le système (ni local, ni international/BIRS).\n\n` +
+          `ACTIONS REQUISES:\n` +
+          `• Bloquer le bagage pour investigation\n` +
+          `• OU faire payer le passager (suspicion de fraude)`,
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => {
+                setScanned(false);
+                setShowScanner(true);
+                setLastScannedTag(null);
+                setLastScanTime(0);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
         return;
       }
 
@@ -616,9 +626,24 @@ export default function ArrivalScreen({ navigation }: Props) {
               <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
             </View>
             <Card style={styles.instructionCard}>
+              {currentFlight && (
+                <View style={styles.flightInfoBanner}>
+                  <Ionicons name="airplane" size={20} color="#fff" />
+                  <Text style={styles.flightInfoText}>
+                    Vol: {currentFlight.flightNumber} | {currentFlight.departure} → {currentFlight.arrival}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.instruction}>
                 Scannez le tag RFID ou code-barres du bagage arrivé
               </Text>
+              {currentFlight && (
+                <Text style={[styles.subInstruction, { color: 'rgba(255,255,255,0.7)', marginTop: Spacing.xs }]}>
+                  {currentFlight.departure !== currentFlight.arrival ? 
+                    `Bagage en provenance de ${currentFlight.departure}` : 
+                    'Vol local'}
+                </Text>
+              )}
             </Card>
             <TouchableOpacity
               style={styles.torchButton}
@@ -712,12 +737,34 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     backgroundColor: 'rgba(0,0,0,0.7)',
     borderWidth: 0,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  flightInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 8,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  flightInfoText: {
+    color: '#fff',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.bold,
   },
   instruction: {
     color: '#fff',
     fontSize: FontSizes.md,
     textAlign: 'center',
     fontWeight: FontWeights.semibold,
+  },
+  subInstruction: {
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
   },
   processingContainer: {
     flex: 1,

@@ -166,16 +166,16 @@ class AuthService {
       await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(session.user));
       
       // ✅ SAUVEGARDER API_URL ET API_KEY POUR LA SYNCHRONISATION
-      // Ces valeurs sont nécessaires pour sync.service.ts
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      const apiKey = process.env.EXPO_PUBLIC_API_KEY || ''; // Vide si non requise
+      // Ces valeurs sont nécessaires pour sync.service.ts et flight.service.ts
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.brsats.com';
+      const apiKey = process.env.EXPO_PUBLIC_API_KEY || 'bfs-api-key-secure-2025';
       
       await AsyncStorage.setItem(STORAGE_KEYS.API_URL, apiUrl);
       await AsyncStorage.setItem(STORAGE_KEYS.API_KEY, apiKey);
       
       console.log('[Auth] ✅ Session + API config sauvegardées');
       console.log('[Auth]    API_URL:', apiUrl);
-      console.log('[Auth]    API_KEY:', apiKey ? 'SET' : 'EMPTY (non requise)');
+      console.log('[Auth]    API_KEY:', apiKey ? 'SET' : 'MISSING');
     } catch (error) {
       console.error('Error saving session:', error);
       throw error;

@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
+import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, databaseServiceInstance } from '../services';
@@ -20,6 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Baggage'>;
 export default function BaggageScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentFlight } = useFlightContext();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -181,15 +183,65 @@ export default function BaggageScreen({ navigation }: Props) {
       if (!passenger) {
         console.log('[BAGGAGE] ❌ Tag non reconnu - Scan refusé:', rfidTag);
         await playErrorSound();
-        setToastMessage(`❌ TAG NON RECONNU !\n\nLe tag ${rfidTag} n'appartient à aucun passager enregistré.\n\nVérifiez que le passager a bien fait son check-in.`);
-        setToastType('error');
-        setShowToast(true);
-        resetScanner();
+        setProcessing(false);
+        
+        Alert.alert(
+          'TAG NON RECONNU',
+          `Le tag ${rfidTag} n'appartient à aucun passager enregistré.\n\nVérifiez que le passager a bien fait son check-in.`,
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => {
+                isProcessingRef.current = false;
+                setScanned(false);
+                setShowScanner(true);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
         return;
       }
 
-      // ✅ Passager trouvé → Enregistrer le bagage
-      console.log('[BAGGAGE] Création bagage pour passager:', passenger.fullName);
+      // ✅ Vérifier le nombre de bagages déjà enregistrés vs nombre attendu
+      const existingBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
+      const baggageCount = existingBaggages?.length || 0;
+      
+      // Récupérer le nombre de bagages attendus depuis les données du passager
+      const expectedBaggageCount = passenger.baggageCount || passenger.expectedTags?.length || 1;
+      
+      console.log('[BAGGAGE] Vérification quota:', {
+        passager: passenger.fullName,
+        bagagesEnregistres: baggageCount,
+        bagagesAttendus: expectedBaggageCount,
+      });
+
+      // Si le passager a déjà atteint ou dépassé son quota de bagages
+      if (baggageCount >= expectedBaggageCount) {
+        console.log('[BAGGAGE] ❌ Quota de bagages dépassé !');
+        await playErrorSound();
+        setProcessing(false);
+        
+        Alert.alert(
+          'QUOTA DE BAGAGES DÉPASSÉ',
+          `Le passager ${passenger.fullName} a déjà ${baggageCount} bagage(s) enregistré(s).\n\nNombre de bagages autorisés: ${expectedBaggageCount}\n\nCe bagage supplémentaire ne peut pas être accepté.`,
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => {
+                isProcessingRef.current = false;
+                setScanned(false);
+                setShowScanner(true);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
+      // ✅ Passager trouvé et quota OK → Enregistrer le bagage
+      console.log('[BAGGAGE] Création bagage pour passager:', passenger.fullName, `(${baggageCount + 1}/${expectedBaggageCount})`);
       
       const baggageId = await databaseServiceInstance.createBaggage({
         passengerId: passenger.id,
@@ -486,8 +538,16 @@ export default function BaggageScreen({ navigation }: Props) {
               <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
             </View>
             <Card style={styles.instructionCard}>
+              {currentFlight && (
+                <View style={styles.flightInfoBanner}>
+                  <Ionicons name="airplane" size={20} color="#fff" />
+                  <Text style={styles.flightInfoText}>
+                    Vol: {currentFlight.flightNumber} | {currentFlight.departure} → {currentFlight.arrival}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.instruction}>
-                📦 Scannez le tag RFID du bagage
+                Scannez le tag RFID du bagage
               </Text>
               <Text style={[styles.subInstruction, { color: 'rgba(255,255,255,0.7)' }]}>
                 Le passager sera identifié automatiquement
@@ -664,6 +724,22 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
+  },
+  flightInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 8,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  flightInfoText: {
+    color: '#fff',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.bold,
   },
   instruction: {
     color: '#fff',

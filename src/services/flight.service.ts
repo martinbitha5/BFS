@@ -352,11 +352,11 @@ class FlightService {
       const availableFlights = await this.getAvailableFlights(airportCode);
 
       if (availableFlights.length === 0) {
-        // Aucun vol programmé = on autorise pour ne pas bloquer l'agent
-        console.log('[FlightService] ⚠️ Aucun vol programmé - Autorisation par défaut');
+        // Aucun vol programmé = BLOQUER le scan
+        console.log('[FlightService] ❌ Aucun vol programmé - SCAN BLOQUÉ');
         return {
-          isValid: true,
-          reason: 'Aucun vol programmé - scan autorisé',
+          isValid: false,
+          reason: 'AUCUN VOL PROGRAMMÉ POUR AUJOURD\'HUI. Contactez le superviseur pour programmer les vols du jour.',
         };
       }
 
@@ -383,10 +383,10 @@ class FlightService {
       };
     } catch (error) {
       console.error('[FlightService] Erreur validation locale:', error);
-      // En cas d'erreur, on autorise pour ne pas bloquer l'agent
+      // En cas d'erreur, BLOQUER le scan pour sécurité
       return {
-        isValid: true,
-        reason: 'Erreur de validation - scan autorisé',
+        isValid: false,
+        reason: 'ERREUR DE VALIDATION. Impossible de vérifier les vols programmés. Contactez le support.',
       };
     }
   }
@@ -396,7 +396,7 @@ class FlightService {
    */
   isFlightScheduledLocally(flightNumber: string, scheduledFlights: AvailableFlight[]): boolean {
     if (scheduledFlights.length === 0) {
-      return true; // Aucun vol programmé = pas de restriction
+      return false; // Aucun vol programmé = BLOQUER
     }
 
     const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');

@@ -105,7 +105,7 @@ export default function Users() {
     try {
       setLoading(true);
       setError('');
-      const response = await api.get(`/api/v1/users?airport=${currentUser.airport_code}`);
+      const response = await api.get('/api/v1/users');
       const userData = response.data.data || [];
       setUsers(userData);
       
