@@ -126,32 +126,35 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar à gauche (style glassmorphism) */}
       <aside className={`
         fixed md:relative
-        w-64 h-screen max-h-screen
+        w-64 h-screen
         bg-black/30 backdrop-blur-md text-white
-        flex flex-col shadow-xl z-30 border-r border-white/20
+        shadow-xl z-30 border-r border-white/20
         transform transition-transform duration-300 ease-in-out
+        overflow-y-auto
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        {/* Header Sidebar */}
-        <div className="p-4 border-b border-white/20">
-          <div className="flex items-center space-x-3 mb-3">
-            <Logo width={70} height={35} className="hover:scale-105 transition-transform duration-200" />
+        {/* Tout le contenu scrolle ensemble */}
+        <div className="flex flex-col min-h-full">
+          {/* Header Sidebar */}
+          <div className="p-4 border-b border-white/20">
+            <div className="flex items-center space-x-3 mb-3">
+              <Logo width={70} height={35} className="hover:scale-105 transition-transform duration-200" />
+            </div>
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-white">
+                OPS Dashboard
+              </h1>
+              {user && (
+                <p className="text-xs text-white/70 font-medium mt-1">
+                  Aéroport {user.airport_code}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">
-              OPS Dashboard
-            </h1>
-            {user && (
-              <p className="text-xs text-white/70 font-medium mt-1">
-                Aéroport {user.airport_code}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          <div className="space-y-1 px-3">
+          {/* Navigation - tout scrolle ensemble */}
+          <nav className="py-2 md:py-4">
+          <div className="space-y-0.5 md:space-y-1 px-2 md:px-3">
             {navItems.map((item) => {
               const Icon = item.icon;
               
@@ -165,15 +168,15 @@ export default function Layout({ children }: LayoutProps) {
                   <div key={item.label}>
                     <button
                       onClick={() => toggleMenu(menuKey)}
-                      className={`w-full flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 md:py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                         hasActiveChild
                           ? 'bg-white/20 text-white font-semibold'
                           : 'text-white/80 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center">
-                        <Icon className="w-5 h-5 mr-3" />
-                        {item.label}
+                        <Icon className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
+                        <span className="text-[13px] md:text-sm">{item.label}</span>
                       </div>
                       {expanded ? (
                         <ChevronDown className="w-4 h-4" />
@@ -183,7 +186,7 @@ export default function Layout({ children }: LayoutProps) {
                     </button>
                     
                     {expanded && (
-                      <div className="ml-4 mt-1 space-y-1 border-l-2 border-white/10 pl-2">
+                      <div className="ml-3 md:ml-4 mt-0.5 md:mt-1 space-y-0.5 md:space-y-1 border-l-2 border-white/10 pl-2">
                         {item.children.map((child) => {
                           const ChildIcon = child.icon;
                           const childActive = isActive(child.path);
@@ -193,13 +196,13 @@ export default function Layout({ children }: LayoutProps) {
                               key={child.path}
                               to={child.path!}
                               onClick={() => setSidebarOpen(false)}
-                              className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                              className={`flex items-center px-2 md:px-3 py-2 rounded-lg text-[12px] md:text-sm transition-all duration-200 ${
                                 childActive
                                   ? 'bg-white/20 text-white font-semibold'
                                   : 'text-white/70 hover:bg-white/10 hover:text-white'
                               }`}
                             >
-                              <ChildIcon className="w-4 h-4 mr-2" />
+                              <ChildIcon className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
                               {child.label}
                             </Link>
                           );
@@ -217,36 +220,42 @@ export default function Layout({ children }: LayoutProps) {
                   key={item.path}
                   to={item.path!}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center px-3 py-2.5 md:py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     active
                       ? 'bg-white/20 text-white font-semibold shadow-lg'
                       : 'text-white/80 hover:bg-white/10'
                   }`}
                 >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.label}
+                  <Icon className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
+                  <span className="text-[13px] md:text-sm">{item.label}</span>
                 </Link>
               );
             })}
           </div>
         </nav>
 
-        {/* User info et déconnexion - toujours visible en bas */}
-        {user && (
-          <div className="mt-auto p-4 border-t border-white/20 bg-black/20">
-            <div className="mb-3">
-              <p className="text-sm font-semibold text-white truncate">{user.full_name}</p>
-              <p className="text-xs text-white/60 truncate">{user.email}</p>
+          {/* User info et déconnexion - scrolle avec le reste */}
+          {user && (
+            <div className="mt-auto p-3 md:p-4 border-t border-white/20 bg-black/20">
+              {/* Infos utilisateur */}
+              <div className="mb-2 md:mb-3">
+                <p className="text-sm font-semibold text-white truncate">{user.full_name}</p>
+                <p className="text-xs text-white/60 truncate">{user.email}</p>
+              </div>
+              {/* Bouton déconnexion */}
+              <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  logout();
+                }}
+                className="w-full flex items-center justify-center px-3 py-2.5 md:py-2 rounded-lg text-sm font-medium bg-red-900/50 text-red-300 border border-red-500/30 hover:bg-red-900/70 transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Déconnexion
+              </button>
             </div>
-            <button
-              onClick={logout}
-              className="w-full flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium text-red-300 hover:bg-red-900/30 transition-colors"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Déconnexion
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* Contenu principal */}
@@ -264,7 +273,7 @@ export default function Layout({ children }: LayoutProps) {
           <GlobalSearch />
         </div>
         
-        <div className="flex-1 container mx-auto py-6 px-6 mt-16 md:mt-0">
+        <div className="flex-1 container mx-auto py-6 px-4 sm:px-6 mt-16 md:mt-0">
           {children}
         </div>
         <Footer />

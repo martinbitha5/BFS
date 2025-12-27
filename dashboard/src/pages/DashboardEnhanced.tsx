@@ -292,70 +292,70 @@ export default function DashboardEnhanced() {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Header avec actions - Responsive */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
-            <span>Vue d'ensemble</span>
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800">
-              {user?.airport_code}
-            </span>
-            {/* Indicateur de connexion temps réel */}
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              isConnected 
-                ? 'bg-green-900/40 text-green-300 animate-pulse' 
-                : 'bg-red-900/40 text-red-300'
-            }`}>
+      {/* Header avec actions - Responsive optimisé mobile */}
+      <div className="flex flex-col gap-3">
+        {/* Titre + indicateurs */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span>Vue d'ensemble</span>
+              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-medium bg-primary-100 text-primary-800">
+                {user?.airport_code}
+              </span>
+            </h2>
+            <p className="mt-1 text-[11px] sm:text-xs md:text-sm text-white/70 flex items-center flex-wrap">
               {isConnected ? (
                 <>
-                  <Wifi className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Temps réel</span>
+                  <span className="inline-flex items-center">
+                    <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1.5 sm:mr-2 animate-pulse"></span>
+                    <span className="hidden xs:inline">Mises à jour </span>instantanées
+                  </span>
+                  {lastUpdate && (
+                    <span className="ml-1.5 sm:ml-2 text-white/50 text-[10px] sm:text-xs">
+                      {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
-                  <WifiOff className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Hors ligne</span>
+                  <Clock className="w-3 h-3 mr-1" />
+                  <span className="text-[11px] sm:text-xs">Connexion...</span>
                 </>
               )}
-            </span>
-          </h2>
-          <p className="mt-1 text-xs sm:text-sm text-white/70 flex items-center">
+            </p>
+          </div>
+          {/* Indicateur SSE - visible sur mobile */}
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium ${
+            isConnected 
+              ? 'bg-green-900/40 text-green-300 animate-pulse' 
+              : 'bg-red-900/40 text-red-300'
+          }`}>
             {isConnected ? (
-              <>
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                Mises à jour instantanées
-                {lastUpdate && (
-                  <span className="ml-2 text-white/50">
-                    • Dernière: {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </span>
-                )}
-              </>
+              <Wifi className="w-3 h-3" />
             ) : (
-              <>
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                Connexion en cours...
-              </>
+              <WifiOff className="w-3 h-3" />
             )}
-          </p>
+          </span>
         </div>
-        <div className="flex gap-3">
+        
+        {/* Boutons d'action - responsive */}
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={syncRawScans}
             disabled={syncing}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-lg shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Synchroniser Raw Scans</span>
-            <span className="sm:hidden">Sync</span>
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="ml-1.5 sm:ml-2 hidden xs:inline sm:hidden">Sync</span>
+            <span className="ml-1.5 sm:ml-2 hidden sm:inline">Synchroniser</span>
           </button>
           <button
             onClick={fetchStats}
             disabled={loading}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-lg shadow-sm text-xs sm:text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Actualiser</span>
-            <span className="sm:hidden">Actualiser</span>
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="ml-1.5 sm:ml-2">Actualiser</span>
           </button>
         </div>
       </div>

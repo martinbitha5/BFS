@@ -34,7 +34,12 @@ export default function Signup() {
 
     try {
       await signup(name, code, email, password);
-      navigate('/dashboard');
+      // Rediriger vers login avec un message de succès (pas vers dashboard)
+      navigate('/login', { 
+        state: { 
+          message: 'Votre demande d\'inscription a été soumise avec succès. Votre compte sera validé sous 24h, vous pourrez ensuite vous connecter.' 
+        } 
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {

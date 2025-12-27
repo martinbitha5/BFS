@@ -206,29 +206,29 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
 
   return (
     <>
-      {/* Bouton de recherche */}
+      {/* Bouton de recherche - compact sur mobile */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`flex items-center gap-2 px-4 py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white/70 hover:text-white hover:bg-black/50 transition-colors ${className}`}
+        className={`flex items-center gap-2 p-2 md:px-4 md:py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white/70 hover:text-white hover:bg-black/50 transition-colors ${className}`}
       >
-        <Search className="w-4 h-4" />
+        <Search className="w-4 h-4 md:w-4 md:h-4" />
         <span className="hidden md:inline">Rechercher...</span>
         <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-white/10 rounded">
-          <span>⌘</span>K
+          <span>Ctrl+</span>K
         </kbd>
       </button>
 
-      {/* Modal de recherche */}
+      {/* Modal de recherche - plein écran sur mobile */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 md:pt-20">
           {/* Overlay */}
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Contenu */}
-          <div className="relative w-full max-w-2xl mx-4 bg-black/90 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl overflow-hidden">
+          {/* Contenu - full width sur mobile */}
+          <div className="relative w-full max-w-2xl mx-2 md:mx-4 bg-black/90 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] md:max-h-none">
             {/* Input de recherche */}
             <div className="flex items-center px-4 border-b border-white/10">
               <Search className="w-5 h-5 text-white/50" />
@@ -307,56 +307,57 @@ export default function GlobalSearch({ className = '' }: GlobalSearchProps) {
                   <p className="text-sm text-white/40 mt-1">Essayez avec un PNR, nom ou numéro de bagage</p>
                 </div>
               ) : (
-                <div className="p-6">
-                  <p className="text-white/60 text-sm mb-4">Recherches suggérées :</p>
+                <div className="p-4 md:p-6">
+                  <p className="text-white/60 text-sm mb-3 md:mb-4">Raccourcis :</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => navigate('/passengers')}
-                      className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
+                      onClick={() => { setIsOpen(false); navigate('/passengers'); }}
+                      className="flex items-center gap-2 p-2.5 md:p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
                     >
                       <User className="w-4 h-4 text-blue-400" />
-                      <span className="text-white/80 text-sm">Voir tous les passagers</span>
+                      <span className="text-white/80 text-xs md:text-sm">Passagers</span>
                     </button>
                     <button
-                      onClick={() => navigate('/baggages')}
-                      className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
+                      onClick={() => { setIsOpen(false); navigate('/baggages'); }}
+                      className="flex items-center gap-2 p-2.5 md:p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
                     >
                       <Package className="w-4 h-4 text-green-400" />
-                      <span className="text-white/80 text-sm">Voir tous les bagages</span>
+                      <span className="text-white/80 text-xs md:text-sm">Bagages</span>
                     </button>
                     <button
-                      onClick={() => navigate('/flights')}
-                      className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
+                      onClick={() => { setIsOpen(false); navigate('/flights'); }}
+                      className="flex items-center gap-2 p-2.5 md:p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
                     >
                       <Plane className="w-4 h-4 text-purple-400" />
-                      <span className="text-white/80 text-sm">Gestion des vols</span>
+                      <span className="text-white/80 text-xs md:text-sm">Vols</span>
                     </button>
                     <button
-                      onClick={() => navigate('/birs')}
-                      className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
+                      onClick={() => { setIsOpen(false); navigate('/birs'); }}
+                      className="flex items-center gap-2 p-2.5 md:p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-left"
                     >
                       <Clock className="w-4 h-4 text-yellow-400" />
-                      <span className="text-white/80 text-sm">Rapports BIRS</span>
+                      <span className="text-white/80 text-xs md:text-sm">Rapports</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between text-xs text-white/40">
-              <div className="flex items-center gap-4">
+            {/* Footer - simplifié sur mobile */}
+            <div className="px-3 md:px-4 py-2 border-t border-white/10 flex items-center justify-between text-xs text-white/40">
+              <div className="hidden md:flex items-center gap-4">
                 <span className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↑</kbd>
                   <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↓</kbd>
-                  pour naviguer
+                  naviguer
                 </span>
                 <span className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↵</kbd>
-                  pour sélectionner
+                  sélectionner
                 </span>
               </div>
-              <span>Tapez au moins 2 caractères</span>
+              <span className="md:hidden">Tapez pour rechercher</span>
+              <span className="hidden md:inline">Min. 2 caractères</span>
             </div>
           </div>
         </div>

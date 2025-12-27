@@ -58,11 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      const { airline: airlineData, token } = response.data;
-      setAirline(airlineData);
-      localStorage.setItem('airline', JSON.stringify(airlineData));
-      localStorage.setItem('airline_token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // L'inscription crée une demande en attente d'approbation
+      // On ne stocke rien - l'utilisateur devra attendre l'approbation
+      return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Erreur d\'inscription');
     }

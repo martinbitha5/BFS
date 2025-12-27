@@ -64,7 +64,7 @@ export default function Register() {
       // Ne pas rediriger automatiquement - afficher un message de succès
       navigate('/login', { 
         state: { 
-          message: 'Votre demande d\'inscription a été soumise. Vous recevrez un email une fois votre compte approuvé par le support.' 
+          message: 'Votre demande d\'inscription a été soumise avec succès. Votre compte sera validé sous 24h, vous pourrez ensuite vous connecter.' 
         } 
       });
     } catch (err: any) {
@@ -254,7 +254,7 @@ export default function Register() {
             <Plane className="w-5 h-5 text-primary-300 mr-2 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-white/70">
               Votre demande d'inscription sera soumise pour approbation par le support. 
-              Vous recevrez un email une fois votre compte approuvé.
+              Votre compte sera validé sous 24h, vous pourrez ensuite vous connecter.
             </p>
           </div>
         </div>

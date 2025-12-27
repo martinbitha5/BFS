@@ -134,7 +134,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
         email: userData.email,
         role: userData.role
       },
-      message: 'Votre demande d\'inscription a été soumise avec succès. Vous recevrez un email une fois votre compte approuvé par le support.',
+      message: 'Votre demande d\'inscription a été soumise avec succès. Votre compte sera validé sous 24h, vous pourrez ensuite vous connecter.',
       requiresApproval: true
     });
 
@@ -200,7 +200,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (['supervisor', 'baggage_dispute'].includes(userData.role) && !userData.is_approved) {
       return res.status(403).json({
         success: false,
-        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        error: 'Votre compte n\'a pas encore été validé. La validation se fait sous 24h, veuillez réessayer plus tard.',
         requiresApproval: true
       });
     }

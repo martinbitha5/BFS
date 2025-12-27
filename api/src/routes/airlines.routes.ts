@@ -100,7 +100,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
 
     res.status(201).json({
       success: true,
-      message: 'Votre demande d\'inscription a été soumise avec succès. Elle sera examinée par notre équipe et vous recevrez un email une fois approuvée.',
+      message: 'Votre demande d\'inscription a été soumise avec succès. Votre compte sera validé sous 24h, vous pourrez ensuite vous connecter.',
       request: {
         id: request.id,
         name: request.name,
@@ -149,7 +149,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       if (pendingRequest) {
         return res.status(403).json({
           success: false,
-          error: 'Votre demande d\'inscription est en attente d\'approbation. Veuillez patienter ou contacter le support pour plus d\'informations.',
+          error: 'Votre compte n\'a pas encore été validé. La validation se fait sous 24h, veuillez réessayer plus tard.',
           requiresApproval: true,
         });
       }
@@ -164,7 +164,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (!airline.approved) {
       return res.status(403).json({
         success: false,
-        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        error: 'Votre compte n\'a pas encore été validé. La validation se fait sous 24h, veuillez réessayer plus tard.',
         requiresApproval: true,
       });
     }
@@ -233,7 +233,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     if (!airline.approved) {
       return res.status(403).json({
         success: false,
-        error: 'Votre compte n\'a pas encore été approuvé par le support. Veuillez patienter ou contacter le support pour plus d\'informations.',
+        error: 'Votre compte n\'a pas encore été validé. La validation se fait sous 24h, veuillez réessayer plus tard.',
         requiresApproval: true,
       });
     }
