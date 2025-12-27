@@ -25,8 +25,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Vérifier si une session existe
     const storedAirline = localStorage.getItem('airline');
-    if (storedAirline) {
-      setAirline(JSON.parse(storedAirline));
+    if (storedAirline && storedAirline !== 'undefined' && storedAirline !== 'null') {
+      try {
+        const parsed = JSON.parse(storedAirline);
+        if (parsed && parsed.id) {
+          setAirline(parsed);
+        } else {
+          // Données invalides, nettoyer
+          localStorage.removeItem('airline');
+          localStorage.removeItem('airline_token');
+        }
+      } catch (e) {
+        // JSON invalide, nettoyer le localStorage
+        console.warn('Invalid airline data in localStorage, clearing...');
+        localStorage.removeItem('airline');
+        localStorage.removeItem('airline_token');
+      }
     }
     setLoading(false);
   }, []);
