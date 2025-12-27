@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { notifyStatsUpdate, notifySyncComplete, notifyNewPassenger, notifyNewBaggage } from './realtime.routes';
 
 const router = Router();
 
@@ -315,16 +316,23 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     console.log(`[SYNC] Terminé: ${passengersCreated} passagers, ${baggagesCreated} bagages créés`);
 
+    const syncStats = {
+      processed,
+      passengersCreated,
+      baggagesCreated,
+      errors,
+      totalScans: rawScans.length
+    };
+
+    // ✅ TEMPS RÉEL: Notifier tous les clients SSE
+    notifySyncComplete(airport_code, syncStats);
+    // Envoyer les stats mises à jour
+    await notifyStatsUpdate(airport_code);
+
     res.json({
       success: true,
       message: 'Synchronisation terminée',
-      stats: {
-        processed,
-        passengersCreated,
-        baggagesCreated,
-        errors,
-        totalScans: rawScans.length
-      }
+      stats: syncStats
     });
   } catch (error) {
     console.error('[SYNC] Erreur générale:', error);

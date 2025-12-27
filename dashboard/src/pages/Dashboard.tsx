@@ -1,8 +1,9 @@
-import { CheckCircle, MapPin, Package, Plane, RefreshCw, Users } from 'lucide-react';
+import { CheckCircle, MapPin, Package, Plane, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import StatCard from '../components/StatCard';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtimeStats } from '../hooks/useRealtimeStats';
 
 interface AirportStats {
   totalPassengers: number;
@@ -19,11 +20,35 @@ interface AirportStats {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  
+  // ✅ TEMPS RÉEL: Utiliser le hook SSE pour les mises à jour instantanées
+  const { 
+    stats: realtimeStats, 
+    isConnected, 
+    lastUpdate,
+    error: sseError,
+    fetchStats: fetchRealtimeStats
+  } = useRealtimeStats(user?.airport_code);
+  
   const [stats, setStats] = useState<AirportStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+
+  // ✅ Synchroniser les stats du SSE avec l'état local
+  useEffect(() => {
+    if (realtimeStats) {
+      setStats(realtimeStats);
+      setLoading(false);
+    }
+  }, [realtimeStats]);
+
+  useEffect(() => {
+    if (sseError) {
+      setError(sseError);
+    }
+  }, [sseError]);
 
   const fetchStats = async () => {
     if (!user?.airport_code) return;
@@ -43,7 +68,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user?.airport_code) {
+      // Charger les données initiales
       fetchStats();
+      // Les mises à jour sont maintenant gérées par SSE en temps réel !
     }
   }, [user]);
 
@@ -102,8 +129,42 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Tableau de bord - {user?.airport_code}</h2>
-          <p className="mt-1 text-sm text-white/90">Vue d'ensemble des opérations aéroportuaires</p>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            Tableau de bord - {user?.airport_code}
+            {/* Indicateur de connexion temps réel */}
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+              isConnected 
+                ? 'bg-green-900/40 text-green-300 animate-pulse' 
+                : 'bg-red-900/40 text-red-300'
+            }`}>
+              {isConnected ? (
+                <>
+                  <Wifi className="w-3 h-3 mr-1" />
+                  <span>Temps réel</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3 h-3 mr-1" />
+                  <span>Hors ligne</span>
+                </>
+              )}
+            </span>
+          </h2>
+          <p className="mt-1 text-sm text-white/90 flex items-center">
+            {isConnected ? (
+              <>
+                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                Mises à jour instantanées
+                {lastUpdate && (
+                  <span className="ml-2 text-white/60">
+                    • Dernière: {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
+              </>
+            ) : (
+              'Vue d\'ensemble des opérations aéroportuaires'
+            )}
+          </p>
         </div>
         <div className="flex gap-3">
           <button

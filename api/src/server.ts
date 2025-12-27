@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/error.middleware';
 import airlineApprovalRoutes from './routes/airline-approval.routes';
 import airlinesRoutes from './routes/airlines.routes';
 import airportsRoutes from './routes/airports.routes';
+import auditRoutes from './routes/audit.routes';
 import authRoutes from './routes/auth.routes';
 import baggageAuthorizationRoutes from './routes/baggage-authorization.routes';
 import baggageRoutes from './routes/baggage.routes';
@@ -21,12 +22,12 @@ import flightRoutes from './routes/flights.routes';
 import passengerRoutes from './routes/passenger.routes';
 import publicRoutes from './routes/public.routes';
 import rawScansRoutes from './routes/raw-scans.routes';
+import realtimeRoutes from './routes/realtime.routes';
 import rushRoutes from './routes/rush.routes';
 import statsRoutes from './routes/stats.routes';
 import syncRawScansRoutes from './routes/sync-raw-scans.routes';
 import userApprovalRoutes from './routes/user-approval.routes';
 import usersRoutes from './routes/users.routes';
-import auditRoutes from './routes/audit.routes';
 
 dotenv.config();
 
@@ -106,6 +107,7 @@ app.use('/api/v1/export', apiKeyAuth, exportRoutes); // ✅ NEW: Export with par
 app.use('/api/v1/users', apiKeyAuth, usersRoutes); // ✅ NEW: Gestion des utilisateurs
 app.use('/api/v1/audit', apiKeyAuth, auditRoutes); // ✅ NEW: Logs d'audit
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
+app.use('/api/v1/realtime', realtimeRoutes); // ✅ NEW: SSE temps réel (auth via query params pour EventSource)
 
 // 404 handler (must come before error handler)
 app.use((req, res) => {

@@ -2,6 +2,7 @@ import { Request, Response, Router, NextFunction } from 'express';
 import { supabase } from '../config/database';
 import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { validateBoardingPassScan, validateBaggageScan } from '../middleware/scan-validation.middleware';
+import { notifyRawScan, notifyStatsUpdate } from './realtime.routes';
 
 const router = Router();
 
@@ -191,6 +192,10 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
                 return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
             }
 
+            // ✅ TEMPS RÉEL: Notifier les clients SSE
+            notifyRawScan(airport_code, data);
+            notifyStatsUpdate(airport_code);
+
             return res.json({
                 success: true,
                 data,
@@ -221,6 +226,10 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
             console.error('Error creating raw scan:', error);
             return res.status(500).json({ error: 'Erreur lors de la création' });
         }
+
+        // ✅ TEMPS RÉEL: Notifier les clients SSE d'un nouveau scan
+        notifyRawScan(airport_code, data);
+        notifyStatsUpdate(airport_code);
 
         res.status(201).json({
             success: true,
