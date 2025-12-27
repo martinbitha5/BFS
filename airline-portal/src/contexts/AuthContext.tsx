@@ -31,12 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (parsed && parsed.id) {
           setAirline(parsed);
         } else {
-          // Données invalides, nettoyer
           localStorage.removeItem('airline');
           localStorage.removeItem('airline_token');
         }
       } catch (e) {
-        // JSON invalide, nettoyer le localStorage
         console.warn('Invalid airline data in localStorage, clearing...');
         localStorage.removeItem('airline');
         localStorage.removeItem('airline_token');
