@@ -9,7 +9,6 @@ import LanguageSelection from './pages/LanguageSelection';
 import Legal from './pages/Legal';
 import Login from './pages/Login';
 import Privacy from './pages/Privacy';
-import Signup from './pages/Signup';
 import Terms from './pages/Terms';
 
 function App() {
@@ -21,7 +20,6 @@ function App() {
             <Route path="/" element={<LanguageSelection />} />
             <Route path="/select-language" element={<LanguageSelection />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
             <Route path="/legal" element={<Legal />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />

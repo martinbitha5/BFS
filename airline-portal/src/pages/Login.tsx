@@ -1,6 +1,6 @@
-import { CheckCircle, Lock, Mail, Plane } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Lock, Mail, Plane } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -8,21 +8,10 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Afficher le message de succès si présent dans la navigation state
-    if (location.state?.message) {
-      setSuccessMessage(location.state.message);
-      // Nettoyer le state après affichage
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +47,6 @@ export default function Login() {
 
         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-xl p-8">
           <h2 className="text-2xl font-bold text-white mb-6">{t('login.title')}</h2>
-
-          {successMessage && (
-            <div className="mb-4 p-3 bg-green-900/30 backdrop-blur-md border border-green-400/30 rounded-md flex items-start">
-              <CheckCircle className="w-5 h-5 text-green-300 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-green-200">{successMessage}</p>
-            </div>
-          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-md">
@@ -117,11 +99,8 @@ export default function Login() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-white/70">
-              {t('login.noAccount')}{' '}
-              <Link to="/signup" className="text-primary-300 hover:text-primary-200 font-medium">
-                {t('login.signup')}
-              </Link>
+            <p className="text-sm text-white/60">
+              Pour obtenir un compte, contactez le support BFS.
             </p>
           </div>
         </div>

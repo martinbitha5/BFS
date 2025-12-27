@@ -247,4 +247,127 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * POST /api/v1/airlines/create-by-support
+ * Crée une compagnie aérienne - Réservé au Support
+ */
+router.post('/create-by-support', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Vérifier l'authentification
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentification requise' 
+      });
+    }
+
+    const token = authHeader.substring(7);
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Token invalide' 
+      });
+    }
+
+    // Vérifier que l'utilisateur est support
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role, is_approved')
+      .eq('id', authUser.id)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'support' || !currentUser.is_approved) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Accès refusé : Seul le support peut créer des compagnies aériennes' 
+      });
+    }
+
+    const { name, code, email, password } = req.body;
+
+    if (!name || !code || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tous les champs sont requis (nom, code IATA, email, mot de passe)',
+      });
+    }
+
+    if (code.length !== 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le code IATA doit contenir exactement 2 lettres',
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le mot de passe doit contenir au moins 6 caractères',
+      });
+    }
+
+    // Vérifier si l'email ou le code existe déjà
+    const { data: existingAirline } = await supabase
+      .from('airlines')
+      .select('id')
+      .or(`email.eq.${email},code.eq.${code.toUpperCase()}`)
+      .single();
+
+    if (existingAirline) {
+      return res.status(409).json({
+        success: false,
+        error: 'Une compagnie aérienne avec cet email ou ce code IATA existe déjà',
+      });
+    }
+
+    // Hasher le mot de passe
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Créer la compagnie (directement approuvée)
+    const { data: airline, error: createError } = await supabase
+      .from('airlines')
+      .insert({
+        name,
+        code: code.toUpperCase(),
+        email,
+        password: hashedPassword,
+        approved: true,
+        approved_at: new Date().toISOString(),
+        approved_by: authUser.id,
+      })
+      .select('id, name, code, email, approved, created_at')
+      .single();
+
+    if (createError) {
+      if (createError.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          error: 'Une compagnie aérienne avec cet email ou ce code existe déjà',
+        });
+      }
+      throw createError;
+    }
+
+    // Log d'audit
+    await supabase.from('audit_logs').insert({
+      action: 'CREATE_AIRLINE_BY_SUPPORT',
+      entity_type: 'airline',
+      entity_id: airline.id,
+      description: `Création de la compagnie aérienne ${name} (${code.toUpperCase()}) par le support`,
+      user_id: authUser.id
+    });
+
+    res.status(201).json({
+      success: true,
+      data: airline,
+      message: `Compagnie aérienne "${name}" (${code.toUpperCase()}) créée avec succès`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

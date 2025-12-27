@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, Settings, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, Settings, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,11 +26,11 @@ export default function Layout({ children }: LayoutProps) {
   // Mettre à jour les menus ouverts quand l'utilisateur change
   useEffect(() => {
     setExpandedMenus(prev => {
-      const hasApprovals = prev.includes('approbations');
-      if (user && user.role === 'support' && !hasApprovals) {
-        return [...prev, 'approbations'];
-      } else if ((!user || user.role !== 'support') && hasApprovals) {
-        return prev.filter(m => m !== 'approbations');
+      const hasSupport = prev.includes('support');
+      if (user && user.role === 'support' && !hasSupport) {
+        return [...prev, 'support'];
+      } else if ((!user || user.role !== 'support') && hasSupport) {
+        return prev.filter(m => m !== 'support');
       }
       return prev;
     });
@@ -66,22 +66,21 @@ export default function Layout({ children }: LayoutProps) {
     },
   ];
 
-  // Menu d'approbations (uniquement pour le support)
-  const approvalNavItem: NavItem = {
-    label: 'Approbations',
+  // Menu Support (uniquement pour le support)
+  const supportNavItem: NavItem = {
+    label: 'Support',
     icon: ShieldCheck,
     children: [
-      { path: '/user-approval', label: 'Utilisateurs', icon: Users },
-      { path: '/airline-approval', label: 'Airlines', icon: Plane },
-      { path: '/baggage-authorization', label: 'Bagages', icon: Package },
+      { path: '/administration', label: 'Créer des comptes', icon: UserPlus },
+      { path: '/baggage-authorization', label: 'Autorisations Bagages', icon: Package },
     ]
   };
 
   // Filtrer les éléments du menu selon le rôle de l'utilisateur
   const navItems: NavItem[] = [
     ...baseNavItems,
-    // Ajouter le menu Approbations uniquement si l'utilisateur est support
-    ...(user && user.role === 'support' ? [approvalNavItem] : [])
+    // Ajouter le menu Support uniquement si l'utilisateur est support
+    ...(user && user.role === 'support' ? [supportNavItem] : [])
   ];
 
   const isMenuExpanded = (menuLabel: string) => {

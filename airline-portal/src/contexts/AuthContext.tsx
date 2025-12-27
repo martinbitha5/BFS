@@ -13,7 +13,6 @@ interface AuthContextType {
   airline: Airline | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, code: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -49,23 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (name: string, code: string, email: string, password: string) => {
-    try {
-      const response = await axios.post(`${API_URL}/api/v1/airlines/signup`, {
-        name,
-        code,
-        email,
-        password,
-      });
-
-      // L'inscription crée une demande en attente d'approbation
-      // On ne stocke rien - l'utilisateur devra attendre l'approbation
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Erreur d\'inscription');
-    }
-  };
-
   const logout = () => {
     setAirline(null);
     localStorage.removeItem('airline');
@@ -74,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ airline, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ airline, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,12 +3,15 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import About from './pages/About';
+import Administration from './pages/Administration';
+import AuditLogs from './pages/AuditLogs';
+import BaggageAuthorization from './pages/BaggageAuthorization';
 import Baggages from './pages/Baggages';
 import BIRS from './pages/BIRS';
 import BRSDashboard from './pages/BRSDashboard';
+import BRSTraceability from './pages/BRSTraceability';
 import BRSUnmatched from './pages/BRSUnmatched';
 import BRSWorkflow from './pages/BRSWorkflow';
-import BRSTraceability from './pages/BRSTraceability';
 import DashboardEnhanced from './pages/DashboardEnhanced';
 import DebugParser from './pages/DebugParser';
 import Export from './pages/Export';
@@ -18,14 +21,9 @@ import Login from './pages/Login';
 import Passengers from './pages/Passengers';
 import Privacy from './pages/Privacy';
 import RawScans from './pages/RawScans';
-import Register from './pages/Register';
-import Terms from './pages/Terms';
-import AirlineApproval from './pages/AirlineApproval';
-import BaggageAuthorization from './pages/BaggageAuthorization';
-import UserApproval from './pages/UserApproval';
-import Users from './pages/Users';
-import AuditLogs from './pages/AuditLogs';
 import Settings from './pages/Settings';
+import Terms from './pages/Terms';
+import Users from './pages/Users';
 
 function App() {
   return (
@@ -33,7 +31,6 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -160,21 +157,11 @@ function App() {
             }
           />
           <Route
-            path="/user-approval"
+            path="/administration"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <UserApproval />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/airline-approval"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <AirlineApproval />
+                  <Administration />
                 </Layout>
               </ProtectedRoute>
             }

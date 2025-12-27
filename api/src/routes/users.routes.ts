@@ -332,5 +332,156 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/v1/users/create-by-support
+ * Crée un utilisateur Dashboard (supervisor ou baggage_dispute) - Réservé au Support
+ */
+router.post('/create-by-support', async (req: Request, res: Response) => {
+  try {
+    // Vérifier l'authentification
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentification requise' 
+      });
+    }
+
+    const token = authHeader.substring(7);
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Token invalide' 
+      });
+    }
+
+    // Vérifier que l'utilisateur est support
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role, is_approved')
+      .eq('id', authUser.id)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'support' || !currentUser.is_approved) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Accès refusé : Seul le support peut créer des comptes' 
+      });
+    }
+
+    const { email, password, full_name, role, airport_code } = req.body;
+
+    if (!email || !password || !full_name || !role) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Tous les champs sont requis' 
+      });
+    }
+
+    // Vérifier que le rôle est valide pour le Dashboard
+    const validRoles = ['supervisor', 'baggage_dispute'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Rôle invalide. Les rôles valides sont: supervisor, baggage_dispute' 
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le mot de passe doit contenir au moins 6 caractères' 
+      });
+    }
+
+    // Pour supervisor, airport_code est requis
+    if (role === 'supervisor' && !airport_code) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le code aéroport est requis pour les superviseurs' 
+      });
+    }
+
+    const finalAirportCode = role === 'baggage_dispute' ? 'ALL' : airport_code;
+
+    // Vérifier si l'email existe déjà
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'Un compte existe déjà avec cet email' 
+      });
+    }
+
+    // Créer l'utilisateur dans Supabase Auth
+    const { data: authData, error: createAuthError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
+
+    if (createAuthError) {
+      return res.status(400).json({ 
+        success: false, 
+        error: createAuthError.message 
+      });
+    }
+
+    // Créer l'entrée dans la table users (directement approuvé)
+    const { data: userData, error: createUserError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email,
+        full_name,
+        role,
+        airport_code: finalAirportCode,
+        is_approved: true, // Créé par support = approuvé automatiquement
+        approved_at: new Date().toISOString(),
+        approved_by: authUser.id
+      })
+      .select()
+      .single();
+
+    if (createUserError) {
+      // Nettoyer l'utilisateur créé si l'insertion échoue
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erreur lors de la création du profil utilisateur' 
+      });
+    }
+
+    // Log d'audit
+    await supabase.from('audit_logs').insert({
+      action: 'CREATE_USER_BY_SUPPORT',
+      entity_type: 'user',
+      entity_id: userData.id,
+      description: `Création de l'utilisateur ${full_name} (${email}) avec le rôle ${role} par le support`,
+      airport_code: finalAirportCode,
+      user_id: authUser.id
+    });
+
+    res.status(201).json({
+      success: true,
+      data: userData,
+      message: `Utilisateur "${full_name}" créé avec succès`
+    });
+  } catch (error: any) {
+    console.error('Error in POST /users/create-by-support:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Erreur serveur' 
+    });
+  }
+});
+
 export default router;
 

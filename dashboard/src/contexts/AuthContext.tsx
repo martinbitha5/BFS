@@ -15,7 +15,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, airportCode: string, role?: 'supervisor' | 'baggage_dispute') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -93,46 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, airportCode: string, role: 'supervisor' | 'baggage_dispute' = 'supervisor') => {
-    try {
-      const response = await api.post('/api/v1/auth/register', {
-        email,
-        password,
-        name,
-        airportCode,
-        role
-      });
-
-      if (response.data.success) {
-        // Ne pas connecter automatiquement - l'utilisateur doit attendre l'approbation
-        if (response.data.requiresApproval) {
-          // Retourner un message spécial pour indiquer que l'approbation est nécessaire
-          throw new Error(response.data.message || 'Votre demande a été soumise et nécessite une approbation');
-        }
-        
-        const { user: userData, token } = response.data.data;
-        setUser(userData);
-        localStorage.setItem('bfs_token', token);
-        localStorage.setItem('bfs_user', JSON.stringify(userData));
-      } else {
-        throw new Error(response.data.error || 'Erreur d\'inscription');
-      }
-    } catch (error: any) {
-      console.error('Register error:', error);
-      
-      // Utiliser le message d'erreur professionnel de l'API
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      } else if (error.response?.status === 400) {
-        throw new Error('Veuillez remplir tous les champs requis correctement.');
-      } else if (error.response?.status === 409) {
-        throw new Error('Cet email est déjà utilisé. Veuillez vous connecter ou utiliser une autre adresse email.');
-      } else {
-        throw new Error('Problème de connexion. Vérifiez votre connexion internet et réessayez.');
-      }
-    }
-  };
-
   const logout = () => {
     setUser(null);
     localStorage.removeItem('bfs_token');
@@ -145,7 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     loading,
     login,
-    register,
     logout,
     isAuthenticated: !!user,
   };
