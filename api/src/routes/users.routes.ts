@@ -3,20 +3,16 @@
  * Permet aux superviseurs de gérer les agents de leur aéroport
  */
 
-import { Request, Response, Router } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { NextFunction, Request, Response, Router } from 'express';
+import { supabase } from '../config/database';
 
 const router = Router();
-
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * GET /api/v1/users
  * Liste tous les utilisateurs d'un aéroport
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const airportCode = req.query.airport as string || req.headers['x-airport-code'] as string;
 
@@ -24,7 +20,6 @@ router.get('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Code aéroport requis' });
     }
 
-    // Si l'aéroport est "ALL", récupérer tous les utilisateurs
     let query = supabase.from('users').select('*');
     if (airportCode !== 'ALL' && airportCode !== 'all') {
       query = query.eq('airport_code', airportCode);
@@ -41,8 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
       data: users || []
     });
   } catch (error: any) {
-    console.error('Error in GET /users:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -50,7 +44,7 @@ router.get('/', async (req: Request, res: Response) => {
  * GET /api/v1/users/:id
  * Récupère un utilisateur par son ID
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -69,8 +63,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       data: user
     });
   } catch (error: any) {
-    console.error('Error in GET /users/:id:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -78,7 +71,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  * POST /api/v1/users
  * Crée un nouvel utilisateur
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, full_name, role, airport_code } = req.body;
 
@@ -86,13 +79,11 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Tous les champs sont requis' });
     }
 
-    // Vérifier que le rôle est valide
     const validRoles = ['checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'baggage_dispute', 'support'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ error: 'Rôle invalide' });
     }
 
-    // Créer l'utilisateur dans Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -109,7 +100,6 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: authError.message });
     }
 
-    // Créer l'entrée dans la table users
     const { data: userData, error: userError } = await supabase
       .from('users')
       .insert({
@@ -118,19 +108,17 @@ router.post('/', async (req: Request, res: Response) => {
         full_name,
         role,
         airport_code,
-        is_approved: true // Créé par un superviseur = approuvé automatiquement
+        is_approved: true
       })
       .select()
       .single();
 
     if (userError) {
       console.error('Error creating user record:', userError);
-      // Supprimer l'utilisateur auth si la création du record échoue
       await supabase.auth.admin.deleteUser(authData.user.id);
       return res.status(500).json({ error: 'Erreur lors de la création de l\'utilisateur' });
     }
 
-    // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'CREATE_USER',
       entity_type: 'user',
@@ -145,8 +133,7 @@ router.post('/', async (req: Request, res: Response) => {
       data: userData
     });
   } catch (error: any) {
-    console.error('Error in POST /users:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -154,12 +141,11 @@ router.post('/', async (req: Request, res: Response) => {
  * PUT /api/v1/users/:id
  * Modifie un utilisateur
  */
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { full_name, role, password } = req.body;
 
-    // Récupérer l'utilisateur actuel
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
@@ -170,7 +156,6 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    // Mettre à jour le mot de passe si fourni
     if (password && password.length >= 6) {
       const { error: pwdError } = await supabase.auth.admin.updateUserById(id, {
         password
@@ -182,7 +167,6 @@ router.put('/:id', async (req: Request, res: Response) => {
       }
     }
 
-    // Mettre à jour les informations utilisateur
     const updateData: any = {};
     if (full_name) updateData.full_name = full_name;
     if (role) updateData.role = role;
@@ -200,7 +184,6 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
     }
 
-    // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'UPDATE_USER',
       entity_type: 'user',
@@ -215,8 +198,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       data: updatedUser
     });
   } catch (error: any) {
-    console.error('Error in PUT /users/:id:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -224,11 +206,10 @@ router.put('/:id', async (req: Request, res: Response) => {
  * DELETE /api/v1/users/:id
  * Supprime un utilisateur
  */
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    // Récupérer l'utilisateur avant suppression
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
@@ -239,7 +220,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    // Supprimer de la table users
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
@@ -250,15 +230,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
 
-    // Supprimer de Supabase Auth
     const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
 
     if (authDeleteError) {
       console.error('Error deleting auth user:', authDeleteError);
-      // Continuer quand même, l'utilisateur est déjà supprimé de la table users
     }
 
-    // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'DELETE_USER',
       entity_type: 'user',
@@ -273,8 +250,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       message: 'Utilisateur supprimé avec succès'
     });
   } catch (error: any) {
-    console.error('Error in DELETE /users/:id:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -282,7 +258,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
  * POST /api/v1/users/:id/reset-password
  * Réinitialise le mot de passe d'un utilisateur
  */
-router.post('/:id/reset-password', async (req: Request, res: Response) => {
+router.post('/:id/reset-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { password } = req.body;
@@ -291,7 +267,6 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
     }
 
-    // Récupérer l'utilisateur
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
@@ -302,7 +277,6 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    // Mettre à jour le mot de passe
     const { error: pwdError } = await supabase.auth.admin.updateUserById(id, {
       password
     });
@@ -312,7 +286,6 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Erreur lors de la réinitialisation du mot de passe' });
     }
 
-    // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'RESET_PASSWORD',
       entity_type: 'user',
@@ -327,8 +300,7 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
       message: 'Mot de passe réinitialisé avec succès'
     });
   } catch (error: any) {
-    console.error('Error in POST /users/:id/reset-password:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    next(error);
   }
 });
 
@@ -336,7 +308,7 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
  * POST /api/v1/users/create-by-support
  * Crée un utilisateur Dashboard (supervisor ou baggage_dispute) - Réservé au Support
  */
-router.post('/create-by-support', async (req: Request, res: Response) => {
+router.post('/create-by-support', async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Vérifier l'authentification
     const authHeader = req.headers.authorization;
@@ -475,11 +447,7 @@ router.post('/create-by-support', async (req: Request, res: Response) => {
       message: `Utilisateur "${full_name}" créé avec succès`
     });
   } catch (error: any) {
-    console.error('Error in POST /users/create-by-support:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Erreur serveur' 
-    });
+    next(error);
   }
 });
 
