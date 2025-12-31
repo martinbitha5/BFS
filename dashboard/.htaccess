@@ -5,12 +5,16 @@
     RewriteEngine On
     RewriteBase /
     
-    # Ne pas rediriger les fichiers/dossiers existants
+    # Exclure les fichiers et dossiers réels
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     
+    # Exclure les fichiers spécifiques
+    RewriteCond %{REQUEST_URI} !^/index\.html$
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    
     # Rediriger toutes les autres requêtes vers index.html
-    RewriteRule ^ index.html [QSA,L]
+    RewriteRule ^(.*)$ index.html [QSA,L]
 </IfModule>
 
 # Sécurité - Headers
