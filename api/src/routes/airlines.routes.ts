@@ -326,44 +326,50 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Créer la compagnie (directement approuvée)
-    const { data: airline, error: createError } = await supabase
-      .from('airlines')
+    // Créer une demande d'enregistrement et l'approuver directement
+    const { data: request, error: requestError } = await supabase
+      .from('airline_registration_requests')
       .insert({
         name,
         code: code.toUpperCase(),
         email,
         password: hashedPassword,
-        approved: true,
+        status: 'approved',
         approved_at: new Date().toISOString(),
         approved_by: authUser.id,
       })
-      .select('id, name, code, email, approved, created_at')
+      .select('id, name, code, email, status')
       .single();
 
-    if (createError) {
-      if (createError.code === '23505') {
+    if (requestError) {
+      if (requestError.code === '23505') {
         return res.status(409).json({
           success: false,
           error: 'Une compagnie aérienne avec cet email ou ce code existe déjà',
         });
       }
-      throw createError;
+      throw requestError;
     }
 
     // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'CREATE_AIRLINE_BY_SUPPORT',
-      entity_type: 'airline',
-      entity_id: airline.id,
-      description: `Création de la compagnie aérienne ${name} (${code.toUpperCase()}) par le support`,
+      entity_type: 'airline_registration_request',
+      entity_id: request.id,
+      description: `Création et approbation de la compagnie aérienne ${name} (${code.toUpperCase()}) par le support`,
       user_id: authUser.id
     });
 
     res.status(201).json({
       success: true,
-      data: airline,
-      message: `Compagnie aérienne "${name}" (${code.toUpperCase()}) créée avec succès`,
+      data: {
+        id: request.id,
+        name: request.name,
+        code: request.code,
+        email: request.email,
+        status: request.status,
+      },
+      message: `Compagnie aérienne "${name}" (${code.toUpperCase()}) créée et approuvée avec succès`,
     });
   } catch (error) {
     next(error);
