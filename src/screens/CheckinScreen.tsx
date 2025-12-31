@@ -205,6 +205,7 @@ export default function CheckinScreen({ navigation }: Props) {
             format: parsedData.format,
             checkedInAt: new Date().toISOString(),
             checkedInBy: user.id,
+            airportCode: user.airportCode, // ✅ IMPORTANT: Code aéroport de l'utilisateur
             synced: false,
           });
           

@@ -284,16 +284,45 @@ class DatabaseService {
       );
       
       const existingColumnNames = baggagesInfo.map((col: any) => col.name);
+      console.log('[DB] Existing baggages columns:', existingColumnNames.join(', '));
       const hasTagNumber = existingColumnNames.includes('tag_number');
       
       if (!hasTagNumber) {
-        console.log('[DB] Adding missing tag_number column to baggages table');
+        console.log('[DB] ⚠️ tag_number column MISSING - recreating baggages table');
         try {
-          await this.db.runAsync(`ALTER TABLE baggages ADD COLUMN tag_number TEXT UNIQUE`);
+          // Supprimer l'ancienne table et la recréer avec le bon schéma
+          await this.db.runAsync(`DROP TABLE IF EXISTS baggages`);
+          await this.db.runAsync(`CREATE TABLE IF NOT EXISTS baggages (
+            id TEXT PRIMARY KEY,
+            passenger_id TEXT NOT NULL,
+            tag_number TEXT,
+            expected_tag TEXT,
+            status TEXT NOT NULL DEFAULT 'checked',
+            weight REAL,
+            flight_number TEXT,
+            airport_code TEXT,
+            current_location TEXT,
+            checked_at TEXT,
+            checked_by TEXT,
+            arrived_at TEXT,
+            arrived_by TEXT,
+            delivered_at TEXT,
+            last_scanned_at TEXT,
+            last_scanned_by TEXT,
+            synced INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (passenger_id) REFERENCES passengers(id)
+          )`);
           await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_baggages_tag_number ON baggages(tag_number)`);
-        } catch (e) {
-          console.log('[DB] tag_number column might already exist or migration skipped');
+          await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_baggages_passenger_id ON baggages(passenger_id)`);
+          console.log('[DB] ✅ baggages table recreated with tag_number column');
+        } catch (e: any) {
+          console.error('[DB] Failed to recreate baggages table:', e?.message || e);
         }
+        return; // Skip other migrations since we recreated the table
+      } else {
+        console.log('[DB] ✅ tag_number column already exists');
       }
 
       // Check if other expected columns exist in baggages
@@ -397,6 +426,30 @@ class DatabaseService {
         now,
       ]
     );
+
+    // ✅ SYNCHRONISATION: Ajouter à la queue pour envoi vers PostgreSQL
+    // Note: Seules les colonnes existantes dans le schéma PostgreSQL
+    await this.addToSyncQueue({
+      tableName: 'passengers',
+      recordId: id,
+      operation: 'CREATE',
+      data: JSON.stringify({
+        pnr: passenger.pnr,
+        full_name: passenger.fullName,
+        flight_number: passenger.flightNumber,
+        seat_number: passenger.seatNumber || null,
+        class: passenger.cabinClass || null,
+        departure: passenger.departure,
+        arrival: passenger.arrival,
+        airport_code: (passenger as any).airportCode || passenger.departure,
+        baggage_count: passenger.baggageCount || 0,
+        baggage_base_number: passenger.baggageBaseNumber || null,
+        checked_in: true,
+        checked_in_at: passenger.checkedInAt,
+      }),
+      retryCount: 0,
+      userId: passenger.checkedInBy,
+    });
 
     return id;
   }
@@ -588,6 +641,28 @@ class DatabaseService {
         now,
       ]
     );
+
+    // ✅ SYNCHRONISATION: Ajouter à la queue pour envoi vers PostgreSQL
+    // Note: passenger_id n'est pas inclus car c'est un ID local, pas un UUID PostgreSQL
+    await this.addToSyncQueue({
+      tableName: 'baggages',
+      recordId: id,
+      operation: 'CREATE',
+      data: JSON.stringify({
+        tag_number: baggage.tagNumber,
+        status: baggage.status,
+        weight: baggage.weight || null,
+        flight_number: baggage.flightNumber || null,
+        airport_code: baggage.airportCode || null,
+        current_location: baggage.currentLocation || null,
+        checked_at: baggage.checkedAt || null,
+        arrived_at: baggage.arrivedAt || null,
+        delivered_at: baggage.deliveredAt || null,
+        last_scanned_at: baggage.lastScannedAt || null,
+      }),
+      retryCount: 0,
+      userId: baggage.checkedBy || 'system',
+    });
 
     return id;
   }

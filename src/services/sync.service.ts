@@ -156,12 +156,17 @@ class SyncService {
         // Déterminer l'endpoint selon la table
         switch (item.tableName) {
             case 'passengers':
-                endpoint = `${apiUrl}/api/v1/passengers`;
-                method = item.operation === 'CREATE' ? 'POST' : 'PUT';
+                // Utiliser /sync pour éviter la validation du vol
+                endpoint = `${apiUrl}/api/v1/passengers/sync`;
+                method = 'POST';
+                // Wrapper les données dans un tableau pour /sync
+                data = { passengers: [data] };
                 break;
             case 'baggages':
-                endpoint = `${apiUrl}/api/v1/baggage`;
-                method = item.operation === 'CREATE' ? 'POST' : 'PUT';
+                endpoint = `${apiUrl}/api/v1/baggage/sync`;
+                method = 'POST';
+                // Wrapper les données dans un tableau pour /sync
+                data = { baggages: [data] };
                 break;
             case 'boarding_status':
                 endpoint = `${apiUrl}/api/v1/boarding`;

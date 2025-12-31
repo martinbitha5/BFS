@@ -25,6 +25,15 @@ interface Flight {
   createdAt: string;
 }
 
+// Utiliser la date locale au lieu de UTC pour éviter les décalages de timezone
+const getLocalDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function FlightManagement() {
   const { user } = useAuth();
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -33,8 +42,9 @@ export default function FlightManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const today = new Date().toISOString().split('T')[0];
+  
+  const [selectedDate, setSelectedDate] = useState(getLocalDate());
+  const today = getLocalDate();
   const isToday = selectedDate === today;
 
   useEffect(() => {
@@ -51,10 +61,16 @@ export default function FlightManagement() {
         return;
       }
 
-      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}&date=${selectedDate}`);
-      setFlights(response.data.data || []);
+      // Charger TOUS les vols sans filtre de date pour éviter les problèmes de timezone
+      // puis filtrer côté client
+      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}`);
+      const allFlights = response.data.data || [];
       
-      console.log(`${response.data.data?.length || 0} vols chargés pour ${selectedDate}`);
+      // Filtrer côté client pour la date sélectionnée
+      const filteredFlights = allFlights.filter((f: Flight) => f.scheduledDate === selectedDate);
+      setFlights(filteredFlights);
+      
+      console.log(`${filteredFlights.length} vols pour ${selectedDate} (sur ${allFlights.length} total)`);
     } catch (error: any) {
       console.error('Erreur chargement vols:', error);
       if (error.response?.status === 404) {
@@ -455,7 +471,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
     airlineCode: flight?.airlineCode || '',
     departure: flight?.departure || '',
     arrival: flight?.arrival || '',
-    scheduledDate: flight?.scheduledDate || new Date().toISOString().split('T')[0],
+    scheduledDate: flight?.scheduledDate || getLocalDate(),
     scheduledTime: flight?.scheduledTime || '',
     status: (flight?.status || 'scheduled') as 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled',
     flightType: (flight?.flightType || 'departure') as 'departure' | 'arrival',
@@ -569,7 +585,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
                 <input
                   type="date"
                   required
-                  min={new Date().toISOString().split('T')[0]}
+                  min={getLocalDate()}
                   value={formData.scheduledDate}
                   onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

@@ -26,47 +26,37 @@ export async function validateFlightForScan(
     // Normaliser le numéro de vol (enlever espaces, mettre en majuscules)
     const normalizedFlight = flightNumber.trim().toUpperCase();
 
+    // Utiliser la date locale au lieu de UTC pour éviter les problèmes de timezone
+    const getLocalDateString = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const todayStr = getLocalDateString(scanDate);
+    const tomorrow = new Date(scanDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
     // Vérifier si le vol existe dans flight_schedule pour cet aéroport
+    // Chercher les vols d'aujourd'hui et demain pour être flexible
     const { data: scheduledFlight, error } = await supabase
       .from('flight_schedule')
       .select('*')
       .eq('flight_number', normalizedFlight)
       .eq('airport_code', airportCode)
-      .in('status', ['scheduled', 'boarding'])
-      .gte('scheduled_date', scanDate.toISOString().split('T')[0])
+      .in('status', ['scheduled', 'boarding', 'departed'])
+      .gte('scheduled_date', todayStr)
+      .lte('scheduled_date', tomorrowStr)
       .order('scheduled_date', { ascending: true })
       .limit(1)
       .single();
 
     if (error || !scheduledFlight) {
-      // Vérifier aussi les vols du jour même et du jour suivant
-      const today = new Date(scanDate);
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data: todayFlight } = await supabase
-        .from('flight_schedule')
-        .select('*')
-        .eq('flight_number', normalizedFlight)
-        .eq('airport_code', airportCode)
-        .in('status', ['scheduled', 'boarding', 'departed'])
-        .gte('scheduled_date', today.toISOString().split('T')[0])
-        .lte('scheduled_date', tomorrow.toISOString().split('T')[0])
-        .order('scheduled_date', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (!todayFlight) {
-        return {
-          valid: false,
-          reason: `Vol ${normalizedFlight} non programmé à l'aéroport ${airportCode} pour cette date`
-        };
-      }
-
       return {
-        valid: true,
-        flight: todayFlight
+        valid: false,
+        reason: `Vol ${normalizedFlight} non programmé à l'aéroport ${airportCode} pour cette date`
       };
     }
 
