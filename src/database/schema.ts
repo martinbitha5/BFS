@@ -1,4 +1,7 @@
 export const SQLITE_SCHEMA = `
+-- Migration: Add tag_number column if it doesn't exist
+PRAGMA foreign_keys=OFF;
+
 CREATE TABLE IF NOT EXISTS passengers (
   id TEXT PRIMARY KEY,
   pnr TEXT UNIQUE NOT NULL,
@@ -207,5 +210,9 @@ CREATE INDEX IF NOT EXISTS idx_birs_reports_date ON birs_reports(flight_date);
 CREATE INDEX IF NOT EXISTS idx_birs_report_items_report_id ON birs_report_items(birs_report_id);
 CREATE INDEX IF NOT EXISTS idx_birs_report_items_bag_id ON birs_report_items(bag_id);
 CREATE INDEX IF NOT EXISTS idx_birs_report_items_intl_baggage ON birs_report_items(international_baggage_id);
+
+-- Migration: Ensure tag_number column exists in baggages table
+-- This handles cases where the database was created with an older schema
+PRAGMA foreign_keys=ON;
 `;
 

@@ -1,5 +1,4 @@
 import * as SQLite from 'expo-sqlite';
-import { SQLITE_SCHEMA } from '../database/schema';
 import { Baggage } from '../types/baggage.types';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger } from '../types/passenger.types';
@@ -12,7 +11,16 @@ class DatabaseService {
   async initialize(): Promise<void> {
     try {
       this.db = await SQLite.openDatabaseAsync('bfs.db');
-      await this.db.execAsync(SQLITE_SCHEMA);
+      
+      // Enable foreign keys
+      await this.db.runAsync('PRAGMA foreign_keys = ON');
+      
+      // Run migrations FIRST to fix existing databases
+      await this.runMigrations();
+      
+      // Create tables individually (safer than execAsync with full schema)
+      await this.createTablesIndividually();
+      
       // Initialiser le service d'audit
       await auditService.initialize(this.db);
       // Initialiser le service BIRS (import dynamique pour éviter les cycles)
@@ -25,6 +33,310 @@ class DatabaseService {
     } catch (error) {
       console.error('Error initializing database:', error);
       throw error;
+    }
+  }
+
+  private async createTablesIndividually(): Promise<void> {
+    if (!this.db) return;
+
+    const tables = [
+      `CREATE TABLE IF NOT EXISTS passengers (
+        id TEXT PRIMARY KEY,
+        pnr TEXT UNIQUE NOT NULL,
+        full_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        flight_number TEXT NOT NULL,
+        flight_time TEXT,
+        airline TEXT,
+        airline_code TEXT,
+        departure TEXT NOT NULL,
+        arrival TEXT NOT NULL,
+        route TEXT NOT NULL,
+        company_code TEXT,
+        ticket_number TEXT,
+        seat_number TEXT,
+        cabin_class TEXT,
+        baggage_count INTEGER DEFAULT 0,
+        baggage_base_number TEXT,
+        raw_data TEXT,
+        format TEXT,
+        checked_in_at TEXT NOT NULL,
+        checked_in_by TEXT NOT NULL,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS baggages (
+        id TEXT PRIMARY KEY,
+        passenger_id TEXT NOT NULL,
+        tag_number TEXT UNIQUE,
+        expected_tag TEXT,
+        status TEXT NOT NULL DEFAULT 'checked',
+        weight REAL,
+        flight_number TEXT,
+        airport_code TEXT,
+        current_location TEXT,
+        checked_at TEXT,
+        checked_by TEXT,
+        arrived_at TEXT,
+        arrived_by TEXT,
+        delivered_at TEXT,
+        last_scanned_at TEXT,
+        last_scanned_by TEXT,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (passenger_id) REFERENCES passengers(id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS boarding_status (
+        id TEXT PRIMARY KEY,
+        passenger_id TEXT UNIQUE NOT NULL,
+        boarded INTEGER DEFAULT 0,
+        boarded_at TEXT,
+        boarded_by TEXT,
+        gate TEXT,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (passenger_id) REFERENCES passengers(id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS sync_queue (
+        id TEXT PRIMARY KEY,
+        table_name TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        data TEXT NOT NULL,
+        retry_count INTEGER DEFAULT 0,
+        last_error TEXT,
+        user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS audit_log (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        user_email TEXT NOT NULL,
+        airport_code TEXT NOT NULL,
+        action TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT,
+        details TEXT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS raw_scans (
+        id TEXT PRIMARY KEY,
+        raw_data TEXT NOT NULL,
+        scan_type TEXT NOT NULL,
+        status_checkin INTEGER DEFAULT 0,
+        status_baggage INTEGER DEFAULT 0,
+        status_boarding INTEGER DEFAULT 0,
+        status_arrival INTEGER DEFAULT 0,
+        checkin_at TEXT,
+        checkin_by TEXT,
+        baggage_at TEXT,
+        baggage_by TEXT,
+        baggage_rfid_tag TEXT,
+        boarding_at TEXT,
+        boarding_by TEXT,
+        arrival_at TEXT,
+        arrival_by TEXT,
+        airport_code TEXT NOT NULL,
+        first_scanned_at TEXT NOT NULL,
+        last_scanned_at TEXT NOT NULL,
+        scan_count INTEGER DEFAULT 1,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS international_baggages (
+        id TEXT PRIMARY KEY,
+        tag_number TEXT UNIQUE NOT NULL,
+        scanned_at TEXT NOT NULL,
+        scanned_by TEXT NOT NULL,
+        airport_code TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'scanned',
+        birs_report_id TEXT,
+        passenger_name TEXT,
+        pnr TEXT,
+        flight_number TEXT,
+        origin TEXT,
+        weight REAL,
+        remarks TEXT,
+        reconciled_at TEXT,
+        reconciled_by TEXT,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS birs_reports (
+        id TEXT PRIMARY KEY,
+        report_type TEXT NOT NULL,
+        flight_number TEXT NOT NULL,
+        flight_date TEXT NOT NULL,
+        origin TEXT NOT NULL,
+        destination TEXT NOT NULL,
+        airline TEXT NOT NULL,
+        airline_code TEXT,
+        file_name TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        uploaded_at TEXT NOT NULL,
+        uploaded_by TEXT NOT NULL,
+        airport_code TEXT NOT NULL,
+        total_baggages INTEGER DEFAULT 0,
+        reconciled_count INTEGER DEFAULT 0,
+        unmatched_count INTEGER DEFAULT 0,
+        processed_at TEXT,
+        raw_data TEXT NOT NULL,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS birs_report_items (
+        id TEXT PRIMARY KEY,
+        birs_report_id TEXT NOT NULL,
+        bag_id TEXT NOT NULL,
+        passenger_name TEXT NOT NULL,
+        pnr TEXT,
+        seat_number TEXT,
+        class TEXT,
+        psn TEXT,
+        weight REAL,
+        route TEXT,
+        categories TEXT,
+        loaded INTEGER,
+        received INTEGER,
+        international_baggage_id TEXT,
+        reconciled_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (birs_report_id) REFERENCES birs_reports(id)
+      )`
+    ];
+
+    // Create indexes
+    const indexes = [
+      `CREATE INDEX IF NOT EXISTS idx_passengers_pnr ON passengers(pnr)`,
+      `CREATE INDEX IF NOT EXISTS idx_passengers_departure ON passengers(departure)`,
+      `CREATE INDEX IF NOT EXISTS idx_passengers_arrival ON passengers(arrival)`,
+      `CREATE INDEX IF NOT EXISTS idx_baggages_passenger_id ON baggages(passenger_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_baggages_tag_number ON baggages(tag_number)`,
+      `CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(retry_count)`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action)`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_airport_code ON audit_log(airport_code)`,
+      `CREATE INDEX IF NOT EXISTS idx_raw_scans_raw_data ON raw_scans(raw_data)`,
+      `CREATE INDEX IF NOT EXISTS idx_raw_scans_airport ON raw_scans(airport_code)`,
+      `CREATE INDEX IF NOT EXISTS idx_raw_scans_statuses ON raw_scans(status_checkin, status_baggage, status_boarding, status_arrival)`,
+      `CREATE INDEX IF NOT EXISTS idx_raw_scans_rfid ON raw_scans(baggage_rfid_tag)`,
+      `CREATE INDEX IF NOT EXISTS idx_raw_scans_scan_type ON raw_scans(scan_type)`,
+      `CREATE INDEX IF NOT EXISTS idx_international_baggages_tag_number ON international_baggages(tag_number)`,
+      `CREATE INDEX IF NOT EXISTS idx_international_baggages_status ON international_baggages(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_international_baggages_airport ON international_baggages(airport_code)`,
+      `CREATE INDEX IF NOT EXISTS idx_international_baggages_birs_report ON international_baggages(birs_report_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_reports_flight ON birs_reports(flight_number)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_reports_airport ON birs_reports(airport_code)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_reports_date ON birs_reports(flight_date)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_report_items_report_id ON birs_report_items(birs_report_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_report_items_bag_id ON birs_report_items(bag_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_birs_report_items_intl_baggage ON birs_report_items(international_baggage_id)`
+    ];
+
+    // Create tables
+    for (const table of tables) {
+      try {
+        await this.db.runAsync(table);
+      } catch (e) {
+        console.log('[DB] Table creation skipped (might already exist):', e);
+      }
+    }
+
+    // Create indexes
+    for (const index of indexes) {
+      try {
+        await this.db.runAsync(index);
+      } catch (e) {
+        console.log('[DB] Index creation skipped:', e);
+      }
+    }
+
+    console.log('[DB] All tables and indexes created individually');
+  }
+
+  private async runMigrations(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Check if baggages table exists first
+      const tables = await this.db.getAllAsync<any>(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='baggages'"
+      );
+      
+      if (tables.length === 0) {
+        console.log('[DB] baggages table does not exist yet, skipping migrations');
+        return;
+      }
+
+      // Check if tag_number column exists in baggages table
+      const baggagesInfo = await this.db.getAllAsync<any>(
+        "PRAGMA table_info(baggages)"
+      );
+      
+      const existingColumnNames = baggagesInfo.map((col: any) => col.name);
+      const hasTagNumber = existingColumnNames.includes('tag_number');
+      
+      if (!hasTagNumber) {
+        console.log('[DB] Adding missing tag_number column to baggages table');
+        try {
+          await this.db.runAsync(`ALTER TABLE baggages ADD COLUMN tag_number TEXT UNIQUE`);
+          await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_baggages_tag_number ON baggages(tag_number)`);
+        } catch (e) {
+          console.log('[DB] tag_number column might already exist or migration skipped');
+        }
+      }
+
+      // Check if other expected columns exist in baggages
+      const expectedColumns = ['expected_tag', 'weight', 'flight_number', 'airport_code', 'current_location', 'delivered_at', 'last_scanned_at', 'last_scanned_by'];
+      
+      for (const col of expectedColumns) {
+        if (!existingColumnNames.includes(col)) {
+          console.log(`[DB] Adding missing column ${col} to baggages table`);
+          let columnDef = `${col} TEXT`;
+          if (col === 'weight') columnDef = `${col} REAL`;
+          try {
+            await this.db.runAsync(`ALTER TABLE baggages ADD COLUMN ${columnDef}`);
+          } catch (e) {
+            console.log(`[DB] Column ${col} might already exist`);
+          }
+        }
+      }
+
+      // Check passengers table for missing columns
+      const passengersInfo = await this.db.getAllAsync<any>(
+        "PRAGMA table_info(passengers)"
+      );
+      
+      const passengerExistingColumnNames = passengersInfo.map((col: any) => col.name);
+      const passengerExpectedColumns = ['baggage_count', 'baggage_base_number'];
+      
+      for (const col of passengerExpectedColumns) {
+        if (!passengerExistingColumnNames.includes(col)) {
+          console.log(`[DB] Adding missing column ${col} to passengers table`);
+          let columnDef = `${col} TEXT`;
+          if (col === 'baggage_count') columnDef = `${col} INTEGER DEFAULT 0`;
+          try {
+            await this.db.runAsync(`ALTER TABLE passengers ADD COLUMN ${columnDef}`);
+          } catch (e) {
+            console.log(`[DB] Column ${col} might already exist`);
+          }
+        }
+      }
+
+      console.log('[DB] Migrations completed successfully');
+    } catch (error) {
+      console.error('[DB] Migration error:', error);
+      // Don't throw - migrations are optional, database should still work
     }
   }
 

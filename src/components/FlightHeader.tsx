@@ -10,7 +10,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { FontSizes, FontWeights, Spacing } from '../theme';
-import { Card } from './';
+import Card from './Card';
 
 interface FlightHeaderProps {
   showChangeButton?: boolean;

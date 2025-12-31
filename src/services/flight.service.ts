@@ -209,7 +209,7 @@ class FlightService {
     }
 
     // 2. Chercher dans les passagers du jour
-    const db = databaseServiceInstance.getDatabase();
+    const db = databaseService.getDatabase();
     if (!db) {
       return null;
     }
@@ -321,8 +321,7 @@ class FlightService {
             airlineCode: result.flight.airlineCode || '',
             departure: result.flight.departure,
             arrival: result.flight.arrival,
-            scheduledTime: result.flight.scheduledTime,
-            source: 'scheduled',
+            source: 'schedule',
           },
         };
       }

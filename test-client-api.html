@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Upload</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #444; }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .info { color: #9cdcfe; }
+        button { padding: 10px 20px; background: #007acc; color: white; border: none; cursor: pointer; }
+        pre { background: #252526; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test API Upload - Airline Portal</h1>
+    
+    <div class="test">
+        <h2>Configuration</h2>
+        <p>API URL: <span id="apiUrl" class="info"></span></p>
+        <p>API Key: <span id="apiKey" class="info"></span></p>
+    </div>
+
+    <div class="test">
+        <h2>Test 1: Upload avec clé API</h2>
+        <button onclick="testUpload()">Tester Upload</button>
+        <pre id="result1"></pre>
+    </div>
+
+    <div class="test">
+        <h2>Test 2: Vérifier les headers</h2>
+        <button onclick="testHeaders()">Vérifier Headers</button>
+        <pre id="result2"></pre>
+    </div>
+
+    <div class="test">
+        <h2>Test 3: Test avec Fetch API</h2>
+        <button onclick="testFetch()">Test Fetch</button>
+        <pre id="result3"></pre>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.brsats.com';
+        const API_KEY = 'bfs-api-key-secure-2025';
+
+        document.getElementById('apiUrl').textContent = API_URL;
+        document.getElementById('apiKey').textContent = API_KEY;
+
+        async function testUpload() {
+            const result = document.getElementById('result1');
+            result.textContent = 'En cours...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/v1/birs/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        fileName: 'test.txt',
+                        fileContent: 'test content',
+                        reportType: 'birs',
+                        flightNumber: 'TK540',
+                        flightDate: '2025-12-31',
+                        origin: 'CDG',
+                        destination: 'ORY',
+                        airportCode: 'CDG'
+                    })
+                });
+
+                const data = await response.json();
+                result.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">Status: ${response.status}</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testHeaders() {
+            const result = document.getElementById('result2');
+            result.textContent = 'En cours...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/v1/birs/upload`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'x-api-key': API_KEY
+                    }
+                });
+
+                let headerInfo = `Status: ${response.status}\n\nHeaders reçus:\n`;
+                response.headers.forEach((value, name) => {
+                    headerInfo += `${name}: ${value}\n`;
+                });
+
+                result.innerHTML = `<span class="info">${headerInfo}</span>`;
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testFetch() {
+            const result = document.getElementById('result3');
+            result.textContent = 'En cours...';
+            
+            try {
+                const payload = {
+                    fileName: 'test.pdf',
+                    fileContent: 'PDF content here',
+                    reportType: 'birs'
+                };
+
+                console.log('Payload:', payload);
+                console.log('Headers:', {
+                    'Content-Type': 'application/json',
+                    'x-api-key': API_KEY
+                });
+
+                const response = await fetch(`${API_URL}/api/v1/birs/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                result.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">Status: ${response.status}\nSuccess: ${data.success || false}</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            console.log('Page chargée. API URL:', API_URL);
+            console.log('API Key:', API_KEY);
+        });
+    </script>
+</body>
+</html>

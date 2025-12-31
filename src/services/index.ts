@@ -3,7 +3,7 @@
  * Configuration production - utilise uniquement les vrais services
  */
 
-// Import des services réels
+// Import des services réels (sans dépendances circulaires)
 import { authService } from './auth.service';
 import { databaseService } from './database.service';
 
@@ -11,14 +11,16 @@ import { databaseService } from './database.service';
 export const authServiceInstance = authService;
 export const databaseServiceInstance = databaseService;
 
-// Autres services
+// Autres services - exports directs pour éviter les dépendances circulaires
 export { auditService } from './audit.service';
 export { birsService } from './birs.service';
 export { exportService } from './export.service';
-export { flightService } from './flight.service';
 export { parserService } from './parser.service';
 export { rawScanService } from './raw-scan.service';
 export { rushService } from './rush.service';
 export { settingsService } from './settings.service';
 export { syncService } from './sync.service';
+
+// flightService est exporté en dernier pour éviter les dépendances circulaires
+export { flightService } from './flight.service';
 

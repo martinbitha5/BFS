@@ -1,7 +1,6 @@
-import { Request, Response, Router, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
-import { validateBoardingPassScan, validateBaggageScan } from '../middleware/scan-validation.middleware';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { notifyRawScan, notifyStatsUpdate } from './realtime.routes';
 
 const router = Router();
@@ -203,28 +202,56 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
             });
         }
 
-        // Création
+        // Création - Filtrer les colonnes valides pour PostgreSQL
+        const insertData: Record<string, any> = {
+            raw_data,
+            scan_type,
+            status_checkin: status_checkin || false,
+            status_baggage: status_baggage || false,
+            status_boarding: status_boarding || false,
+            status_arrival: status_arrival || false,
+            airport_code,
+            first_scanned_at: new Date().toISOString(),
+            last_scanned_at: new Date().toISOString(),
+            scan_count: 1,
+        };
+
+        // Ajouter les colonnes optionnelles si elles sont présentes et valides
+        // Note: Les colonnes *_by sont des UUID qui référencent users(id)
+        // On ne les inclut que si elles sont des UUID valides
+        if (restData.checkin_at) insertData.checkin_at = restData.checkin_at;
+        if (restData.baggage_at) insertData.baggage_at = restData.baggage_at;
+        if (restData.baggage_rfid_tag) insertData.baggage_rfid_tag = restData.baggage_rfid_tag;
+        if (restData.boarding_at) insertData.boarding_at = restData.boarding_at;
+        if (restData.arrival_at) insertData.arrival_at = restData.arrival_at;
+        
+        // Les colonnes *_by référencent users(id) - ne pas les inclure pour éviter les erreurs FK
+        // L'API utilise le contexte auth pour identifier l'utilisateur
+
         const { data, error } = await supabase
             .from('raw_scans')
-            .insert({
-                raw_data,
-                scan_type,
-                status_checkin: status_checkin || false,
-                status_baggage: status_baggage || false,
-                status_boarding: status_boarding || false,
-                status_arrival: status_arrival || false,
-                airport_code,
-                first_scanned_at: new Date().toISOString(),
-                last_scanned_at: new Date().toISOString(),
-                scan_count: 1,
-                ...restData,
-            })
+            .insert(insertData)
             .select()
             .single();
 
         if (error) {
             console.error('Error creating raw scan:', error);
-            return res.status(500).json({ error: 'Erreur lors de la création' });
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            console.error('Data sent:', JSON.stringify({
+                raw_data,
+                scan_type,
+                status_checkin,
+                status_baggage,
+                status_boarding,
+                status_arrival,
+                airport_code,
+                ...restData,
+            }, null, 2));
+            return res.status(500).json({ 
+                error: 'Erreur lors de la création',
+                details: error.message || error.code,
+                hint: error.hint
+            });
         }
 
         // ✅ TEMPS RÉEL: Notifier les clients SSE d'un nouveau scan

@@ -149,7 +149,7 @@ class SyncService {
             throw new Error('Configuration API manquante (API_URL non définie)');
         }
 
-        const data = JSON.parse(item.data);
+        let data = JSON.parse(item.data);
         let endpoint = '';
         let method = 'POST';
 
@@ -171,6 +171,11 @@ class SyncService {
                 // ✅ NOUVEAU: Support des raw scans
                 endpoint = `${apiUrl}/api/v1/raw-scans`;
                 method = 'POST'; // L'API gère CREATE et UPDATE automatiquement
+                // Convertir baggageRfidTag en baggage_rfid_tag pour l'API
+                if (data.baggageRfidTag !== undefined) {
+                    data.baggage_rfid_tag = data.baggageRfidTag;
+                    delete data.baggageRfidTag;
+                }
                 break;
             default:
                 throw new Error(`Table non supportée: ${item.tableName}`);

@@ -8,7 +8,7 @@ import { FlightProvider } from './src/contexts/FlightContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import RootStack from './src/navigation/RootStack';
 import SplashScreen from './src/screens/SplashScreen';
-import { databaseServiceInstance } from './src/services';
+import { databaseService } from './src/services/database.service';
 
 function AppContent() {
   const { mode } = useTheme();
@@ -19,7 +19,7 @@ function AppContent() {
   useEffect(() => {
     async function initializeApp() {
       try {
-        await databaseServiceInstance.initialize();
+        await databaseService.initialize();
         setIsReady(true);
       } catch (err) {
         console.error('Failed to initialize app:', err);
