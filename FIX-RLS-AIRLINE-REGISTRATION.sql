@@ -8,6 +8,8 @@
 DROP POLICY IF EXISTS "Support can manage airline registration requests" ON airline_registration_requests;
 DROP POLICY IF EXISTS "Support can view all airline registration requests" ON airline_registration_requests;
 DROP POLICY IF EXISTS "Airlines can view own registration request" ON airline_registration_requests;
+DROP POLICY IF EXISTS "Allow service role to insert airline registration requests" ON airline_registration_requests;
+DROP POLICY IF EXISTS "Support can update airline registration requests" ON airline_registration_requests;
 
 -- 2. Créer une policy pour les INSERT (permet à la clé de service de créer des demandes)
 CREATE POLICY "Allow service role to insert airline registration requests"
@@ -61,6 +63,7 @@ ALTER TABLE airline_registration_requests ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Airlines can view own data" ON airlines;
 DROP POLICY IF EXISTS "Airlines can update own data" ON airlines;
 DROP POLICY IF EXISTS "Anyone can view approved airlines" ON airlines;
+DROP POLICY IF EXISTS "Allow service role to insert airlines" ON airlines;
 
 -- 2. Créer une policy pour les SELECT (tout le monde peut voir les airlines approuvées)
 CREATE POLICY "Anyone can view approved airlines"
@@ -70,7 +73,7 @@ USING (approved = true OR auth.jwt() ->> 'role' = 'service_role');
 -- 3. Créer une policy pour les INSERT (permet à la clé de service de créer des airlines)
 CREATE POLICY "Allow service role to insert airlines"
 ON airlines FOR INSERT
-WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+WITH CHECK (true);
 
 -- 4. Créer une policy pour les UPDATE (airlines peuvent mettre à jour leurs données)
 CREATE POLICY "Airlines can update own data"
