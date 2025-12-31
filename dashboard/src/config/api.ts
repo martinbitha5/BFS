@@ -2,9 +2,10 @@ import axios from 'axios';
 
 // Configuration API - Hostinger Cloud Pro (brsats.com)
 // En développement, utiliser localhost. En production, utiliser HTTPS avec api.brsats.com
-const API_BASE_URL = import.meta.env.MODE === 'development' || import.meta.env.DEV 
-  ? 'http://localhost:3000' 
-  : (import.meta.env.VITE_API_URL || 'https://api.brsats.com');
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const API_BASE_URL = isProduction
+  ? (import.meta.env.VITE_API_URL || 'https://api.brsats.com')
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
 
 // Log pour debug (à retirer en production)
 if (import.meta.env.MODE === 'development') {

@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 // Configuration API - Approche simplifiée et cohérente
-const API_BASE_URL = import.meta.env.MODE === 'development' || import.meta.env.DEV 
-  ? 'http://localhost:3000' 
-  : (import.meta.env.VITE_API_URL || 'https://api.brsats.com');
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const API_BASE_URL = isProduction
+  ? (import.meta.env.VITE_API_URL || 'https://api.brsats.com')
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
 
 // Log pour debug en développement
 if (import.meta.env.MODE === 'development') {
