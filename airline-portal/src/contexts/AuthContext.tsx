@@ -1,6 +1,5 @@
-import axios from 'axios';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { API_URL } from '../config/api';
+import api from '../config/api';
 
 interface Airline {
   id: string;
@@ -45,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_URL}/api/v1/airlines/login`, {
+      const response = await api.post('/api/v1/airlines/login', {
         email,
         password,
       });
@@ -54,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAirline(airlineData);
       localStorage.setItem('airline', JSON.stringify(airlineData));
       localStorage.setItem('airline_token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Le token sera automatiquement ajouté par l'intercepteur
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Erreur de connexion');
     }
@@ -64,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAirline(null);
     localStorage.removeItem('airline');
     localStorage.removeItem('airline_token');
-    delete axios.defaults.headers.common['Authorization'];
+    // Le token sera automatiquement retiré par l'intercepteur (pas de token = pas de header)
   };
 
   return (

@@ -4,15 +4,15 @@
  */
 
 import {
-  BirsReport,
-  BirsReportItem,
-  InternationalBaggage,
-  ReconciliationOptions,
-  ReconciliationResult
+    BirsReport,
+    BirsReportItem,
+    InternationalBaggage,
+    ReconciliationOptions,
+    ReconciliationResult
 } from '../types/birs.types';
 import { birsDatabaseService } from './birs-database.service';
-import { birsReconciliationService } from './birs-reconciliation.service';
 import { birsFileParserService } from './birs-file-parser.service';
+import { birsReconciliationService } from './birs-reconciliation.service';
 
 class BirsService {
   /**
@@ -85,7 +85,7 @@ class BirsService {
    * Si le bagage existe déjà, retourne le bagage existant
    */
   async createInternationalBaggage(
-    rfidTag: string,
+    tagNumber: string,
     scannedBy: string,
     airportCode: string,
     passengerName?: string,
@@ -98,7 +98,7 @@ class BirsService {
     
     try {
       // Vérifier si un bagage international avec ce tag existe déjà
-      const existing = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
+      const existing = await birsDatabaseService.getInternationalBaggageByTagNumber(tagNumber);
       if (existing) {
         console.log('[BIRS] Bagage international déjà existant:', existing.id);
         return existing;
@@ -114,7 +114,7 @@ class BirsService {
 
     try {
       const id = await birsDatabaseService.createInternationalBaggage({
-        rfidTag,
+        tagNumber,
         scannedAt: now,
         scannedBy,
         airportCode,
@@ -137,7 +137,7 @@ class BirsService {
       // Gérer l'erreur de contrainte UNIQUE (le bagage a été créé entre temps)
       if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
         console.log('[BIRS] Contrainte UNIQUE - Le bagage existe déjà, récupération...');
-        const existing = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
+        const existing = await birsDatabaseService.getInternationalBaggageByTagNumber(tagNumber);
         if (existing) {
           return existing;
         }

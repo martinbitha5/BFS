@@ -4,11 +4,11 @@
 
 import * as SQLite from 'expo-sqlite';
 import {
-  BirsReport,
-  BirsReportItem,
-  BirsStatistics,
-  InternationalBaggage,
-  InternationalBaggageStatus
+    BirsReport,
+    BirsReportItem,
+    BirsStatistics,
+    InternationalBaggage,
+    InternationalBaggageStatus
 } from '../types/birs.types';
 
 class BirsDatabaseService {
@@ -38,13 +38,13 @@ class BirsDatabaseService {
 
     await this.db.runAsync(
       `INSERT INTO international_baggages (
-        id, rfid_tag, scanned_at, scanned_by, airport_code, status,
+        id, tag_number, scanned_at, scanned_by, airport_code, status,
         birs_report_id, passenger_name, pnr, flight_number, origin,
         weight, remarks, reconciled_at, reconciled_by, synced, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.rfidTag,
+        data.tagNumber,
         data.scannedAt,
         data.scannedBy,
         data.airportCode,
@@ -80,12 +80,12 @@ class BirsDatabaseService {
     return this.mapInternationalBaggage(result);
   }
 
-  async getInternationalBaggageByRfidTag(rfidTag: string): Promise<InternationalBaggage | null> {
+  async getInternationalBaggageByTagNumber(tagNumber: string): Promise<InternationalBaggage | null> {
     if (!this.db) throw new Error('Database not initialized');
 
     const result = await this.db.getFirstAsync<any>(
-      'SELECT * FROM international_baggages WHERE rfid_tag = ?',
-      [rfidTag]
+      'SELECT * FROM international_baggages WHERE tag_number = ?',
+      [tagNumber]
     );
 
     if (!result) return null;
@@ -507,7 +507,7 @@ class BirsDatabaseService {
   private mapInternationalBaggage(row: any): InternationalBaggage {
     return {
       id: row.id,
-      rfidTag: row.rfid_tag,
+      tagNumber: row.tag_number,
       scannedAt: row.scanned_at,
       scannedBy: row.scanned_by,
       airportCode: row.airport_code,

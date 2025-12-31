@@ -10,13 +10,20 @@ export type BaggageStatus =
 export interface Baggage {
   id: string;
   passengerId: string;
-  rfidTag: string;
+  tagNumber: string;
   expectedTag?: string;
   status: BaggageStatus;
+  weight?: number;
+  flightNumber?: string;
+  airportCode?: string;
+  currentLocation?: string;
   checkedAt?: string;
   checkedBy?: string;
   arrivedAt?: string;
   arrivedBy?: string;
+  deliveredAt?: string;
+  lastScannedAt?: string;
+  lastScannedBy?: string;
   synced: boolean;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +34,7 @@ export interface Baggage {
  */
 export interface BaggageTagData {
   passengerName: string; // Nom du passager (ex: "MOHILO LOUVE")
-  rfidTag: string; // Tag RFID ou numéro d'étiquette (ex: "4071 ET201605" ou "4071" ou "ET201605")
+  tagNumber: string; // Tag RFID ou numéro d'étiquette (ex: "4071 ET201605" ou "4071" ou "ET201605")
   flightNumber?: string; // Numéro de vol (ex: "ET73")
   flightDate?: string; // Date du vol (ex: "22NOV")
   pnr?: string; // PNR (ex: "HHJWNG")

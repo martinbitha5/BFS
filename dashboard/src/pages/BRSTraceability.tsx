@@ -4,17 +4,16 @@
  */
 
 import {
-  Calendar,
-  Clock,
-  FileText,
-  MapPin,
-  Package,
-  Plane,
-  Search,
-  User,
-  X
+    Calendar,
+    Clock,
+    FileText,
+    MapPin,
+    Package,
+    Plane,
+    Search,
+    User
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,7 +30,7 @@ interface TraceabilityEvent {
 interface BaggageTraceability {
   baggage: {
     id: string;
-    rfid_tag: string;
+    tag_number: string;
     status: string;
     passenger_name?: string;
     pnr?: string;
@@ -159,7 +158,7 @@ export default function BRSTraceability() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-white/60 text-sm mb-1">RFID Tag</p>
-                <p className="text-white font-mono font-semibold">{traceability.baggage.rfid_tag}</p>
+                <p className="text-white font-mono font-semibold">{traceability.baggage.tag_number}</p>
               </div>
               <div>
                 <p className="text-white/60 text-sm mb-1">Statut</p>

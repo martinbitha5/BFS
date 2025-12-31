@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { notifyStatsUpdate, notifySyncComplete, notifyNewPassenger, notifyNewBaggage } from './realtime.routes';
+import { notifyStatsUpdate, notifySyncComplete } from './realtime.routes';
 
 const router = Router();
 
@@ -236,7 +236,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
           const { data: existingIntl } = await supabase
             .from('international_baggages')
             .select('id')
-            .eq('rfid_tag', scan.baggage_rfid_tag)
+            .eq('tag_number', scan.baggage_rfid_tag)
             .single();
 
           if (!existingNational && !existingIntl) {
@@ -287,7 +287,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
               const { error: bagError } = await supabase
                 .from('international_baggages')
                 .insert({
-                  rfid_tag: scan.baggage_rfid_tag,
+                  tag_number: scan.baggage_rfid_tag,
                   status: 'scanned',
                   passenger_name: baggageParsed?.passengerName,
                   pnr: pnrFromTag,
@@ -509,7 +509,7 @@ function parseSimpleBaggageTag(rawData: string): any {
     const tag = rawData.trim();
 
     return {
-      rfidTag: tag,
+      tagNumber: tag,
       passengerName: null,
       pnr: null,
       flightNumber: null,

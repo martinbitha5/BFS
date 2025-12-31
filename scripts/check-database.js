@@ -54,7 +54,7 @@ async function checkDatabase() {
     console.log(`\n🧳 BAGAGES INTERNATIONAUX: ${intlBags?.length || 0}`);
     if (intlBags && intlBags.length > 0) {
       intlBags.slice(0, 3).forEach((b, i) => {
-        console.log(`   [${i + 1}] Tag: ${b.rfid_tag} - Statut: ${b.status}`);
+        console.log(`   [${i + 1}] Tag: ${b.tag_number} - Statut: ${b.status}`);
       });
     }
 

@@ -15,15 +15,11 @@
  * - Le flux complet fonctionne sans erreur
  */
 
-import * as SQLite from 'expo-sqlite';
-import { SQLITE_SCHEMA } from '../src/database/schema';
+import { AIRPORTS } from '../src/constants/airports';
 import { databaseService } from '../src/services/database.service';
 import { parserService } from '../src/services/parser.service';
-import { AIRPORTS } from '../src/constants/airports';
-import { UserRole } from '../src/types/user.types';
-import { Passenger } from '../src/types/passenger.types';
 import { Baggage } from '../src/types/baggage.types';
-import { BoardingStatus } from '../src/types/boarding.types';
+import { UserRole } from '../src/types/user.types';
 
 // Types pour les résultats de test
 interface TestResult {
@@ -60,7 +56,7 @@ function generatePNR(): string {
 }
 
 // Fonction pour générer un tag RFID unique
-function generateRFIDTag(base: number = 4071161863): string {
+function generateTagNumber(base: number = 4071161863): string {
   return (base + Math.floor(Math.random() * 1000)).toString();
 }
 
@@ -218,12 +214,12 @@ async function testBaggage(
 
     // Créer les bagages
     for (let i = 0; i < baggageCount; i++) {
-      const rfidTag = passenger.baggageBaseNumber
+      const tagNumber = passenger.baggageBaseNumber
         ? (parseInt(passenger.baggageBaseNumber) + i).toString()
-        : generateRFIDTag();
+        : generateTagNumber();
 
       // Vérifier si le bagage existe déjà
-      const existing = await databaseService.getBaggageByRfidTag(rfidTag);
+      const existing = await databaseService.getBaggageByTagNumber(tagNumber);
       if (existing) {
         baggageIds.push(existing.id);
         continue;
@@ -231,8 +227,8 @@ async function testBaggage(
 
       const baggageId = await databaseService.createBaggage({
         passengerId: passenger.id,
-        rfidTag,
-        expectedTag: passenger.baggageBaseNumber ? rfidTag : undefined,
+        tagNumber,
+        expectedTag: passenger.baggageBaseNumber ? tagNumber : undefined,
         status: 'checked',
         checkedAt: new Date().toISOString(),
         checkedBy: user.id,
@@ -390,7 +386,7 @@ async function testArrival(
       await databaseService.updateBaggageStatus(foundBaggage.id, 'arrived', user.id);
 
       // Vérifier que le statut a été mis à jour
-      const updated = await databaseService.getBaggageByRfidTag(foundBaggage.rfidTag);
+      const updated = await databaseService.getBaggageByTagNumber(foundBaggage.tagNumber);
       if (!updated || updated.status !== 'arrived') {
         return {
           success: false,
@@ -431,7 +427,7 @@ async function testArrival(
     await databaseService.updateBaggageStatus(targetBaggage.id, 'arrived', user.id);
 
     // Vérifier que le statut a été mis à jour
-    const updated = await databaseService.getBaggageByRfidTag(targetBaggage.rfidTag);
+    const updated = await databaseService.getBaggageByTagNumber(targetBaggage.tagNumber);
     if (!updated || updated.status !== 'arrived') {
       return {
         success: false,

@@ -175,6 +175,46 @@ export default function CheckinScreen({ navigation }: Props) {
         airportCode: user.airportCode,
       });
 
+      // ✅ ÉTAPE 5: Créer/mettre à jour le passager en base SQLite avec les données parsées
+      if (parsedData) {
+        const { databaseServiceInstance } = await import('../services');
+        
+        // Chercher si le passager existe déjà par PNR
+        let existingPassenger = await databaseServiceInstance.getPassengerByPnr(parsedData.pnr);
+        
+        if (!existingPassenger) {
+          // Créer le passager avec les données du boarding pass
+          const passengerId = await databaseServiceInstance.createPassenger({
+            pnr: parsedData.pnr,
+            fullName: parsedData.fullName,
+            firstName: parsedData.firstName,
+            lastName: parsedData.lastName,
+            flightNumber: parsedData.flightNumber,
+            flightTime: parsedData.flightTime,
+            airline: parsedData.airline,
+            airlineCode: parsedData.companyCode,
+            departure: parsedData.departure,
+            arrival: parsedData.arrival,
+            route: parsedData.route,
+            companyCode: parsedData.companyCode,
+            ticketNumber: parsedData.ticketNumber,
+            seatNumber: parsedData.seatNumber,
+            baggageCount: parsedData.baggageInfo?.count || 1,
+            baggageBaseNumber: parsedData.baggageInfo?.baseNumber,
+            rawData: data,
+            format: parsedData.format,
+            checkedInAt: new Date().toISOString(),
+            checkedInBy: user.id,
+            synced: false,
+          });
+          
+          console.log('[CHECK-IN] ✅ Passager créé en base SQLite:', passengerId, 'avec', parsedData.baggageInfo?.count || 1, 'bagages');
+        } else {
+          // Mettre à jour le passager existant avec les données du boarding pass
+          console.log('[CHECK-IN] ℹ️ Passager existe déjà, mise à jour des données');
+        }
+      }
+
       // Enregistrer l'action d'audit
       const { logAudit } = await import('../utils/audit.util');
       await logAudit(

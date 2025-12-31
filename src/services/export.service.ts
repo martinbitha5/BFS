@@ -1,10 +1,10 @@
 import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as Linking from 'expo-linking';
+import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
-import { Passenger } from '../types/passenger.types';
 import { Baggage } from '../types/baggage.types';
 import { BoardingStatus } from '../types/boarding.types';
+import { Passenger } from '../types/passenger.types';
 import { databaseServiceInstance } from './database.service';
 
 interface ExportOptions {
@@ -83,7 +83,7 @@ class ExportService {
           const checkedDate = baggage.checkedAt ? new Date(baggage.checkedAt) : null;
           const arrivedDate = baggage.arrivedAt ? new Date(baggage.arrivedAt) : null;
           const row = [
-            baggage.rfidTag,
+            baggage.tagNumber,
             passenger.pnr,
             passenger.fullName,
             baggage.status === 'arrived' ? 'Arrivé' : baggage.status === 'rush' ? 'Rush (Soute pleine)' : 'En transit',
@@ -165,7 +165,7 @@ class ExportService {
       const checkedDate = baggage.checkedAt ? new Date(baggage.checkedAt) : null;
       const arrivedDate = baggage.arrivedAt ? new Date(baggage.arrivedAt) : null;
       return {
-        'Tag RFID': baggage.rfidTag,
+        'Tag RFID': baggage.tagNumber,
         'PNR Passager': passenger?.pnr || '-',
         'Nom Passager': passenger?.fullName || '-',
         'Statut': baggage.status === 'arrived' ? 'Arrivé' : baggage.status === 'rush' ? 'Rush (Soute pleine)' : 'En transit',
@@ -347,15 +347,15 @@ class ExportService {
     };
 
     // Fonction helper pour extraire le numéro de base du tag RFID
-    const extractBaseTag = (rfidTag: string): string => {
+    const extractBaseTag = (tagNumber: string): string => {
       // Si le tag contient des chiffres, prendre les 10 premiers chiffres
-      const numbers = rfidTag.match(/\d+/g);
+      const numbers = tagNumber.match(/\d+/g);
       if (numbers && numbers.length > 0) {
         const fullNumber = numbers.join('');
         // Prendre les 10 premiers chiffres comme numéro de base
         return fullNumber.substring(0, 10);
       }
-      return rfidTag;
+      return tagNumber;
     };
 
     // Fonction helper pour créer une feuille Excel de bagages
@@ -367,7 +367,7 @@ class ExportService {
       
       // Créer les lignes de données
       const dataRows = baggages.map((baggage) => {
-        const baseTag = extractBaseTag(baggage.rfidTag);
+        const baseTag = extractBaseTag(baggage.tagNumber);
         const flightCode = formatFlightCode(baggage.passenger);
         return [
           baseTag,
@@ -375,8 +375,8 @@ class ExportService {
           flightCode,
           baggage.passenger.pnr || '',
           baggage.passenger.seatNumber || '',
-          baggage.rfidTag,
-          baggage.passenger.ticketNumber || '',
+          baggage.tagNumber,
+          baggage.passenger.ticketNumber || ''
         ];
       });
 

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { birsParserService } from '../services/birs-parser.service';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { birsParserService } from '../services/birs-parser.service';
 
 const router = Router();
 
@@ -374,7 +374,7 @@ router.post('/reconcile/:reportId', requireAirportCode, async (req: Request, res
 
       const matchedBag = scannedBags?.find(bag => {
         // Match exact sur tag RFID
-        if (bag.rfid_tag === item.bag_id) return true;
+        if (bag.tag_number === item.bag_id) return true;
         
         // Match sur PNR si disponible
         if (bag.pnr && item.pnr && bag.pnr === item.pnr) return true;

@@ -1,7 +1,6 @@
-import axios from 'axios';
 import { Calendar, CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { API_URL } from '../config/api';
+import api from '../config/api';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -31,7 +30,7 @@ export default function History() {
     setError('');
 
     try {
-      const response = await axios.get(`${API_URL}/api/v1/birs/history?airline_code=${airline?.code}`);
+      const response = await api.get(`/api/v1/birs/history?airline_code=${airline?.code}`);
       setReports(response.data.data || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur lors du chargement de l\'historique');

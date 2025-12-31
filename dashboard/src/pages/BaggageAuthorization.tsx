@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface BaggageAuthorizationRequest {
   id: string;
   passenger_id: string;
-  rfid_tag: string;
+  tag_number: string;
   requested_baggage_count: number;
   declared_baggage_count: number;
   current_baggage_count: number;
@@ -279,7 +279,7 @@ export default function BaggageAuthorization() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
-                      {request.rfid_tag}
+                      {request.tag_number}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -346,7 +346,7 @@ export default function BaggageAuthorization() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-bold mb-4">Rejeter la demande</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Vous êtes sur le point de rejeter la demande de bagage supplémentaire pour <strong>{selectedRequest.passengers?.full_name}</strong> (Tag: {selectedRequest.rfid_tag})
+              Vous êtes sur le point de rejeter la demande de bagage supplémentaire pour <strong>{selectedRequest.passengers?.full_name}</strong> (Tag: {selectedRequest.tag_number})
             </p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">

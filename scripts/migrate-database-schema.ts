@@ -35,7 +35,7 @@ async function migrateDatabase() {
       CREATE TABLE baggages_new (
         id TEXT PRIMARY KEY,
         passenger_id TEXT NOT NULL,
-        rfid_tag TEXT UNIQUE NOT NULL,
+        tag_number TEXT UNIQUE NOT NULL,
         expected_tag TEXT,
         status TEXT NOT NULL DEFAULT 'checked',
         weight REAL,
@@ -57,12 +57,12 @@ async function migrateDatabase() {
       
       -- Copier les données existantes
       INSERT INTO baggages_new (
-        id, passenger_id, rfid_tag, expected_tag, status,
+        id, passenger_id, tag_number, expected_tag, status,
         checked_at, checked_by, arrived_at, arrived_by,
         synced, created_at, updated_at
       )
       SELECT 
-        id, passenger_id, rfid_tag, expected_tag, status,
+        id, passenger_id, tag_number, expected_tag, status,
         checked_at, checked_by, arrived_at, arrived_by,
         synced, created_at, updated_at
       FROM baggages;
@@ -75,7 +75,7 @@ async function migrateDatabase() {
       
       -- Recréer les index
       CREATE INDEX idx_baggages_passenger_id ON baggages(passenger_id);
-      CREATE INDEX idx_baggages_rfid_tag ON baggages(rfid_tag);
+      CREATE INDEX idx_baggages_tag_number ON baggages(tag_number);
       CREATE INDEX idx_baggages_airport_code ON baggages(airport_code);
       CREATE INDEX idx_baggages_flight_number ON baggages(flight_number);
     `);

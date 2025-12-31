@@ -158,7 +158,7 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
 
     const formattedBaggages = recentBaggages?.map(b => ({
       id: b.id,
-      tag: b.tag_number || b.rfid_tag || b.id,
+      tag: b.tag_number || b.id,
       status: b.status || 'unknown',
       passengerId: b.passenger_id,
       createdAt: b.created_at,

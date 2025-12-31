@@ -13,7 +13,7 @@ import { birsDatabaseService } from '../services/birs-database.service';
 import { parserService } from '../services/parser.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Passenger } from '../types/passenger.types';
-import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
+import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Baggage'>;
@@ -30,7 +30,7 @@ export default function BaggageScreen({ navigation }: Props) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [torchEnabled, setTorchEnabled] = useState(false);
-  const [lastScannedRfidTag, setLastScannedRfidTag] = useState<string | null>(null);
+  const [lastScannedTagNumber, setLastScannedTagNumber] = useState<string | null>(null);
   const [scannedTagInfo, setScannedTagInfo] = useState<any>(null);
   const [foundPassenger, setFoundPassenger] = useState<Passenger | null>(null);
   
@@ -80,14 +80,14 @@ export default function BaggageScreen({ navigation }: Props) {
 
       // ✅ Parser l'étiquette de bagage pour extraire les informations
       let baggageTagData;
-      let rfidTag: string;
+      let tagNumber: string;
       
       try {
         baggageTagData = parserService.parseBaggageTag(cleanedData);
-        rfidTag = baggageTagData.rfidTag.trim();
+        tagNumber = baggageTagData.tagNumber.trim();
         
         console.log('[BAGGAGE] Données extraites du tag:', {
-          rfidTag,
+          tagNumber,
           passengerName: baggageTagData.passengerName,
           pnr: baggageTagData.pnr,
           flightNumber: baggageTagData.flightNumber,
@@ -98,15 +98,15 @@ export default function BaggageScreen({ navigation }: Props) {
         });
         
         // Si le parsing n'a pas extrait de tag RFID valide, utiliser les données brutes
-        if (!rfidTag || rfidTag === 'UNKNOWN' || rfidTag.length === 0) {
-          rfidTag = cleanedData;
+        if (!tagNumber || tagNumber === 'UNKNOWN' || tagNumber.length === 0) {
+          tagNumber = cleanedData;
         }
       } catch (parseError) {
         // En cas d'erreur de parsing, utiliser les données brutes comme tag RFID
-        rfidTag = cleanedData;
+        tagNumber = cleanedData;
         baggageTagData = {
           passengerName: 'UNKNOWN',
-          rfidTag: cleanedData,
+          tagNumber: cleanedData,
           rawData: cleanedData,
         };
       }
@@ -127,10 +127,10 @@ export default function BaggageScreen({ navigation }: Props) {
       }
 
       // ✅ Vérifier si le bagage existe déjà dans la table normale
-      const existing = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+      const existing = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
       if (existing) {
         await playErrorSound();
-        setToastMessage(`⚠️ Bagage déjà enregistré: ${rfidTag}`);
+        setToastMessage(`⚠️ Bagage déjà enregistré: ${tagNumber}`);
         setToastType('warning');
         setShowToast(true);
         resetScanner();
@@ -138,10 +138,10 @@ export default function BaggageScreen({ navigation }: Props) {
       }
 
       // ✅ Vérifier si le bagage existe déjà dans la table internationale
-      const existingInternational = await birsDatabaseService.getInternationalBaggageByRfidTag(rfidTag);
+      const existingInternational = await birsDatabaseService.getInternationalBaggageByTagNumber(tagNumber);
       if (existingInternational) {
         await playErrorSound();
-        setToastMessage(`⚠️ Bagage international déjà enregistré: ${rfidTag}`);
+        setToastMessage(`⚠️ Bagage international déjà enregistré: ${tagNumber}`);
         setToastType('warning');
         setShowToast(true);
         resetScanner();
@@ -152,8 +152,8 @@ export default function BaggageScreen({ navigation }: Props) {
       let passenger: Passenger | null = null;
       
       // 1. D'abord chercher par tag attendu (le plus fiable pour les tags numériques)
-      console.log('[BAGGAGE] 🔍 Recherche passager par tag attendu:', rfidTag);
-      passenger = await databaseServiceInstance.getPassengerByExpectedTag(rfidTag);
+      console.log('[BAGGAGE] 🔍 Recherche passager par tag attendu:', tagNumber);
+      passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
       
       if (passenger) {
         console.log('[BAGGAGE] ✅ Passager trouvé par tag attendu:', passenger.fullName);
@@ -181,13 +181,13 @@ export default function BaggageScreen({ navigation }: Props) {
 
       // ❌ REFUSER LE SCAN SI LE PASSAGER N'EST PAS TROUVÉ
       if (!passenger) {
-        console.log('[BAGGAGE] ❌ Tag non reconnu - Scan refusé:', rfidTag);
+        console.log('[BAGGAGE] ❌ Tag non reconnu - Scan refusé:', tagNumber);
         await playErrorSound();
         setProcessing(false);
         
         Alert.alert(
           'TAG NON RECONNU',
-          `Le tag ${rfidTag} n'appartient à aucun passager enregistré.\n\nVérifiez que le passager a bien fait son check-in.`,
+          `Le tag ${tagNumber} n'appartient à aucun passager enregistré.\n\nVérifiez que le passager a bien fait son check-in.`,
           [
             {
               text: 'Nouveau scan',
@@ -245,7 +245,7 @@ export default function BaggageScreen({ navigation }: Props) {
       
       const baggageId = await databaseServiceInstance.createBaggage({
         passengerId: passenger.id,
-        rfidTag,
+        tagNumber,
         status: 'checked',
         checkedAt: new Date().toISOString(),
         checkedBy: user.id,
@@ -257,16 +257,16 @@ export default function BaggageScreen({ navigation }: Props) {
       await logAudit(
         'REGISTER_BAGGAGE',
         'baggage',
-        `Enregistrement bagage RFID: ${rfidTag} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
+        `Enregistrement bagage RFID: ${tagNumber} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
         baggageId
       );
 
       // Ajouter à la file de synchronisation
       await databaseServiceInstance.addToSyncQueue({
         tableName: 'baggages',
-        recordId: rfidTag,
+        recordId: tagNumber,
         operation: 'CREATE',
-        data: JSON.stringify({ passengerId: passenger.id, rfidTag }),
+        data: JSON.stringify({ passengerId: passenger.id, tagNumber }),
         retryCount: 0,
         userId: user.id,
       });
@@ -278,16 +278,16 @@ export default function BaggageScreen({ navigation }: Props) {
         statusField: 'baggage',
         userId: user.id,
         airportCode: user.airportCode,
-        baggageRfidTag: rfidTag,
+        baggageRfidTag: tagNumber,
       });
 
       setFoundPassenger(passenger);
       
       await playSuccessSound();
-      setToastMessage(`✅ Bagage enregistré !\nPassager: ${passenger.fullName}\nTag: ${rfidTag}`);
+      setToastMessage(`✅ Bagage enregistré !\nPassager: ${passenger.fullName}\nTag: ${tagNumber}`);
       setToastType('success');
 
-      setLastScannedRfidTag(rfidTag);
+      setLastScannedTagNumber(tagNumber);
       setShowToast(true);
       setShowScanner(false);
       isProcessingRef.current = false;
@@ -318,7 +318,7 @@ export default function BaggageScreen({ navigation }: Props) {
     isProcessingRef.current = false;
     setScanned(false);
     setProcessing(false);
-    setLastScannedRfidTag(null);
+    setLastScannedTagNumber(null);
     setScannedTagInfo(null);
     setFoundPassenger(null);
     setShowScanner(true);
@@ -356,7 +356,7 @@ export default function BaggageScreen({ navigation }: Props) {
           <ActivityIndicator size="large" color={colors.primary.main} />
           <Text style={[styles.processingText, { color: colors.text.secondary }]}>Traitement en cours...</Text>
         </View>
-      ) : !showScanner && lastScannedRfidTag ? (
+      ) : !showScanner && lastScannedTagNumber ? (
         <ScrollView 
           style={styles.successContainer}
           contentContainerStyle={styles.successContentContainer}
@@ -382,7 +382,7 @@ export default function BaggageScreen({ navigation }: Props) {
                 </View>
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 1, textAlign: 'center', flex: 1, fontSize: FontSizes.lg, fontWeight: FontWeights.bold }]}>
-                    {lastScannedRfidTag}
+                    {lastScannedTagNumber}
                   </Text>
                 </View>
               </View>

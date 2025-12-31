@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { validateBaggageScan } from '../middleware/scan-validation.middleware';
 
 const router = Router();
@@ -12,15 +12,13 @@ const router = Router();
  */
 router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { flight, status } = req.query;
-    const airportCode = req.userAirportCode; // Peut être undefined si accès total
+    const { flight, status, airport } = req.query;
+    const airportCode = airport || req.userAirportCode;
     
     let query = supabase
       .from('baggages')
       .select('*, passengers(*)');
     
-    // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
-    // ou si un aéroport spécifique est demandé (autre que ALL)
     if (airportCode) {
       query = query.eq('airport_code', airportCode);
     }
@@ -35,7 +33,6 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
 
     if (error) throw error;
 
-    // Transformer les données pour le dashboard (snake_case -> camelCase)
     const transformedData = data?.map(baggage => {
       const passenger = Array.isArray(baggage.passengers) 
         ? baggage.passengers[0] 
@@ -50,12 +47,12 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
         flightNumber: baggage.flight_number,
         airportCode: baggage.airport_code,
         currentLocation: baggage.current_location,
-        scannedAt: baggage.scanned_at,
+        checkedAt: baggage.checked_at,
         arrivedAt: baggage.arrived_at,
         deliveredAt: baggage.delivered_at,
         lastScannedAt: baggage.last_scanned_at,
         lastScannedBy: baggage.last_scanned_by,
-        passenger: passenger ? {
+        passengers: passenger ? {
           id: passenger.id,
           fullName: passenger.full_name,
           pnr: passenger.pnr,
@@ -225,20 +222,19 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
       // Si le nombre de bagages existants + 1 dépasse le nombre déclaré, créer une demande d'autorisation
       if (existingCount >= declaredCount) {
         // Récupérer le tag RFID
-        const rfidTag = tag_number || baggageData.tag_number || baggageData.rfid_tag;
+        const tagNumber = tag_number || baggageData.tag_number;
         
-        if (!rfidTag) {
+        if (!tagNumber) {
           return res.status(400).json({
             success: false,
             error: 'Le tag RFID est requis pour créer une demande d\'autorisation'
           });
         }
 
-        // Vérifier si une demande existe déjà pour ce tag
         const { data: existingRequest } = await supabase
           .from('baggage_authorization_requests')
           .select('id, status')
-          .eq('rfid_tag', rfidTag)
+          .eq('rfid_tag', tagNumber)
           .eq('status', 'pending')
           .maybeSingle();
 
@@ -255,18 +251,11 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
         }
 
         // Créer une demande d'autorisation
-        if (!rfidTag) {
-          return res.status(400).json({
-            success: false,
-            error: 'Le tag RFID est requis pour créer une demande d\'autorisation'
-          });
-        }
-
         const { data: authRequest, error: authError } = await supabase
           .from('baggage_authorization_requests')
           .insert({
             passenger_id: passenger_id,
-            rfid_tag: rfidTag,
+            rfid_tag: tagNumber,
             requested_baggage_count: existingCount + 1,
             declared_baggage_count: declaredCount,
             current_baggage_count: existingCount,

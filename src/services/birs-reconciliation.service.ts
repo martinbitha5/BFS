@@ -98,7 +98,7 @@ class BirsReconciliationService {
 
     // Match sur le Bag ID (priorité haute)
     if (options.matchOnBagId !== false) {
-      const bagId1 = this.normalizeBagId(baggage.rfidTag);
+      const bagId1 = this.normalizeBagId(baggage.tagNumber);
       const bagId2 = this.normalizeBagId(item.bagId);
       
       if (bagId1 && bagId2) {

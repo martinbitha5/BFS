@@ -2783,7 +2783,7 @@ class ParserService {
   parseBaggageTag(rawData: string): BaggageTagData {
     const result: BaggageTagData = {
       passengerName: 'UNKNOWN',
-      rfidTag: rawData.trim(),
+      tagNumber: rawData.trim(),
       rawData,
     };
 
@@ -2797,7 +2797,7 @@ class ParserService {
       const baseNumber = trimmedData.substring(0, 10);
       const sequence = parseInt(trimmedData.substring(10, 13), 10);
       
-      result.rfidTag = baseNumber; // On stocke juste la base comme tag
+      result.tagNumber = baseNumber; // On stocke juste la base comme tag
       result.baggageSequence = sequence;
       
       console.log(`[PARSER TAG] Format 13 chiffres: base=${baseNumber}, séquence=${sequence}`);
@@ -2809,7 +2809,7 @@ class ParserService {
     // Format: 9071366379 = base uniquement
     // ============================================
     if (/^\d{10}$/.test(trimmedData)) {
-      result.rfidTag = trimmedData;
+      result.tagNumber = trimmedData;
       result.baggageSequence = 1; // Par défaut, c'est le 1er bagage
       
       console.log(`[PARSER TAG] Format 10 chiffres: base=${trimmedData}`);
@@ -2836,26 +2836,26 @@ class ParserService {
     // Chercher un pattern numérique suivi de ET suivi de chiffres (6 ou plus)
     const tagMatch1 = rawData.match(/(\d{4,})\s*ET\s*(\d{6,})/i);
     if (tagMatch1) {
-      result.rfidTag = `${tagMatch1[1]} ET${tagMatch1[2]}`;
+      result.tagNumber = `${tagMatch1[1]} ET${tagMatch1[2]}`;
     } else {
       // Chercher pattern avec ET au début (ET136262)
       const tagEtMatch = rawData.match(/ET\s*(\d{6,})/i);
       if (tagEtMatch) {
-        result.rfidTag = `ET${tagEtMatch[1]}`;
+        result.tagNumber = `ET${tagEtMatch[1]}`;
       } else {
         // Chercher juste un numéro long (10-13 chiffres)
         const longNumMatch = trimmedData.match(/(\d{10,13})/);
         if (longNumMatch) {
           const numStr = longNumMatch[1];
           if (numStr.length === 13) {
-            result.rfidTag = numStr.substring(0, 10);
+            result.tagNumber = numStr.substring(0, 10);
             result.baggageSequence = parseInt(numStr.substring(10, 13), 10);
           } else {
-            result.rfidTag = numStr.substring(0, 10);
+            result.tagNumber = numStr.substring(0, 10);
           }
         } else if (trimmedData.length <= 20 && /^\d{4,}$/.test(trimmedData)) {
           // C'est un nombre pur, utiliser directement comme tag RFID
-          result.rfidTag = trimmedData;
+          result.tagNumber = trimmedData;
         } else {
           // Chercher un numéro de 4 chiffres ou plus dans les données
           // Pour les codes Interleaved2of5, la valeur complète est souvent le tag RFID
@@ -2863,9 +2863,9 @@ class ParserService {
       if (tagNumMatch) {
             // Si c'est un nombre long (8+ chiffres), c'est probablement le tag complet
             if (tagNumMatch[1].length >= 8) {
-        result.rfidTag = tagNumMatch[1];
+        result.tagNumber = tagNumMatch[1];
       } else {
-              result.rfidTag = tagNumMatch[1];
+              result.tagNumber = tagNumMatch[1];
             }
           }
         }
@@ -2880,7 +2880,7 @@ class ParserService {
     } else {
       // Chercher séparément
       const flightMatch = rawData.match(/ET\s*(\d{2,4})/i);
-      if (flightMatch && !result.rfidTag.includes(flightMatch[0])) {
+      if (flightMatch && !result.tagNumber.includes(flightMatch[0])) {
         result.flightNumber = `ET${flightMatch[1]}`;
       }
       const dateMatch = rawData.match(/(\d{2}[A-Z]{3})/i);

@@ -107,7 +107,6 @@ export async function exportPassengers(
         'Vol': p.flightNumber,
         'Compagnie': p.airline,
         'Départ': p.departure,
-        'Arrivée': p.arrival,
         'Heure': p.flightTime,
         'Siège': p.seatNumber,
         'Bagages': p.baggageCount,
@@ -151,7 +150,7 @@ export async function exportBaggages(
     
     if (options.format === 'csv') {
       const csvData = baggages.map((b: any) => ({
-        'RFID Tag': b.rfidTag,
+        'Tag RFID': b.tagNumber || '-',
         'Passager ID': b.passengerId,
         'Statut': b.status,
         'Type': b.type || 'Standard',
@@ -314,7 +313,7 @@ export async function importBaggages(
     
     const baggages = rows.map(row => ({
       passengerId: row['Passager ID'] || row['passengerId'],
-      rfidTag: row['RFID Tag'] || row['rfidTag'],
+      tagNumber: row['Tag RFID'] || row['RFID Tag'] || row['tagNumber'],
       status: row['Statut'] || row['status'] || 'checked',
       type: row['Type'] || row['type'] || 'Standard',
       weight: parseFloat(row['Poids (kg)'] || row['weight'] || '0'),
@@ -324,9 +323,9 @@ export async function importBaggages(
     
     // Filtrer les bagages invalides
     const validBaggages = baggages.filter(b => {
-      if (!b.passengerId || !b.rfidTag) {
+      if (!b.passengerId || !b.tagNumber) {
         result.skipped++;
-        result.errors.push(`Bagage ignoré: données manquantes (Tag: ${b.rfidTag})`);
+        result.errors.push(`Bagage ignoré: données manquantes (Tag: ${b.tagNumber})`);
         return false;
       }
       return true;

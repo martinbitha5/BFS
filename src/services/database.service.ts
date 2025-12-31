@@ -135,22 +135,12 @@ class DatabaseService {
   /**
    * Cherche un passager par tag de bagage attendu
    * 
-   * Format du tag scanné: 9071366379001 (13 chiffres)
-   * - 9071366379 = Base (10 chiffres)
-   * - 001 = Séquence (ce bagage est le 1er)
-   * 
-   * Pour un passager avec 3 bagages et base 9071366379:
-   * - Bagage 1: base 9071366379, tag = 9071366379 ou 9071366379001
-   * - Bagage 2: base 9071366380, tag = 9071366380 ou 9071366380002
-   * - Bagage 3: base 9071366381, tag = 9071366381 ou 9071366381003
-   * 
-   * @param rfidTag - Le tag RFID scanné (ex: "9071366379001" ou "9071366379")
    * @returns Le passager trouvé ou null
    */
-  async getPassengerByExpectedTag(rfidTag: string): Promise<Passenger | null> {
+  async getPassengerByExpectedTag(tagNumber: string): Promise<Passenger | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const cleanTag = rfidTag.trim();
+    const cleanTag = tagNumber.trim();
     
     // Extraire la base du tag scanné
     // Si 13 chiffres: les 10 premiers sont la base, les 3 derniers sont la séquence
@@ -259,20 +249,28 @@ class DatabaseService {
 
     await this.db.runAsync(
       `INSERT INTO baggages (
-        id, passenger_id, rfid_tag, expected_tag, status,
-        checked_at, checked_by, arrived_at, arrived_by,
-        synced, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, passenger_id, tag_number, expected_tag, status, weight,
+        flight_number, airport_code, current_location,
+        checked_at, checked_by, arrived_at, arrived_by, delivered_at,
+        last_scanned_at, last_scanned_by, synced, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         baggage.passengerId,
-        baggage.rfidTag,
+        baggage.tagNumber,
         baggage.expectedTag || null,
         baggage.status,
+        baggage.weight || null,
+        baggage.flightNumber || null,
+        baggage.airportCode || null,
+        baggage.currentLocation || null,
         baggage.checkedAt || null,
         baggage.checkedBy || null,
         baggage.arrivedAt || null,
         baggage.arrivedBy || null,
+        baggage.deliveredAt || null,
+        baggage.lastScannedAt || null,
+        baggage.lastScannedBy || null,
         baggage.synced ? 1 : 0,
         now,
         now,
@@ -282,12 +280,12 @@ class DatabaseService {
     return id;
   }
 
-  async getBaggageByRfidTag(rfidTag: string): Promise<Baggage | null> {
+  async getBaggageByTagNumber(tagNumber: string): Promise<Baggage | null> {
     if (!this.db) throw new Error('Database not initialized');
 
     const result = await this.db.getFirstAsync<Baggage>(
-      'SELECT * FROM baggages WHERE rfid_tag = ?',
-      [rfidTag]
+      'SELECT * FROM baggages WHERE tag_number = ?',
+      [tagNumber]
     );
 
     if (result) {
@@ -350,7 +348,7 @@ class DatabaseService {
     }));
   }
 
-  async updateBaggageStatus(baggageId: string, status: 'checked' | 'arrived' | 'rush', userId: string): Promise<void> {
+  async updateBaggageStatus(baggageId: string, status: 'checked' | 'loaded' | 'in_transit' | 'arrived' | 'delivered' | 'rush' | 'lost', userId: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
     const now = new Date().toISOString();

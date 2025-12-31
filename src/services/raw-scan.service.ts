@@ -127,7 +127,7 @@ class RawScanService {
                 checkin_by: scanData.checkinBy,
                 baggage_at: scanData.baggageAt,
                 baggage_by: scanData.baggageBy,
-                baggage_rfid_tag: scanData.baggageRfidTag,
+                baggageRfidTag: scanData.baggageRfidTag,
                 boarding_at: scanData.boardingAt,
                 boarding_by: scanData.boardingBy,
                 arrival_at: scanData.arrivalAt,

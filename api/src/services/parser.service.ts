@@ -2745,7 +2745,7 @@ class ParserService {
   parseBaggageTag(rawData: string): BaggageTagData {
     const result: BaggageTagData = {
       passengerName: 'UNKNOWN',
-      rfidTag: rawData.trim(),
+      tagNumber: rawData.trim(),
       rawData,
     };
 
@@ -2765,19 +2765,19 @@ class ParserService {
     // Chercher un pattern numérique suivi de ET suivi de chiffres (6 ou plus)
     const tagMatch1 = rawData.match(/(\d{4,})\s*ET\s*(\d{6,})/i);
     if (tagMatch1) {
-      result.rfidTag = `${tagMatch1[1]} ET${tagMatch1[2]}`;
+      result.tagNumber = `${tagMatch1[1]} ET${tagMatch1[2]}`;
     } else {
       // Chercher pattern avec ET au début (ET136262)
       const tagEtMatch = rawData.match(/ET\s*(\d{6,})/i);
       if (tagEtMatch) {
-        result.rfidTag = `ET${tagEtMatch[1]}`;
+        result.tagNumber = `ET${tagEtMatch[1]}`;
       } else {
         // Chercher juste un numéro (4071 ou 4071136262) - mais seulement si c'est le contenu principal
         // Si les données sont très courtes (juste un numéro), c'est probablement le tag
         const trimmedData = rawData.trim();
         if (trimmedData.length <= 20 && /^\d{4,}$/.test(trimmedData)) {
           // C'est un nombre pur, utiliser directement comme tag RFID
-          result.rfidTag = trimmedData;
+          result.tagNumber = trimmedData;
         } else {
           // Chercher un numéro de 4 chiffres ou plus dans les données
           // Pour les codes Interleaved2of5, la valeur complète est souvent le tag RFID
@@ -2785,9 +2785,9 @@ class ParserService {
       if (tagNumMatch) {
             // Si c'est un nombre long (8+ chiffres), c'est probablement le tag complet
             if (tagNumMatch[1].length >= 8) {
-        result.rfidTag = tagNumMatch[1];
+        result.tagNumber = tagNumMatch[1];
       } else {
-              result.rfidTag = tagNumMatch[1];
+              result.tagNumber = tagNumMatch[1];
             }
           }
         }
@@ -2802,7 +2802,7 @@ class ParserService {
     } else {
       // Chercher séparément
       const flightMatch = rawData.match(/ET\s*(\d{2,4})/i);
-      if (flightMatch && !result.rfidTag.includes(flightMatch[0])) {
+      if (flightMatch && !result.tagNumber.includes(flightMatch[0])) {
         result.flightNumber = `ET${flightMatch[1]}`;
       }
       const dateMatch = rawData.match(/(\d{2}[A-Z]{3})/i);
@@ -2971,7 +2971,7 @@ class ParserService {
     console.log('│  Vol          :', result.flightNumber || 'X');
     console.log('│  Date         :', result.flightDate || 'X');
     console.log('│  PNR          :', result.pnr || 'X');
-    console.log('│  Tag RFID     :', result.rfidTag);
+    console.log('│  Tag RFID     :', result.tagNumber);
     console.log('└─────────────────────────────────────────────────┘');
     console.log('');
     return result;

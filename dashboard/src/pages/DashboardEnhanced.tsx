@@ -57,7 +57,7 @@ interface RecentPassenger {
 
 interface RecentBaggage {
   id: string;
-  rfidTag: string;
+  tagNumber: string;
   status: string;
   weight?: number;
   checkedAt: string;
@@ -677,7 +677,7 @@ export default function DashboardEnhanced() {
                     {recentBaggages.map((baggage) => (
                       <tr key={baggage.id} className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="text-sm font-mono text-green-300 bg-green-900/30 px-2 py-1 rounded">{baggage.rfidTag}</span>
+                          <span className="text-sm font-mono text-green-300 bg-green-900/30 px-2 py-1 rounded">{baggage.tagNumber}</span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {baggage.passenger ? (

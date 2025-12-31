@@ -1,5 +1,5 @@
+import { AlertCircle, CheckCircle, Clock, Package, Plane, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Package, AlertCircle, Search, CheckCircle, Clock, Plane } from 'lucide-react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,7 +13,7 @@ interface Baggage {
   checkedAt: string;
   arrivedAt: string | null;
   currentLocation: string;
-  passengers: {
+  passengers?: {
     fullName: string;
     pnr: string;
     departure: string;
@@ -23,7 +23,7 @@ interface Baggage {
 
 interface InternationalBaggage {
   id: string;
-  rfidTag: string;
+  tagNumber: string;
   status: 'scanned' | 'reconciled' | 'unmatched' | 'rush' | 'pending';
   passengerName: string | null;
   pnr: string | null;
@@ -120,7 +120,7 @@ export default function Baggages() {
         } else {
           const bag = b as InternationalBaggage;
           return (
-            bag.rfidTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            bag.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
             bag.passengerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             bag.pnr?.toLowerCase().includes(searchTerm.toLowerCase())
           );
@@ -158,7 +158,7 @@ export default function Baggages() {
   };
 
   const getBaggageIdentifier = (baggage: Baggage | InternationalBaggage) => {
-    return 'tagNumber' in baggage ? baggage.tagNumber : baggage.rfidTag;
+    return baggage.tagNumber;
   };
 
   const getBaggagePassenger = (baggage: Baggage | InternationalBaggage) => {
@@ -185,7 +185,7 @@ export default function Baggages() {
             <p className="text-white font-medium">{getBaggagePassenger(baggage)}</p>
             {isNational && (baggage as Baggage).passengers?.pnr && (
               <p className="text-sm text-white/70 font-mono">
-                PNR: {(baggage as Baggage).passengers.pnr}
+                PNR: {(baggage as Baggage).passengers?.pnr}
               </p>
             )}
             {!isNational && (baggage as InternationalBaggage).pnr && (

@@ -4,6 +4,7 @@ export interface BoardingStatus {
   boarded: boolean;
   boardedAt?: string;
   boardedBy?: string;
+  gate?: string;
   synced: boolean;
   createdAt: string;
 }

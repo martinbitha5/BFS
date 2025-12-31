@@ -5,9 +5,9 @@
 
 import { Baggage } from '../types/baggage.types';
 import { InternationalBaggage } from '../types/birs.types';
+import { logAudit } from '../utils/audit.util';
 import { birsDatabaseService } from './birs-database.service';
 import { databaseService } from './database.service';
-import { logAudit } from '../utils/audit.util';
 
 interface RushDeclaration {
   baggageId: string;
@@ -64,7 +64,7 @@ class RushService {
       JSON.stringify({
         baggageId,
         baggageType: 'national',
-        rfidTag: baggage.rfidTag,
+        tagNumber: baggage.tagNumber,
         previousStatus: baggage.status,
         reason,
         nextFlightNumber,
@@ -121,7 +121,7 @@ class RushService {
       JSON.stringify({
         baggageId,
         baggageType: 'international',
-        rfidTag: baggage.rfidTag,
+        tagNumber: baggage.tagNumber,
         previousStatus: baggage.status,
         reason,
         nextFlightNumber,
@@ -169,7 +169,7 @@ class RushService {
       JSON.stringify({
         baggageId,
         baggageType: 'national',
-        rfidTag: baggage.rfidTag,
+        tagNumber: baggage.tagNumber,
         newStatus,
         reason
       }),
@@ -219,7 +219,7 @@ class RushService {
       JSON.stringify({
         baggageId,
         baggageType: 'international',
-        rfidTag: baggage.rfidTag,
+        tagNumber: baggage.tagNumber,
         newStatus,
         reason
       }),

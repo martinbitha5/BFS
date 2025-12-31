@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { databaseServiceInstance, authServiceInstance, exportService } from '../services';
-import { Baggage } from '../types/baggage.types';
-import { BaggageCard } from '../components';
-import { Colors, Spacing, FontSizes, FontWeights } from '../theme';
 import * as Sharing from 'expo-sharing';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BaggageCard } from '../components';
+import { RootStackParamList } from '../navigation/RootStack';
+import { authServiceInstance, databaseServiceInstance, exportService } from '../services';
+import { Colors, FontSizes, FontWeights, Spacing } from '../theme';
+import { Baggage } from '../types/baggage.types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BagageList'>;
 
@@ -131,7 +131,7 @@ export default function BagageListScreen({ navigation }: Props) {
           <BaggageCard
             baggage={item}
             showPassengerInfo={false}
-            onPress={() => navigation.navigate('BagageDetail', { id: item.rfidTag })}
+            onPress={() => navigation.navigate('BagageDetail', { id: item.tagNumber })}
           />
         )}
         contentContainerStyle={baggages.length === 0 ? styles.emptyList : styles.listContent}

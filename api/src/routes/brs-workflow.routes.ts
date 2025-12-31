@@ -6,8 +6,8 @@
 
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { brsNotificationService } from '../services/brs-notification.service';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { brsNotificationService } from '../services/brs-notification.service';
 
 const router = Router();
 
@@ -260,7 +260,7 @@ router.get('/exceptions', requireAirportCode, async (req: Request, res: Response
         status: 'open' as const,
         baggage_id: bag.id,
         flight_number: bag.flight_number || 'UNKNOWN',
-        description: `Bagage scanné mais non trouvé dans les rapports BRS: ${bag.rfid_tag}`,
+        description: `Bagage scanné mais non trouvé dans les rapports BRS: ${bag.tag_number}`,
         created_by: bag.scanned_by,
         created_at: bag.scanned_at
       })) || [];
@@ -620,7 +620,7 @@ router.get('/traceability/:identifier', requireAirportCode, async (req: Request,
     const { data: baggageByTag } = await supabase
       .from('international_baggages')
       .select('*')
-      .eq('rfid_tag', identifier)
+      .eq('tag_number', identifier)
       .eq('airport_code', airport) // FORCER le filtre par aéroport
       .single();
 
@@ -665,7 +665,7 @@ router.get('/traceability/:identifier', requireAirportCode, async (req: Request,
     const traceability = {
       baggage: {
         id: baggage.id,
-        rfid_tag: baggage.rfid_tag,
+        tag_number: baggage.tag_number,
         status: baggage.status,
         passenger_name: baggage.passenger_name,
         pnr: baggage.pnr,

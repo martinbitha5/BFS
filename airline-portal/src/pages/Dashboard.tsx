@@ -1,7 +1,6 @@
-import axios from 'axios';
 import { AlertCircle, Check, FileText, Plane, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { API_URL } from '../config/api';
+import api from '../config/api';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -82,11 +81,7 @@ export default function Dashboard() {
         airlineCode: airline?.code || '',
       };
 
-      const response = await axios.post(`${API_URL}/api/v1/birs/upload`, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post('/api/v1/birs/upload', payload);
 
       setMessage(`✅ Fichier uploadé avec succès ! ${response.data.processedCount || 0} bagages traités.`);
       setMessageType('success');

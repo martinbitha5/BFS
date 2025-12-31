@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Baggage } from '../types/baggage.types';
-import { Colors, Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import Card from './Card';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { Baggage } from '../types/baggage.types';
 import Badge from './Badge';
+import Card from './Card';
 
 interface BaggageCardProps {
   baggage: Baggage;
@@ -54,7 +54,7 @@ export default function BaggageCard({ baggage, showPassengerInfo, passengerName,
       <View style={styles.header}>
         <View style={styles.tagContainer}>
           <Text style={[styles.tagLabel, { color: colors.text.secondary }]}>Tag RFID</Text>
-          <Text style={[styles.tagValue, { color: colors.text.primary }]}>{baggage.rfidTag}</Text>
+          <Text style={[styles.tagValue, { color: colors.text.primary }]}>{baggage.tagNumber}</Text>
         </View>
         <Badge label={getStatusLabel(baggage.status)} variant={getStatusColor(baggage.status)} />
       </View>
@@ -79,7 +79,7 @@ export default function BaggageCard({ baggage, showPassengerInfo, passengerName,
             <Text style={[styles.detailValue, { color: colors.text.primary }]}>{formatDate(baggage.arrivedAt)}</Text>
           </View>
         )}
-        {baggage.expectedTag && baggage.expectedTag === baggage.rfidTag && (
+        {baggage.expectedTag && baggage.expectedTag === baggage.tagNumber && (
           <View style={[styles.expectedBadge, { backgroundColor: colors.success.light + '15' }]}>
             <Text style={[styles.expectedText, { color: colors.success.dark }]}>Tag attendu</Text>
           </View>

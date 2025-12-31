@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Badge, Card, FlightInfo, PassengerCard } from '../components';
 import { RootStackParamList } from '../navigation/RootStack';
 import { databaseServiceInstance } from '../services';
+import { Colors, FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
 import { Passenger } from '../types/passenger.types';
-import { BaggageCard, PassengerCard, FlightInfo, Card, Badge } from '../components';
-import { Colors, Spacing, FontSizes, FontWeights } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BagageDetail'>;
 
@@ -28,7 +28,7 @@ export default function BagageDetailScreen({ route }: Props) {
       setError(null);
 
       // Chercher le bagage par RFID tag (méthode optimisée)
-      const foundBaggage = await databaseServiceInstance.getBaggageByRfidTag(id);
+      const foundBaggage = await databaseServiceInstance.getBaggageByTagNumber(id);
 
       if (!foundBaggage) {
         setError('Bagage non trouvé');
@@ -87,14 +87,14 @@ export default function BagageDetailScreen({ route }: Props) {
         <View style={styles.headerContent}>
           <View style={styles.tagContainer}>
             <Text style={styles.tagLabel}>Tag RFID</Text>
-            <Text style={styles.tagValue}>{baggage.rfidTag}</Text>
+            <Text style={styles.tagValue}>{baggage.tagNumber}</Text>
           </View>
           <Badge
             label={baggage.status === 'arrived' ? 'Arrivé' : 'En transit'}
             variant={baggage.status === 'arrived' ? 'success' : 'info'}
           />
         </View>
-        {baggage.expectedTag && baggage.expectedTag === baggage.rfidTag && (
+        {baggage.expectedTag && baggage.expectedTag === baggage.tagNumber && (
           <View style={styles.expectedBadge}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.success.main} />
             <Text style={styles.expectedText}>Tag attendu</Text>

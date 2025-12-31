@@ -3,10 +3,8 @@
  * Génère des bagages RUSH et des fichiers BIRS de test
  */
 
-import { Baggage } from '../types/baggage.types';
-import { InternationalBaggage, BirsReportItem } from '../types/birs.types';
-import { databaseService } from './database.service';
 import { birsDatabaseService } from './birs-database.service';
+import { databaseService } from './database.service';
 import { rushService } from './rush.service';
 
 interface TestDataGenerationOptions {
@@ -121,7 +119,7 @@ class TestDataGeneratorService {
         const airline = this.AIRLINES[Math.floor(Math.random() * this.AIRLINES.length)];
         const passengerName = this.generateRandomName();
         const pnr = this.generatePNR();
-        const rfidTag = this.generateBagTag(airline.code);
+        const tagNumber = this.generateBagTag(airline.code);
 
         // Créer un passager fictif
         const passengerId = await this.createTestPassenger(
@@ -134,7 +132,7 @@ class TestDataGeneratorService {
         // Créer le bagage
         const baggageId = await this.createTestBaggage(
           passengerId,
-          rfidTag,
+          tagNumber,
           options.userId
         );
 
@@ -164,12 +162,12 @@ class TestDataGeneratorService {
         ];
         const passengerName = this.generateRandomName();
         const pnr = this.generatePNR();
-        const rfidTag = this.generateBagTag(airline.code);
+        const tagNumber = this.generateBagTag(airline.code);
         const flightNumber = airline.flights[Math.floor(Math.random() * airline.flights.length)];
 
         // Créer le bagage international
         const baggageId = await this.createTestInternationalBaggage(
-          rfidTag,
+          tagNumber,
           passengerName,
           pnr,
           flightNumber,
@@ -373,7 +371,7 @@ class TestDataGeneratorService {
    */
   private async createTestBaggage(
     passengerId: string,
-    rfidTag: string,
+    tagNumber: string,
     userId: string
   ): Promise<string> {
     const db = databaseService.getDatabase();
@@ -384,10 +382,10 @@ class TestDataGeneratorService {
 
     await db.runAsync(
       `INSERT INTO baggages (
-        id, passenger_id, rfid_tag, status, checked_at, checked_by,
+        id, passenger_id, tag_number, status, checked_at, checked_by,
         synced, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, passengerId, rfidTag, 'checked', now, userId, 0, now, now]
+      [id, passengerId, tagNumber, 'checked', now, userId, 0, now, now]
     );
 
     return id;
@@ -397,7 +395,7 @@ class TestDataGeneratorService {
    * Crée un bagage international de test
    */
   private async createTestInternationalBaggage(
-    rfidTag: string,
+    tagNumber: string,
     passengerName: string,
     pnr: string,
     flightNumber: string,
@@ -407,7 +405,7 @@ class TestDataGeneratorService {
     const now = new Date().toISOString();
 
     const id = await birsDatabaseService.createInternationalBaggage({
-      rfidTag,
+      tagNumber,
       scannedAt: now,
       scannedBy: userId,
       airportCode,

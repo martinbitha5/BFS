@@ -1,20 +1,17 @@
-import { 
-  AlertCircle, 
-  CheckCircle, 
-  Package, 
-  RefreshCw, 
-  XCircle, 
-  Search,
-  Filter,
-  Eye,
-  Link as LinkIcon,
-  X,
-  AlertTriangle,
-  Clock,
-  User,
-  Plane,
-  Calendar,
-  Tag
+import {
+    AlertCircle,
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    Link as LinkIcon,
+    Package,
+    Plane,
+    RefreshCw,
+    Search,
+    Tag,
+    User,
+    X,
+    XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '../config/api';
@@ -22,7 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface UnmatchedBaggage {
   id: string;
-  rfid_tag: string;
+  tag_number: string;
   passenger_name?: string;
   pnr?: string;
   flight_number?: string;
@@ -130,7 +127,7 @@ export default function BRSUnmatched() {
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         filtered = filtered.filter(b => 
-          b.rfid_tag.toLowerCase().includes(term) ||
+          b.tag_number.toLowerCase().includes(term) ||
           (b.passenger_name && b.passenger_name.toLowerCase().includes(term)) ||
           (b.pnr && b.pnr.toLowerCase().includes(term)) ||
           (b.flight_number && b.flight_number.toLowerCase().includes(term))
@@ -197,8 +194,8 @@ export default function BRSUnmatched() {
       }
       
       // Match partiel sur tag
-      if (baggage.rfid_tag && item.bag_id) {
-        const bagTag = baggage.rfid_tag.toLowerCase();
+      if (baggage.tag_number && item.bag_id) {
+        const bagTag = baggage.tag_number.toLowerCase();
         const itemTag = item.bag_id.toLowerCase();
         
         if (bagTag.includes(itemTag) || itemTag.includes(bagTag)) {
@@ -393,7 +390,7 @@ export default function BRSUnmatched() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <Tag className="w-5 h-5 text-primary-400" />
-                          <span className="font-mono text-white font-semibold">{baggage.rfid_tag}</span>
+                          <span className="font-mono text-white font-semibold">{baggage.tag_number}</span>
                           {baggage.flight_number && (
                             <>
                               <Plane className="w-4 h-4 text-white/60" />
@@ -488,7 +485,7 @@ export default function BRSUnmatched() {
                   Suggestions de Réconciliation
                 </h2>
                 <p className="text-white/70 mt-1">
-                  Bagage: {selectedBaggage.rfid_tag}
+                  Bagage: {selectedBaggage.tag_number}
                 </p>
               </div>
               <button

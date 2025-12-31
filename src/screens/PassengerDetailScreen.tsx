@@ -205,7 +205,7 @@ export default function PassengerDetailScreen({ route, navigation }: Props) {
                 key={baggage.id}
                 baggage={baggage}
                 showPassengerInfo={false}
-                onPress={() => navigation.navigate('BagageDetail', { id: baggage.rfidTag })}
+                onPress={() => navigation.navigate('BagageDetail', { id: baggage.tagNumber })}
               />
             ))}
           </View>

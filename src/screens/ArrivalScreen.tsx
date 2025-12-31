@@ -73,13 +73,13 @@ export default function ArrivalScreen({ navigation }: Props) {
         return;
       }
 
-      const rfidTag = data.trim();
+      const tagNumber = data.trim();
       
       // 1️⃣ Chercher dans les BAGAGES LOCAUX (enregistrés au check-in local)
-      let found = await databaseServiceInstance.getBaggageByRfidTag(rfidTag);
+      let found = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
       
       if (found) {
-        console.log('[ARRIVAL] ✅ Bagage LOCAL trouvé:', rfidTag);
+        console.log('[ARRIVAL] ✅ Bagage LOCAL trouvé:', tagNumber);
         
         // Récupérer le passager propriétaire
         const passengerData = await databaseServiceInstance.getPassengerById(found.passengerId);
@@ -104,7 +104,7 @@ export default function ArrivalScreen({ navigation }: Props) {
         try {
           // Vérifier si birsDatabaseService est initialisé
           if (birsDatabaseService.isInitialized()) {
-            const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(rfidTag);
+            const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(tagNumber);
             
             if (birsItemFound) {
               console.log('[ARRIVAL] ✅ Bagage INTERNATIONAL trouvé dans BIRS:', birsItemFound.bagId);
@@ -125,7 +125,7 @@ export default function ArrivalScreen({ navigation }: Props) {
               await playSuccessSound();
               setToastMessage(
                 `✅ BAGAGE INTERNATIONAL REÇU !\n\n` +
-                `Tag: ${rfidTag}\n` +
+                `Tag: ${tagNumber}\n` +
                 `Passager: ${birsItemFound.passengerName}\n` +
                 `${birsItemFound.pnr ? `PNR: ${birsItemFound.pnr}` : ''}`
               );
@@ -137,7 +137,7 @@ export default function ArrivalScreen({ navigation }: Props) {
               await logAudit(
                 'INTERNATIONAL_BAGGAGE_RECEIVED',
                 'arrival',
-                `Bagage international reçu: ${rfidTag} - ${birsItemFound.passengerName}`,
+                `Bagage international reçu: ${tagNumber} - ${birsItemFound.passengerName}`,
                 birsItemFound.id
               );
               
@@ -149,7 +149,7 @@ export default function ArrivalScreen({ navigation }: Props) {
         }
         
         // 3️⃣ ❌ BAGAGE NON RECONNU - NI LOCAL, NI INTERNATIONAL → BLOQUER
-        console.log('[ARRIVAL] ⚠️ BAGAGE SUSPECT - Tag non trouvé ni localement ni dans BIRS:', rfidTag);
+        console.log('[ARRIVAL] ⚠️ BAGAGE SUSPECT - Tag non trouvé ni localement ni dans BIRS:', tagNumber);
         await playErrorSound();
         
         // Enregistrer l'action d'audit pour le bagage suspect
@@ -157,15 +157,15 @@ export default function ArrivalScreen({ navigation }: Props) {
         await logAudit(
           'BAGGAGE_SUSPECT_DETECTED',
           'arrival',
-          `Bagage suspect détecté à l'arrivée: ${rfidTag} - Non enregistré (local ou BIRS)`,
-          rfidTag
+          `Bagage suspect détecté à l'arrivée: ${tagNumber} - Non enregistré (local ou BIRS)`,
+          tagNumber
         );
         
         // Afficher une Alert native qui reste visible
         setProcessing(false);
         Alert.alert(
           'BAGAGE SUSPECT - FRAUDE',
-          `Tag: ${rfidTag}\n\n` +
+          `Tag: ${tagNumber}\n\n` +
           `Ce bagage n'est PAS enregistré dans le système (ni local, ni international/BIRS).\n\n` +
           `ACTIONS REQUISES:\n` +
           `• Bloquer le bagage pour investigation\n` +
@@ -258,7 +258,7 @@ export default function ArrivalScreen({ navigation }: Props) {
 
       // ✅ Vérifier dans raw_scans si déjà confirmé à l'arrivée
       const { rawScanService } = await import('../services');
-      const existingScan = await rawScanService.findByRawData(baggage.rfidTag);
+      const existingScan = await rawScanService.findByRawData(baggage.tagNumber);
       if (existingScan && existingScan.statusArrival) {
         await playErrorSound();
         setToastMessage('⚠️ Arrivée déjà confirmée !');
@@ -276,7 +276,7 @@ export default function ArrivalScreen({ navigation }: Props) {
       await logAudit(
         'CONFIRM_ARRIVAL',
         'baggage',
-        `Confirmation arrivée bagage: ${baggage.rfidTag} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
+        `Confirmation arrivée bagage: ${baggage.tagNumber} pour passager ${passenger.fullName} (PNR: ${passenger.pnr})`,
         baggage.id
       );
 
@@ -295,16 +295,16 @@ export default function ArrivalScreen({ navigation }: Props) {
 
       // ✅ Enregistrer dans raw_scans
       await rawScanService.createOrUpdateRawScan({
-        rawData: baggage.rfidTag,
+        rawData: baggage.tagNumber,
         scanType: 'baggage_tag',
         statusField: 'arrival',
         userId: user.id,
         airportCode: user.airportCode,
-        baggageRfidTag: baggage.rfidTag,
+        baggageRfidTag: baggage.tagNumber,
       });
 
       // Mettre à jour le statut local
-      const updatedBaggage = await databaseServiceInstance.getBaggageByRfidTag(baggage.rfidTag);
+      const updatedBaggage = await databaseServiceInstance.getBaggageByTagNumber(baggage.tagNumber);
       if (updatedBaggage) {
         setBaggage(updatedBaggage);
       }
@@ -407,7 +407,7 @@ export default function ArrivalScreen({ navigation }: Props) {
                 <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Tag RFID:</Text>
                   <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
-                    {baggage.rfidTag}
+                    {baggage.tagNumber}
                   </Text>
                 </View>
                 <View style={styles.resultRow}>
@@ -506,7 +506,7 @@ export default function ArrivalScreen({ navigation }: Props) {
                 <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Tag RFID:</Text>
                   <Text style={[styles.resultValue, { color: colors.text.primary, fontFamily: 'monospace', letterSpacing: 2 }]}>
-                    {internationalBaggage.rfidTag}
+                    {internationalBaggage.tagNumber}
                   </Text>
                 </View>
                 <View style={[styles.resultRow, { borderBottomColor: colors.border.light }]}>

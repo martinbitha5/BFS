@@ -26,7 +26,7 @@ export type BirsReportType =
  */
 export interface InternationalBaggage {
   id: string;
-  rfidTag: string;                    // Tag scanné (peut être différent du tag attendu)
+  tagNumber: string;                  // Tag scanné (peut être différent du tag attendu)
   scannedAt: string;                  // Date/heure du scan à l'arrivée
   scannedBy: string;                  // Agent qui a scanné
   airportCode: string;                // Code aéroport où le bagage a été scanné

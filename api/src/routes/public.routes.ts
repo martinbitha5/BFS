@@ -1,4 +1,4 @@
-import { Request, Response, Router, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 
 const router = Router();
@@ -108,7 +108,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
 
     // 2. Si aucun bagage national trouvé, chercher dans bagages internationaux
     if (!baggage) {
-      const searchField = pnr ? 'pnr' : 'rfid_tag';
+      const searchField = pnr ? 'pnr' : 'tag_number';
       const searchValue = pnr ? (pnr as string).toUpperCase() : (tag as string).toUpperCase();
 
       const { data: internationalBaggage, error: intlError } = await supabase
@@ -121,7 +121,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
 
       if (internationalBaggage && !intlError) {
         baggage = {
-          bag_id: internationalBaggage.rfid_tag,
+          bag_id: internationalBaggage.tag_number,
           status: internationalBaggage.status,
           weight: internationalBaggage.weight,
           current_location: internationalBaggage.airport_code,

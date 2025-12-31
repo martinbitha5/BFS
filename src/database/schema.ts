@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS passengers (
 CREATE TABLE IF NOT EXISTS baggages (
   id TEXT PRIMARY KEY,
   passenger_id TEXT NOT NULL,
-  rfid_tag TEXT UNIQUE NOT NULL,
+  tag_number TEXT UNIQUE NOT NULL,
   expected_tag TEXT,
   status TEXT NOT NULL DEFAULT 'checked',
   weight REAL,
@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS boarding_status (
   boarded INTEGER DEFAULT 0,
   boarded_at TEXT,
   boarded_by TEXT,
+  gate TEXT,
   synced INTEGER DEFAULT 0,
   created_at TEXT NOT NULL,
   FOREIGN KEY (passenger_id) REFERENCES passengers(id)
@@ -91,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_passengers_pnr ON passengers(pnr);
 CREATE INDEX IF NOT EXISTS idx_passengers_departure ON passengers(departure);
 CREATE INDEX IF NOT EXISTS idx_passengers_arrival ON passengers(arrival);
 CREATE INDEX IF NOT EXISTS idx_baggages_passenger_id ON baggages(passenger_id);
-CREATE INDEX IF NOT EXISTS idx_baggages_rfid_tag ON baggages(rfid_tag);
+CREATE INDEX IF NOT EXISTS idx_baggages_tag_number ON baggages(tag_number);
 CREATE INDEX IF NOT EXISTS idx_sync_queue_synced ON sync_queue(retry_count);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
@@ -132,7 +133,7 @@ CREATE INDEX IF NOT EXISTS idx_raw_scans_scan_type ON raw_scans(scan_type);
 
 CREATE TABLE IF NOT EXISTS international_baggages (
   id TEXT PRIMARY KEY,
-  rfid_tag TEXT UNIQUE NOT NULL,
+  tag_number TEXT UNIQUE NOT NULL,
   scanned_at TEXT NOT NULL,
   scanned_by TEXT NOT NULL,
   airport_code TEXT NOT NULL,
@@ -196,7 +197,7 @@ CREATE TABLE IF NOT EXISTS birs_report_items (
   FOREIGN KEY (birs_report_id) REFERENCES birs_reports(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_international_baggages_rfid ON international_baggages(rfid_tag);
+CREATE INDEX IF NOT EXISTS idx_international_baggages_tag_number ON international_baggages(tag_number);
 CREATE INDEX IF NOT EXISTS idx_international_baggages_status ON international_baggages(status);
 CREATE INDEX IF NOT EXISTS idx_international_baggages_airport ON international_baggages(airport_code);
 CREATE INDEX IF NOT EXISTS idx_international_baggages_birs_report ON international_baggages(birs_report_id);
