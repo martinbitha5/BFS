@@ -19,11 +19,9 @@ export const api = axios.create({
   },
 });
 
-// Ajouter l'API key si configurée
-const API_KEY = import.meta.env.VITE_API_KEY;
-if (API_KEY) {
-  api.defaults.headers.common['x-api-key'] = API_KEY;
-}
+// Ajouter l'API key - utiliser la clé par défaut si non configurée
+const API_KEY = import.meta.env.VITE_API_KEY || 'bfs-api-key-secure-2025';
+api.defaults.headers.common['x-api-key'] = API_KEY;
 
 // Intercepteur pour ajouter automatiquement le code aéroport à toutes les requêtes
 api.interceptors.request.use((config) => {

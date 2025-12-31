@@ -18,11 +18,9 @@ export const api = axios.create({
   },
 });
 
-// Ajouter l'API key si configurée
-const API_KEY = import.meta.env.VITE_API_KEY;
-if (API_KEY) {
-  api.defaults.headers.common['x-api-key'] = API_KEY;
-}
+// Ajouter l'API key - utiliser la clé par défaut si non configurée
+const API_KEY = import.meta.env.VITE_API_KEY || 'bfs-api-key-secure-2025';
+api.defaults.headers.common['x-api-key'] = API_KEY;
 
 // Intercepteur de réponse pour gérer les erreurs
 api.interceptors.response.use(

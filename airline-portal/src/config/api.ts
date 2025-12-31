@@ -19,14 +19,10 @@ export const api = axios.create({
   },
 });
 
-// Ajouter l'API key si configurée
-const API_KEY = import.meta.env.VITE_API_KEY;
-if (API_KEY) {
-  api.defaults.headers.common['x-api-key'] = API_KEY;
-  console.log('[API Config] API Key configured');
-} else {
-  console.warn('[API Config] ⚠️ VITE_API_KEY not found in environment variables');
-}
+// Ajouter l'API key - utiliser la clé par défaut si non configurée
+const API_KEY = import.meta.env.VITE_API_KEY || 'bfs-api-key-secure-2025';
+api.defaults.headers.common['x-api-key'] = API_KEY;
+console.log('[API Config] API Key configured:', API_KEY);
 
 // Intercepteur pour ajouter automatiquement le token d'authentification
 api.interceptors.request.use((config) => {
