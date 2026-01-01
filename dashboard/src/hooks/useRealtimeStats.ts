@@ -112,13 +112,23 @@ export function useRealtimeStats(airportCode: string | undefined) {
         const message: SSEMessage = JSON.parse(event.data);
         console.log('Stats update recu:', message.timestamp);
         
-        setData(prev => ({
-          ...prev,
-          stats: message.stats || prev.stats,
-          rawScansStats: message.rawScansStats || prev.rawScansStats,
-          lastUpdate: new Date(),
-          error: null,
-        }));
+        setData(prev => {
+          // Ne pas écraser rawScansStats avec des données vides/zéros
+          let newRawScansStats: RawScansStats | null = prev.rawScansStats;
+          if (message.rawScansStats && message.rawScansStats.total > 0) {
+            newRawScansStats = message.rawScansStats;
+          } else if (!prev.rawScansStats && message.rawScansStats) {
+            newRawScansStats = message.rawScansStats;
+          }
+          
+          return {
+            ...prev,
+            stats: message.stats || prev.stats,
+            rawScansStats: newRawScansStats,
+            lastUpdate: new Date(),
+            error: null,
+          };
+        });
       } catch (err) {
         console.error('Erreur parsing stats_update:', err);
       }
