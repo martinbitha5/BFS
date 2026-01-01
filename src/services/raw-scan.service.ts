@@ -8,12 +8,24 @@ import { CreateRawScanParams, RawScan, RawScanResult, ScanStatusField } from '..
  */
 class RawScanService {
     private db: SQLite.SQLiteDatabase | null = null;
+    private dbServiceCache: any = null; // ✅ Cache pour éviter les imports dynamiques répétés
 
     /**
      * Initialise le service avec la base de données
      */
     initialize(database: SQLite.SQLiteDatabase): void {
         this.db = database;
+    }
+    
+    /**
+     * Obtient le databaseService (avec cache)
+     */
+    private async getDbService(): Promise<any> {
+        if (!this.dbServiceCache) {
+            const module = await import('./database.service');
+            this.dbServiceCache = module.databaseService;
+        }
+        return this.dbServiceCache;
     }
 
     /**
@@ -112,8 +124,8 @@ class RawScanService {
         if (!this.db) return;
         
         try {
-            // Import dynamique pour éviter les dépendances circulaires
-            const { databaseService } = await import('./database.service');
+            // ✅ Utiliser le cache au lieu de l'import dynamique répété
+            const databaseService = await this.getDbService();
             
             // ✅ TRANSFORMER EN SNAKE_CASE POUR L'API
             const apiData = {

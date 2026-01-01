@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
+import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, flightService, parserService } from '../services';
@@ -17,6 +18,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Checkin'>;
 export default function CheckinScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { setCurrentFlight } = useFlightContext();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(true);
@@ -243,6 +245,20 @@ export default function CheckinScreen({ navigation }: Props) {
 
       // Jouer le son de succès
       await playSuccessSound();
+
+      // ✅ ÉTAPE 6: Définir automatiquement le vol actuel pour les bagages
+      if (parsedData && parsedData.flightNumber && parsedData.flightNumber !== 'UNKNOWN') {
+        await setCurrentFlight({
+          flightNumber: parsedData.flightNumber,
+          airline: parsedData.airline || '',
+          airlineCode: parsedData.companyCode || '',
+          departure: parsedData.departure || '',
+          arrival: parsedData.arrival || '',
+          selectedAt: new Date().toISOString(),
+          selectedBy: user.id,
+        });
+        console.log('[CHECK-IN] ✅ Vol défini automatiquement:', parsedData.flightNumber);
+      }
 
       // Message selon si c'est nouveau ou mise à jour
       const message = result.isNew

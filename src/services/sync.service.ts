@@ -17,6 +17,11 @@ class SyncService {
     private syncInterval: ReturnType<typeof setInterval> | null = null;
     private readonly SYNC_INTERVAL_MS = 30000; // 30 secondes
     private readonly MAX_RETRIES = 5;
+    
+    // ✅ CACHE pour éviter les appels répétés à AsyncStorage
+    private cachedApiUrl: string | null = null;
+    private cachedApiKey: string | null = null;
+    private cacheLoaded: boolean = false;
 
     /**
      * Démarre la synchronisation automatique
@@ -133,17 +138,24 @@ class SyncService {
     }
 
     /**
+     * Charge et met en cache les valeurs API (appelé une seule fois)
+     */
+    private async loadApiConfig(): Promise<void> {
+        if (this.cacheLoaded) return;
+        
+        this.cachedApiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
+        this.cachedApiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
+        this.cacheLoaded = true;
+    }
+
+    /**
      * Synchronise un élément spécifique
      */
     private async syncItem(item: SyncQueueItem): Promise<void> {
-        const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
-        const apiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
-
-        console.log(`[Sync] 🔍 Config: API_URL=${apiUrl ? 'SET' : 'MISSING'}, API_KEY=${apiKey ? 'SET' : 'EMPTY'}`);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sync.service.ts:syncItem',message:'Sync item received',data:{tableName:item.tableName,recordId:item.recordId,operation:item.operation,retryCount:item.retryCount},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
+        // ✅ Utiliser le cache au lieu de charger à chaque fois
+        await this.loadApiConfig();
+        const apiUrl = this.cachedApiUrl;
+        const apiKey = this.cachedApiKey;
 
         if (!apiUrl) {
             throw new Error('Configuration API manquante (API_URL non définie)');

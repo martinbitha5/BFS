@@ -16,6 +16,26 @@ const STORAGE_KEYS = {
 
 class FlightService {
   /**
+   * Normalise un numéro de vol en supprimant les zéros non significatifs
+   * ET0064 -> ET64, 9U0404 -> 9U404
+   */
+  normalizeFlightNumber(flightNumber: string): string {
+    if (!flightNumber) return '';
+    // Code compagnie = 2 caractères (lettre+lettre/chiffre OU chiffre+lettre)
+    // Ex: ET, KQ, 9U, 5J - PAS 3 caractères
+    const match = flightNumber.match(/^([A-Z][A-Z0-9]|[0-9][A-Z])\s*0*([1-9]\d*)$/i);
+    if (match) {
+      return `${match[1].toUpperCase()}${match[2]}`;
+    }
+    // Cas spécial: vol "0"
+    const zeroMatch = flightNumber.match(/^([A-Z][A-Z0-9]|[0-9][A-Z])\s*(0+)$/i);
+    if (zeroMatch) {
+      return `${zeroMatch[1].toUpperCase()}0`;
+    }
+    return flightNumber.toUpperCase().replace(/\s+/g, '');
+  }
+
+  /**
    * Récupère tous les vols disponibles pour un aéroport
    * Source : 1) Vols programmés (dashboard), 2) Passagers enregistrés
    */
@@ -27,7 +47,9 @@ class FlightService {
     try {
       const scheduledFlights = await this.getScheduledFlights(airportCode, today);
       for (const flight of scheduledFlights) {
-        flights.set(flight.flightNumber, flight);
+        // Utiliser le numéro normalisé comme clé pour éviter les doublons
+        const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
+        flights.set(normalizedKey, { ...flight, flightNumber: normalizedKey });
       }
       console.log(`[FlightService] ${scheduledFlights.length} vols programmés chargés`);
     } catch (error) {
@@ -38,14 +60,15 @@ class FlightService {
     try {
       const passengersFlights = await this.getFlightsFromPassengers(airportCode, today);
       for (const flight of passengersFlights) {
-        if (flights.has(flight.flightNumber)) {
+        const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
+        if (flights.has(normalizedKey)) {
           // Mettre à jour les compteurs du vol programmé
-          const existingFlight = flights.get(flight.flightNumber)!;
+          const existingFlight = flights.get(normalizedKey)!;
           existingFlight.passengerCount = flight.passengerCount;
           existingFlight.baggageCount = flight.baggageCount;
         } else {
           // Vol non programmé mais avec passagers (cas exceptionnel)
-          flights.set(flight.flightNumber, flight);
+          flights.set(normalizedKey, { ...flight, flightNumber: normalizedKey });
         }
       }
       console.log(`[FlightService] ${passengersFlights.length} vols avec passagers chargés`);
@@ -209,7 +232,7 @@ class FlightService {
     }
 
     // 2. Chercher dans les passagers du jour
-    const db = databaseService.getDatabase();
+    const db = databaseServiceInstance.getDatabase();
     if (!db) {
       return null;
     }

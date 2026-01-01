@@ -48,12 +48,13 @@ export default function BaggageScreen({ navigation }: Props) {
       return;
     }
 
-    // Jouer le son de scan automatique
-    await playScanSound();
-    
+    // Bloquer immédiatement les scans multiples AVANT toute opération async
     isProcessingRef.current = true;
     setScanned(true);
     setProcessing(true);
+
+    // Jouer le son de scan automatique
+    await playScanSound();
 
     try {
       const user = await authServiceInstance.getCurrentUser();
@@ -243,10 +244,13 @@ export default function BaggageScreen({ navigation }: Props) {
       // ✅ Passager trouvé et quota OK → Enregistrer le bagage
       console.log('[BAGGAGE] Création bagage pour passager:', passenger.fullName, `(${baggageCount + 1}/${expectedBaggageCount})`);
       
+      // Créer le bagage avec TOUTES les données nécessaires pour la sync
       const baggageId = await databaseServiceInstance.createBaggage({
         passengerId: passenger.id,
         tagNumber,
         status: 'checked',
+        flightNumber: passenger.flightNumber,
+        airportCode: user.airportCode,
         checkedAt: new Date().toISOString(),
         checkedBy: user.id,
         synced: false,
@@ -261,15 +265,7 @@ export default function BaggageScreen({ navigation }: Props) {
         baggageId
       );
 
-      // Ajouter à la file de synchronisation
-      await databaseServiceInstance.addToSyncQueue({
-        tableName: 'baggages',
-        recordId: tagNumber,
-        operation: 'CREATE',
-        data: JSON.stringify({ passengerId: passenger.id, tagNumber }),
-        retryCount: 0,
-        userId: user.id,
-      });
+      // Note: createBaggage ajoute déjà à la sync queue, pas besoin de doublon
 
       // Enregistrer dans raw_scans
       await rawScanService.createOrUpdateRawScan({

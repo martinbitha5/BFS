@@ -12,8 +12,12 @@ class DatabaseService {
     try {
       this.db = await SQLite.openDatabaseAsync('bfs.db');
       
-      // Enable foreign keys
+      // ✅ OPTIMISATIONS SQLITE POUR LA PERFORMANCE
       await this.db.runAsync('PRAGMA foreign_keys = ON');
+      await this.db.runAsync('PRAGMA journal_mode = WAL');      // Write-Ahead Logging - plus rapide
+      await this.db.runAsync('PRAGMA synchronous = NORMAL');   // Bon équilibre performance/sécurité
+      await this.db.runAsync('PRAGMA cache_size = 10000');     // Cache plus grand (10MB)
+      await this.db.runAsync('PRAGMA temp_store = MEMORY');    // Temp tables en mémoire
       
       // Run migrations FIRST to fix existing databases
       await this.runMigrations();
@@ -561,9 +565,33 @@ class DatabaseService {
         if (scannedBaseNum === expectedBaseNum) {
           console.log(`[DB] ✅ Tag ${cleanTag} correspond au passager ${passenger.full_name}`);
           console.log(`[DB]    Base passager: ${baseNumber}, Bagage #${i + 1}/${baggageCount}`);
+          // Mapper les colonnes snake_case vers camelCase
           return {
-            ...passenger,
+            id: passenger.id,
+            pnr: passenger.pnr,
+            fullName: passenger.full_name,
+            firstName: passenger.first_name,
+            lastName: passenger.last_name,
+            flightNumber: passenger.flight_number,
+            flightTime: passenger.flight_time,
+            airline: passenger.airline,
+            airlineCode: passenger.airline_code,
+            departure: passenger.departure,
+            arrival: passenger.arrival,
+            route: passenger.route,
+            companyCode: passenger.company_code,
+            ticketNumber: passenger.ticket_number,
+            seatNumber: passenger.seat_number,
+            cabinClass: passenger.cabin_class,
+            baggageCount: passenger.baggage_count,
+            baggageBaseNumber: passenger.baggage_base_number,
+            rawData: passenger.raw_data,
+            format: passenger.format,
+            checkedInAt: passenger.checked_in_at,
+            checkedInBy: passenger.checked_in_by,
             synced: Boolean(passenger.synced),
+            createdAt: passenger.created_at,
+            updatedAt: passenger.updated_at,
           };
         }
       }

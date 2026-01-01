@@ -43,9 +43,18 @@ export default function FlightManagement() {
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [selectedDate, setSelectedDate] = useState(getLocalDate());
+  // Récupérer la date sauvegardée ou utiliser aujourd'hui
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = localStorage.getItem('flightManagement_selectedDate');
+    return saved || getLocalDate();
+  });
   const today = getLocalDate();
   const isToday = selectedDate === today;
+
+  // Sauvegarder la date sélectionnée
+  useEffect(() => {
+    localStorage.setItem('flightManagement_selectedDate', selectedDate);
+  }, [selectedDate]);
 
   useEffect(() => {
     loadFlights();
@@ -437,6 +446,7 @@ export default function FlightManagement() {
       {showAddModal && (
         <FlightModal
           mode="add"
+          airportCode={user?.airport_code || 'FIH'}
           onClose={() => setShowAddModal(false)}
           onSuccess={handleAddSuccess}
         />
@@ -447,6 +457,7 @@ export default function FlightManagement() {
         <FlightModal
           mode="edit"
           flight={selectedFlight}
+          airportCode={user?.airport_code || 'FIH'}
           onClose={() => {
             setShowEditModal(false);
             setSelectedFlight(null);
@@ -459,9 +470,10 @@ export default function FlightManagement() {
 }
 
 // Modal d'ajout/modification de vol
-function FlightModal({ mode, flight, onClose, onSuccess }: { 
+function FlightModal({ mode, flight, airportCode, onClose, onSuccess }: { 
   mode: 'add' | 'edit';
   flight?: Flight;
+  airportCode: string;
   onClose: () => void; 
   onSuccess: (flight: any) => void;
 }) {
@@ -477,6 +489,7 @@ function FlightModal({ mode, flight, onClose, onSuccess }: {
     flightType: (flight?.flightType || 'departure') as 'departure' | 'arrival',
     baggageRestriction: (flight?.baggageRestriction || 'block') as 'block' | 'allow_with_payment' | 'allow',
     restrictionNote: flight?.restrictionNote || '',
+    airportCode: flight?.airportCode || airportCode,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

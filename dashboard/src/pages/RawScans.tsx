@@ -42,18 +42,28 @@ export default function RawScans() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const fetchScans = async () => {
-    if (!user?.airport_code) return;
+    console.log('[RawScans] User:', user);
+    console.log('[RawScans] Airport code:', user?.airport_code);
+    
+    if (!user?.airport_code) {
+      console.error('[RawScans] Pas de code aéroport !');
+      setError('Code aéroport manquant. Veuillez vous reconnecter.');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       setError('');
       
       let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
+      console.log('[RawScans] Fetching:', url);
       if (statusFilter !== 'all') {
         url += `&status=${statusFilter}`;
       }
 
       const response = await api.get(url);
+      console.log('[RawScans] Response:', response.data);
       const rawScans = response.data.data || [];
       setScans(rawScans);
       
