@@ -88,9 +88,6 @@ export function useRealtimeStats(airportCode: string | undefined) {
       url.searchParams.append('api_key', apiKey);
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeStats.ts:connect',message:'Attempting SSE connection',data:{url:url.toString(),airportCode,hasToken:!!token,hasApiKey:!!apiKey},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
 
     console.log('Connexion SSE a:', url.toString());
 
@@ -101,9 +98,6 @@ export function useRealtimeStats(airportCode: string | undefined) {
     eventSource.addEventListener('connected', (event) => {
       const data = JSON.parse(event.data);
       console.log('SSE Connecte:', data);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeStats.ts:connected',message:'SSE connected successfully',data:{eventData:data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       reconnectAttempts.current = 0;
       setData(prev => ({
         ...prev,
@@ -117,9 +111,6 @@ export function useRealtimeStats(airportCode: string | undefined) {
       try {
         const message: SSEMessage = JSON.parse(event.data);
         console.log('Stats update recu:', message.timestamp);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeStats.ts:stats_update',message:'Stats received via SSE',data:{hasStats:!!message.stats,hasRawScans:!!message.rawScansStats,timestamp:message.timestamp},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         
         setData(prev => ({
           ...prev,
@@ -212,9 +203,6 @@ export function useRealtimeStats(airportCode: string | undefined) {
     // Gestion des erreurs
     eventSource.onerror = (error) => {
       console.error('SSE Erreur:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeStats.ts:error',message:'SSE connection error',data:{readyState:eventSource.readyState,url:eventSource.url},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       eventSource.close();
       
       // NE PAS réinitialiser les stats - garder les dernières données valides

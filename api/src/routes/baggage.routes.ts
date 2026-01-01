@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { validateBaggageScan } from '../middleware/scan-validation.middleware';
+import { autoSyncIfNeeded } from '../services/auto-sync.service';
 
 const router = Router();
 
@@ -13,7 +14,12 @@ const router = Router();
 router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
     const { flight, status, airport } = req.query;
-    const airportCode = airport || req.userAirportCode;
+    const airportCode = (airport || req.userAirportCode) as string;
+    
+    // Auto-sync si la table est vide mais que des raw_scans existent
+    if (airportCode) {
+      await autoSyncIfNeeded(airportCode);
+    }
     
     let query = supabase
       .from('baggages')

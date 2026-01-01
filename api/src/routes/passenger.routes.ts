@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
-import { restrictToAirport, requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { autoSyncIfNeeded } from '../services/auto-sync.service';
 
 const router = Router();
 
@@ -13,6 +14,11 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
   try {
     const { flight } = req.query;
     const airportCode = req.userAirportCode; // Peut être undefined si accès total
+    
+    // Auto-sync si la table est vide mais que des raw_scans existent
+    if (airportCode) {
+      await autoSyncIfNeeded(airportCode);
+    }
     
     let query = supabase
       .from('passengers')
