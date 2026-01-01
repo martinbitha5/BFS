@@ -1,11 +1,10 @@
-import { Activity, AlertTriangle, Barcode, CheckCircle, Clock, Database, MapPin, Package, Plane, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Activity, AlertTriangle, Barcode, CheckCircle, Clock, Database, MapPin, Package, Plane, RefreshCw, Users } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import AlertsPanel from '../components/AlertsPanel';
 import StatCard from '../components/StatCard';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useRealtimeStats } from '../hooks/useRealtimeStats';
 
 interface AirportStats {
   totalPassengers: number;
@@ -92,17 +91,7 @@ interface FlightWithStats {
 export default function DashboardEnhanced() {
   const { user } = useAuth();
   
-  // ✅ TEMPS RÉEL: Utiliser le hook SSE pour les mises à jour instantanées
-  const { 
-    stats: realtimeStats, 
-    rawScansStats: realtimeRawScansStats, 
-    isConnected, 
-    lastUpdate, 
-    error: sseError,
-    fetchStats: fetchRealtimeStats,
-    triggerUpdate
-  } = useRealtimeStats(user?.airport_code);
-  
+  // États simples - pas de SSE complexe
   const [stats, setStats] = useState<AirportStats | null>(null);
   const [rawScansStats, setRawScansStats] = useState<RawScansStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,30 +102,16 @@ export default function DashboardEnhanced() {
   const [recentPassengers, setRecentPassengers] = useState<RecentPassenger[]>([]);
   const [recentBaggages, setRecentBaggages] = useState<RecentBaggage[]>([]);
   const [flightsWithStats, setFlightsWithStats] = useState<FlightWithStats[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  // ✅ Synchroniser les stats du SSE avec l'état local
-  useEffect(() => {
-    if (realtimeStats) {
-      setStats(realtimeStats);
-      setLoading(false);
-    }
-  }, [realtimeStats]);
-
-  useEffect(() => {
-    if (realtimeRawScansStats) {
-      setRawScansStats(realtimeRawScansStats);
-    }
-  }, [realtimeRawScansStats]);
-
-  // Note: Ne pas propager les erreurs SSE à l'état principal error
-  // pour éviter de cacher les données quand la connexion temps réel est perdue
-  // L'indicateur de connexion SSE suffit pour informer l'utilisateur
-
-  const fetchStats = async () => {
-    if (!user?.airport_code) return;
+  const fetchStats = useCallback(async () => {
+    if (!user?.airport_code || !isMountedRef.current) return;
 
     try {
-      setLoading(true);
+      if (!stats) setLoading(true);
       setError('');
       
       // 1. Statistiques principales
@@ -182,13 +157,20 @@ export default function DashboardEnhanced() {
         console.error('Error fetching flights stats:', flightsErr);
       }
 
+      if (isMountedRef.current) {
+        setLastUpdate(new Date());
+      }
     } catch (err: any) {
       console.error('Error fetching stats:', err);
-      setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
+      if (isMountedRef.current) {
+        setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [user?.airport_code, stats]);
 
   const syncRawScans = async () => {
     if (!user?.airport_code) return;
@@ -216,13 +198,23 @@ export default function DashboardEnhanced() {
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
+    
     if (user?.airport_code) {
-      // Charger les données initiales (passagers récents, vols, etc.)
+      // Charger les données initiales
       fetchStats();
-      // Les stats principales sont maintenant gérées par SSE en temps réel !
-      // Plus besoin de setInterval - les mises à jour arrivent instantanément
+      
+      // Polling toutes les 30 secondes pour garder les données à jour
+      intervalRef.current = setInterval(fetchStats, 30000);
     }
-  }, [user]);
+
+    return () => {
+      isMountedRef.current = false;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [user?.airport_code, fetchStats]);
 
   // Données réelles pour les graphiques
   const baggageStatusData = stats ? [
@@ -300,38 +292,17 @@ export default function DashboardEnhanced() {
               </span>
             </h2>
             <p className="mt-1 text-[11px] sm:text-xs md:text-sm text-white/70 flex items-center flex-wrap">
-              {isConnected ? (
-                <>
-                  <span className="inline-flex items-center">
-                    <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1.5 sm:mr-2 animate-pulse"></span>
-                    <span className="hidden xs:inline">Mises à jour </span>instantanées
-                  </span>
-                  {lastUpdate && (
-                    <span className="ml-1.5 sm:ml-2 text-white/50 text-[10px] sm:text-xs">
-                      {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Clock className="w-3 h-3 mr-1" />
-                  <span className="text-[11px] sm:text-xs">Connexion...</span>
-                </>
+              <span className="inline-flex items-center">
+                <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1.5 sm:mr-2 animate-pulse"></span>
+                <span className="hidden xs:inline">Actualisation auto </span>30s
+              </span>
+              {lastUpdate && (
+                <span className="ml-1.5 sm:ml-2 text-white/50 text-[10px] sm:text-xs">
+                  {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
               )}
             </p>
           </div>
-          {/* Indicateur SSE - visible sur mobile */}
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium ${
-            isConnected 
-              ? 'bg-green-900/40 text-green-300 animate-pulse' 
-              : 'bg-red-900/40 text-red-300'
-          }`}>
-            {isConnected ? (
-              <Wifi className="w-3 h-3" />
-            ) : (
-              <WifiOff className="w-3 h-3" />
-            )}
-          </span>
         </div>
         
         {/* Boutons d'action - responsive */}
