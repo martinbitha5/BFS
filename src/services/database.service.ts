@@ -698,15 +698,33 @@ class DatabaseService {
   async getBaggageByTagNumber(tagNumber: string): Promise<Baggage | null> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const result = await this.db.getFirstAsync<Baggage>(
+    const result = await this.db.getFirstAsync<any>(
       'SELECT * FROM baggages WHERE tag_number = ?',
       [tagNumber]
     );
 
     if (result) {
+      // Mapper snake_case (SQLite) vers camelCase (TypeScript)
       return {
-        ...result,
+        id: result.id,
+        passengerId: result.passenger_id,
+        tagNumber: result.tag_number,
+        expectedTag: result.expected_tag,
+        status: result.status,
+        weight: result.weight,
+        flightNumber: result.flight_number,
+        airportCode: result.airport_code,
+        currentLocation: result.current_location,
+        checkedAt: result.checked_at,
+        checkedBy: result.checked_by,
+        arrivedAt: result.arrived_at,
+        arrivedBy: result.arrived_by,
+        deliveredAt: result.delivered_at,
+        lastScannedAt: result.last_scanned_at,
+        lastScannedBy: result.last_scanned_by,
         synced: Boolean(result.synced),
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
       };
     }
 
@@ -716,14 +734,31 @@ class DatabaseService {
   async getBaggagesByPassengerId(passengerId: string): Promise<Baggage[]> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const results = await this.db.getAllAsync<Baggage>(
+    const results = await this.db.getAllAsync<any>(
       'SELECT * FROM baggages WHERE passenger_id = ? ORDER BY created_at ASC',
       [passengerId]
     );
 
     return results.map(b => ({
-      ...b,
+      id: b.id,
+      passengerId: b.passenger_id,
+      tagNumber: b.tag_number,
+      expectedTag: b.expected_tag,
+      status: b.status,
+      weight: b.weight,
+      flightNumber: b.flight_number,
+      airportCode: b.airport_code,
+      currentLocation: b.current_location,
+      checkedAt: b.checked_at,
+      checkedBy: b.checked_by,
+      arrivedAt: b.arrived_at,
+      arrivedBy: b.arrived_by,
+      deliveredAt: b.delivered_at,
+      lastScannedAt: b.last_scanned_at,
+      lastScannedBy: b.last_scanned_by,
       synced: Boolean(b.synced),
+      createdAt: b.created_at,
+      updatedAt: b.updated_at,
     }));
   }
 
@@ -734,14 +769,31 @@ class DatabaseService {
 
     // Create placeholders for IN clause
     const placeholders = passengerIds.map(() => '?').join(',');
-    const results = await this.db.getAllAsync<Baggage>(
+    const results = await this.db.getAllAsync<any>(
       `SELECT * FROM baggages WHERE passenger_id IN (${placeholders}) ORDER BY passenger_id, created_at ASC`,
       passengerIds
     );
 
     return results.map(b => ({
-      ...b,
+      id: b.id,
+      passengerId: b.passenger_id,
+      tagNumber: b.tag_number,
+      expectedTag: b.expected_tag,
+      status: b.status,
+      weight: b.weight,
+      flightNumber: b.flight_number,
+      airportCode: b.airport_code,
+      currentLocation: b.current_location,
+      checkedAt: b.checked_at,
+      checkedBy: b.checked_by,
+      arrivedAt: b.arrived_at,
+      arrivedBy: b.arrived_by,
+      deliveredAt: b.delivered_at,
+      lastScannedAt: b.last_scanned_at,
+      lastScannedBy: b.last_scanned_by,
       synced: Boolean(b.synced),
+      createdAt: b.created_at,
+      updatedAt: b.updated_at,
     }));
   }
 
@@ -749,7 +801,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     // Get baggages for passengers that have departure or arrival matching the airport
-    const results = await this.db.getAllAsync<Baggage>(
+    const results = await this.db.getAllAsync<any>(
       `SELECT b.* FROM baggages b
        INNER JOIN passengers p ON b.passenger_id = p.id
        WHERE p.departure = ? OR p.arrival = ?
@@ -758,8 +810,25 @@ class DatabaseService {
     );
 
     return results.map(b => ({
-      ...b,
+      id: b.id,
+      passengerId: b.passenger_id,
+      tagNumber: b.tag_number,
+      expectedTag: b.expected_tag,
+      status: b.status,
+      weight: b.weight,
+      flightNumber: b.flight_number,
+      airportCode: b.airport_code,
+      currentLocation: b.current_location,
+      checkedAt: b.checked_at,
+      checkedBy: b.checked_by,
+      arrivedAt: b.arrived_at,
+      arrivedBy: b.arrived_by,
+      deliveredAt: b.delivered_at,
+      lastScannedAt: b.last_scanned_at,
+      lastScannedBy: b.last_scanned_by,
       synced: Boolean(b.synced),
+      createdAt: b.created_at,
+      updatedAt: b.updated_at,
     }));
   }
 

@@ -414,14 +414,20 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
     // Pour chaque bagage, rechercher le passager correspondant par tag_number
     const baggagesWithPassenger = await Promise.all(
       baggages.map(async (baggage) => {
+        // Supprimer l'ID local s'il n'est pas un UUID valide (format: baggage_xxx)
+        // PostgreSQL attend un UUID, pas un ID local
+        const { id, ...baggageWithoutLocalId } = baggage;
+        const isValidUUID = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const cleanBaggage = isValidUUID ? baggage : baggageWithoutLocalId;
+
         // Si passenger_id déjà présent, ne pas chercher
-        if (baggage.passenger_id) {
-          return baggage;
+        if (cleanBaggage.passenger_id) {
+          return cleanBaggage;
         }
 
-        const tagNumber = baggage.tag_number;
+        const tagNumber = cleanBaggage.tag_number;
         if (!tagNumber) {
-          return baggage;
+          return cleanBaggage;
         }
 
         // Extraire la base du tag (10 premiers chiffres)
@@ -432,12 +438,12 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
           .from('passengers')
           .select('id')
           .eq('baggage_base_number', tagBase)
-          .eq('airport_code', baggage.airport_code)
+          .eq('airport_code', cleanBaggage.airport_code)
           .single();
 
         if (passenger) {
           console.log(`[BAGGAGE SYNC] ✅ Passager trouvé pour tag ${tagNumber}: ${passenger.id}`);
-          return { ...baggage, passenger_id: passenger.id };
+          return { ...cleanBaggage, passenger_id: passenger.id };
         }
 
         // Fallback: rechercher par tag similaire (base + séquence)
@@ -445,7 +451,7 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
         const { data: passengerByBase } = await supabase
           .from('passengers')
           .select('id, baggage_base_number')
-          .eq('airport_code', baggage.airport_code)
+          .eq('airport_code', cleanBaggage.airport_code)
           .not('baggage_base_number', 'is', null);
 
         if (passengerByBase) {
@@ -459,12 +465,12 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
 
           if (matchedPassenger) {
             console.log(`[BAGGAGE SYNC] ✅ Passager trouvé par base pour tag ${tagNumber}: ${matchedPassenger.id}`);
-            return { ...baggage, passenger_id: matchedPassenger.id };
+            return { ...cleanBaggage, passenger_id: matchedPassenger.id };
           }
         }
 
         console.log(`[BAGGAGE SYNC] ⚠️ Aucun passager trouvé pour tag ${tagNumber}`);
-        return baggage;
+        return cleanBaggage;
       })
     );
 
