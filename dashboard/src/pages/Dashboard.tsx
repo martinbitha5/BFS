@@ -116,16 +116,14 @@ export default function Dashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {/* Message d'erreur (affiché en haut mais n'empêche pas l'affichage des données) */}
+      {error && (
+        <div className="bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-lg p-4">
+          <p className="text-red-300">{error}</p>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

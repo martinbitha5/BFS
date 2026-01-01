@@ -128,11 +128,9 @@ export default function DashboardEnhanced() {
     }
   }, [realtimeRawScansStats]);
 
-  useEffect(() => {
-    if (sseError) {
-      setError(sseError);
-    }
-  }, [sseError]);
+  // Note: Ne pas propager les erreurs SSE à l'état principal error
+  // pour éviter de cacher les données quand la connexion temps réel est perdue
+  // L'indicateur de connexion SSE suffit pour informer l'utilisateur
 
   const fetchStats = async () => {
     if (!user?.airport_code) return;
@@ -282,16 +280,14 @@ export default function DashboardEnhanced() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-900/30 backdrop-blur-md border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {/* Message d'erreur (affiché en haut mais n'empêche pas l'affichage des données) */}
+      {error && (
+        <div className="bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-lg p-4">
+          <p className="text-red-300">{error}</p>
+        </div>
+      )}
       {/* Header avec actions - Responsive optimisé mobile */}
       <div className="flex flex-col gap-3">
         {/* Titre + indicateurs */}

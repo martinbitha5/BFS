@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../config/api';
 
 // Types pour les événements SSE
@@ -217,10 +217,13 @@ export function useRealtimeStats(airportCode: string | undefined) {
       // #endregion
       eventSource.close();
       
+      // NE PAS réinitialiser les stats - garder les dernières données valides
+      // L'indicateur isConnected suffit pour informer l'utilisateur
       setData(prev => ({
         ...prev,
         isConnected: false,
-        error: 'Connexion perdue',
+        // Ne pas définir error ici pour ne pas déclencher l'affichage d'erreur
+        // qui pourrait cacher les données existantes
       }));
 
       // Tentative de reconnexion
@@ -233,10 +236,9 @@ export function useRealtimeStats(airportCode: string | undefined) {
           connect();
         }, delay);
       } else {
-        setData(prev => ({
-          ...prev,
-          error: 'Impossible de se reconnecter. Rafraîchissez la page.',
-        }));
+        // Après échec de toutes les tentatives, ne pas définir d'erreur
+        // pour ne pas cacher les données. L'indicateur isConnected=false suffit.
+        console.warn('SSE: Toutes les tentatives de reconnexion ont échoué');
       }
     };
 
@@ -284,17 +286,15 @@ export function useRealtimeStats(airportCode: string | undefined) {
 
       setData(prev => ({
         ...prev,
-        stats: statsRes.data.data,
-        rawScansStats: rawScansRes.data.data,
+        stats: statsRes.data.data || prev.stats,
+        rawScansStats: rawScansRes.data.data || prev.rawScansStats,
         lastUpdate: new Date(),
         error: null,
       }));
     } catch (err: any) {
       console.error('Erreur fetch stats:', err);
-      setData(prev => ({
-        ...prev,
-        error: err.response?.data?.error || 'Erreur de chargement',
-      }));
+      // Ne pas définir d'erreur pour ne pas cacher les données existantes
+      // Juste logger l'erreur
     }
   }, [airportCode]);
 
