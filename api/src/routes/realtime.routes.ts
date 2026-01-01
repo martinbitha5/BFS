@@ -131,8 +131,8 @@ async function getAirportStats(airportCode: string): Promise<any> {
     
     // Raw scans stats
     filterAirport
-      ? supabase.from('raw_scans').select('scan_type, status').eq('airport_code', airportCode)
-      : supabase.from('raw_scans').select('scan_type, status'),
+      ? supabase.from('raw_scans').select('scan_type, status_checkin, status_baggage, status_boarding, status_arrival').eq('airport_code', airportCode)
+      : supabase.from('raw_scans').select('scan_type, status_checkin, status_baggage, status_boarding, status_arrival'),
     
     // Vols du jour
     filterAirport
@@ -163,10 +163,10 @@ async function getAirportStats(airportCode: string): Promise<any> {
       baggage_tag: rawScans.filter(s => s.scan_type === 'baggage_tag').length,
     },
     by_status: {
-      checkin: rawScans.filter(s => s.status === 'checkin').length,
-      baggage: rawScans.filter(s => s.status === 'baggage').length,
-      boarding: rawScans.filter(s => s.status === 'boarding').length,
-      arrival: rawScans.filter(s => s.status === 'arrival').length,
+      checkin: rawScans.filter(s => s.status_checkin).length,
+      baggage: rawScans.filter(s => s.status_baggage).length,
+      boarding: rawScans.filter(s => s.status_boarding).length,
+      arrival: rawScans.filter(s => s.status_arrival).length,
     },
   };
 

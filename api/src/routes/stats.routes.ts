@@ -51,9 +51,9 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     const totalBaggages = baggages?.length || 0;
     const boardedPassengers = boardingStatuses?.filter(bs => bs.boarded).length || 0;
     const arrivedBaggages = baggages?.filter(b => b.status === 'arrived').length || 0;
-    const todayPassengers = passengers?.filter(p => p.checkedInAt?.startsWith(today)).length || 0;
-    const todayBaggages = baggages?.filter(b => b.checkedAt?.startsWith(today)).length || 0;
-    const uniqueFlights = [...new Set(passengers?.map(p => p.flightNumber) || [])];
+    const todayPassengers = passengers?.filter(p => p.checked_in_at?.startsWith(today)).length || 0;
+    const todayBaggages = baggages?.filter(b => b.created_at?.startsWith(today)).length || 0;
+    const uniqueFlights = [...new Set(passengers?.map(p => p.flight_number) || [])];
 
     res.json({
       success: true,
@@ -317,8 +317,8 @@ router.get('/global', requireAirportCode, async (req, res, next) => {
     const totalBaggages = baggages?.length || 0;
     const boardedPassengers = boardingStatuses?.filter(bs => bs.boarded).length || 0;
     const arrivedBaggages = baggages?.filter(b => b.status === 'arrived').length || 0;
-    const todayPassengers = passengers?.filter(p => p.checkedInAt?.startsWith(today)).length || 0;
-    const todayBaggages = baggages?.filter(b => b.checkedAt?.startsWith(today)).length || 0;
+    const todayPassengers = passengers?.filter(p => p.checked_in_at?.startsWith(today)).length || 0;
+    const todayBaggages = baggages?.filter(b => b.created_at?.startsWith(today)).length || 0;
 
     // Grouper par aéroport
     const airportStats = passengers?.reduce((acc: any, p) => {

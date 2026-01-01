@@ -199,6 +199,39 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
           }
         }
 
+        // Si c'est un boarding pass au checkpoint EMBARQUEMENT
+        if (scan.scan_type === 'boarding_pass' && scan.status_boarding) {
+          const parsed = parseSimpleBoardingPass(scan.raw_data);
+          
+          if (parsed && parsed.pnr) {
+            // Trouver le passager par PNR
+            const { data: passenger } = await supabase
+              .from('passengers')
+              .select('id')
+              .eq('pnr', parsed.pnr)
+              .eq('airport_code', airport_code)
+              .single();
+
+            if (passenger) {
+              // Créer ou mettre à jour le boarding_status
+              const { error: boardError } = await supabase
+                .from('boarding_status')
+                .upsert({
+                  passenger_id: passenger.id,
+                  boarded: true,
+                  boarded_at: scan.boarding_at || new Date().toISOString(),
+                  gate: null
+                }, { onConflict: 'passenger_id' });
+
+              if (!boardError) {
+                console.log(`[SYNC] ✅ Passager embarqué: ${parsed.pnr}`);
+              } else {
+                console.error(`[SYNC] ❌ Erreur embarquement ${parsed.pnr}:`, boardError);
+              }
+            }
+          }
+        }
+
         // Si c'est un bagage tag
         if (scan.scan_type === 'baggage_tag' && scan.status_baggage && scan.baggage_rfid_tag) {
           // Extraire les infos du tag bagage
