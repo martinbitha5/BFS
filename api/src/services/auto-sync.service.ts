@@ -1,4 +1,5 @@
 import { supabase } from '../config/database';
+import { logAudit } from './audit.service';
 
 // Cache pour éviter de re-sync trop souvent (5 minutes)
 const syncCache: Map<string, number> = new Map();
@@ -206,6 +207,17 @@ async function performSyncInBackground(airportCode: string): Promise<void> {
     }
 
     console.log(`[AUTO-SYNC] Terminé pour ${airportCode}: ${passengersCreated} passagers, ${baggagesCreated} bagages créés`);
+
+    // Enregistrer dans l'audit log si des données ont été créées
+    if (passengersCreated > 0 || baggagesCreated > 0) {
+      await logAudit({
+        action: 'SYNC_RAW_SCANS',
+        entityType: 'raw_scan',
+        description: `Synchronisation automatique: ${passengersCreated} passager(s), ${baggagesCreated} bagage(s) créé(s)`,
+        airportCode,
+        metadata: { passengersCreated, baggagesCreated, rawScansProcessed: rawScans.length }
+      });
+    }
   } catch (err) {
     console.error('[AUTO-SYNC] Erreur lors de la sync:', err);
   }
