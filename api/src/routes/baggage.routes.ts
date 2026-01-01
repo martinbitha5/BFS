@@ -398,6 +398,7 @@ router.post('/scan', requireAirportCode, validateBaggageScan, async (req: Reques
 /**
  * POST /api/v1/baggage/sync
  * Synchronisation batch de bagages
+ * Lie automatiquement le bagage au passager via baggage_base_number
  */
 router.post('/sync', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -410,9 +411,66 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
+    // Pour chaque bagage, rechercher le passager correspondant par tag_number
+    const baggagesWithPassenger = await Promise.all(
+      baggages.map(async (baggage) => {
+        // Si passenger_id déjà présent, ne pas chercher
+        if (baggage.passenger_id) {
+          return baggage;
+        }
+
+        const tagNumber = baggage.tag_number;
+        if (!tagNumber) {
+          return baggage;
+        }
+
+        // Extraire la base du tag (10 premiers chiffres)
+        const tagBase = tagNumber.substring(0, 10);
+
+        // Rechercher un passager avec ce baggage_base_number
+        const { data: passenger } = await supabase
+          .from('passengers')
+          .select('id')
+          .eq('baggage_base_number', tagBase)
+          .eq('airport_code', baggage.airport_code)
+          .single();
+
+        if (passenger) {
+          console.log(`[BAGGAGE SYNC] ✅ Passager trouvé pour tag ${tagNumber}: ${passenger.id}`);
+          return { ...baggage, passenger_id: passenger.id };
+        }
+
+        // Fallback: rechercher par tag similaire (base + séquence)
+        // Tag format: 4071303675 (base) -> passager avec baggage_base_number = 4071303675
+        const { data: passengerByBase } = await supabase
+          .from('passengers')
+          .select('id, baggage_base_number')
+          .eq('airport_code', baggage.airport_code)
+          .not('baggage_base_number', 'is', null);
+
+        if (passengerByBase) {
+          // Chercher un passager dont le baggage_base_number correspond au début du tag
+          const matchedPassenger = passengerByBase.find(p => {
+            if (!p.baggage_base_number) return false;
+            // Le tag peut être la base exacte ou base + séquence
+            return tagNumber.startsWith(p.baggage_base_number) || 
+                   p.baggage_base_number === tagBase;
+          });
+
+          if (matchedPassenger) {
+            console.log(`[BAGGAGE SYNC] ✅ Passager trouvé par base pour tag ${tagNumber}: ${matchedPassenger.id}`);
+            return { ...baggage, passenger_id: matchedPassenger.id };
+          }
+        }
+
+        console.log(`[BAGGAGE SYNC] ⚠️ Aucun passager trouvé pour tag ${tagNumber}`);
+        return baggage;
+      })
+    );
+
     const { data, error } = await supabase
       .from('baggages')
-      .upsert(baggages, { onConflict: 'id' })
+      .upsert(baggagesWithPassenger, { onConflict: 'tag_number' })
       .select();
 
     if (error) throw error;
