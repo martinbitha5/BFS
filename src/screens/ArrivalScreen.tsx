@@ -40,26 +40,17 @@ export default function ArrivalScreen({ navigation }: Props) {
 
   const handleRfidScanned = async ({ data }: { data: string }) => {
     const now = Date.now();
-    const DEBOUNCE_TIME = 3000; // 3 secondes de debounce
+    const DEBOUNCE_TIME = 1500; // 1.5 secondes de debounce (rapide)
     
-    // Vérifier si c'est un scan en double dans un court laps de temps
-    if (lastScannedTag === data && now - lastScanTime < DEBOUNCE_TIME) {
-      console.log('[ARRIVAL] Scan ignoré - debounce actif (même tag dans les', DEBOUNCE_TIME, 'ms');
-      return; // Ignorer silencieusement
-    }
-    
-    if (scanned || processing || !showScanner) {
-      console.log('[ARRIVAL] Scan ignoré - déjà en cours de traitement', { scanned, processing, showScanner });
-      return;
-    }
+    // Ignorer silencieusement les scans en double
+    if (lastScannedTag === data && now - lastScanTime < DEBOUNCE_TIME) return;
+    if (scanned || processing || !showScanner) return;
     
     // Enregistrer le scan immédiatement pour bloquer les scans suivants
     setLastScannedTag(data);
     setLastScanTime(now);
     setScanned(true);
     setProcessing(true);
-
-    console.log('[ARRIVAL] Tag RFID ou code-barres scanné:', data);
     
     // Jouer le son de scan automatique
     await playScanSound();
@@ -74,12 +65,12 @@ export default function ArrivalScreen({ navigation }: Props) {
       }
 
       const tagNumber = data.trim();
+      console.log('[ARRIVAL] Scan:', tagNumber);
       
       // 1️⃣ Chercher dans les BAGAGES LOCAUX (enregistrés au check-in local)
       let found = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
       
       if (found) {
-        console.log('[ARRIVAL] ✅ Bagage LOCAL trouvé:', tagNumber);
         
         // Récupérer le passager propriétaire
         const passengerData = await databaseServiceInstance.getPassengerById(found.passengerId);
@@ -92,14 +83,30 @@ export default function ArrivalScreen({ navigation }: Props) {
           return;
         }
         
+        // VÉRIFICATION D'AÉROPORT (seulement en production)
+        if (!__DEV__) {
+          if (passengerData.arrival !== user.airportCode) {
+            await playErrorSound();
+            const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
+            setToastMessage(errorMsg.message);
+            setToastType(errorMsg.type);
+            setShowToast(true);
+            resetScanner();
+            return;
+          }
+        }
+
         // Continuer avec le flux normal pour bagage local
         setPassenger(passengerData);
         setBaggage(found);
         setBirsItem(null);
         setInternationalBaggage(null);
+        setShowScanner(false);
+        
+        await playSuccessSound();
+        return; // Sortir ici, le traitement est terminé
       } else {
         // 2️⃣ Chercher dans les BAGAGES INTERNATIONAUX ATTENDUS (fichier BIRS uploadé)
-        console.log('[ARRIVAL] Bagage non trouvé localement, recherche dans BIRS...');
         
         try {
           // Vérifier si birsDatabaseService est initialisé
@@ -107,8 +114,7 @@ export default function ArrivalScreen({ navigation }: Props) {
             const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(tagNumber);
             
             if (birsItemFound) {
-              console.log('[ARRIVAL] ✅ Bagage INTERNATIONAL trouvé dans BIRS:', birsItemFound.bagId);
-              console.log('[ARRIVAL] Passager:', birsItemFound.passengerName, '| PNR:', birsItemFound.pnr);
+              console.log('[ARRIVAL] ✅ BIRS:', birsItemFound.bagId, '-', birsItemFound.passengerName);
               
               // Marquer l'item BIRS comme reçu
               await birsDatabaseService.updateBirsReportItem(birsItemFound.id, {
@@ -149,7 +155,7 @@ export default function ArrivalScreen({ navigation }: Props) {
         }
         
         // 3️⃣ ❌ BAGAGE NON RECONNU - NI LOCAL, NI INTERNATIONAL → BLOQUER
-        console.log('[ARRIVAL] ⚠️ BAGAGE SUSPECT - Tag non trouvé ni localement ni dans BIRS:', tagNumber);
+        console.log('[ARRIVAL] ⚠️ SUSPECT:', tagNumber);
         await playErrorSound();
         
         // Enregistrer l'action d'audit pour le bagage suspect
@@ -185,47 +191,9 @@ export default function ArrivalScreen({ navigation }: Props) {
         );
         return;
       }
-
-      // Suite du traitement pour bagage LOCAL trouvé
-      // À ce stade, found et passenger sont définis car on a passé le bloc if (found)
-      const passengerData = passenger!;
-      const localBaggage = found!;
-
-      // VÉRIFICATION D'AÉROPORT DÉSACTIVÉE EN MODE TEST
-      // Permet de tester avec n'importe quel bagage sans blocage
-      if (!__DEV__) {
-        // Vérifier que le bagage concerne l'aéroport de l'agent (arrivée)
-        if (passengerData.arrival !== user.airportCode) {
-          await playErrorSound();
-          const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
-          setToastMessage(errorMsg.message);
-          setToastType(errorMsg.type);
-          setShowToast(true);
-          resetScanner();
-          return;
-        }
-      } else {
-        console.log('[ARRIVAL] MODE TEST - Vérification aéroport désactivée:', {
-          arrivalFromPassenger: passengerData.arrival,
-          userAirport: user.airportCode,
-        });
-        console.log('[ARRIVAL] Pas de vérification d\'aéroport - continuation du processus d\'arrivée');
-      }
-
-      setBaggage(localBaggage);
-      setPassenger(passengerData);
-      setShowScanner(false);
-      
-      // Jouer le son de succès pour la recherche réussie
-      await playSuccessSound();
     } catch (error) {
       await playErrorSound();
       const user = await authServiceInstance.getCurrentUser();
-      const errorMsg = getScanErrorMessage(user?.role as any || 'arrival', 'arrival', 'unknown');
-      setToastMessage(error instanceof Error ? error.message : errorMsg.message);
-      setToastType('error');
-      setShowToast(true);
-      resetScanner();
     } finally {
       setProcessing(false);
     }
@@ -280,15 +248,17 @@ export default function ArrivalScreen({ navigation }: Props) {
         baggage.id
       );
 
-      // Ajouter à la file de synchronisation
-      // #region agent log
-      console.log('[DEBUG-FIX] ArrivalScreen - Adding to sync queue:', JSON.stringify({tableName:'baggages',recordId:baggage.id,operation:'UPDATE',status:'arrived'}));
-      // #endregion
+      // Ajouter à la file de synchronisation (tag_number requis pour l'upsert API)
       await databaseServiceInstance.addToSyncQueue({
         tableName: 'baggages',
         recordId: baggage.id,
         operation: 'UPDATE',
-        data: JSON.stringify({ id: baggage.id, status: 'arrived' }),
+        data: JSON.stringify({ 
+          tag_number: baggage.tagNumber, 
+          status: 'arrived',
+          airport_code: user.airportCode,
+          arrived_at: new Date().toISOString(),
+        }),
         retryCount: 0,
         userId: user.id,
       });
@@ -612,9 +582,7 @@ export default function ArrivalScreen({ navigation }: Props) {
             barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec'],
             interval: 1000,
           }}
-          onCameraReady={() => {
-            console.log('[ARRIVAL] Caméra prête pour le scan - Tous formats supportés');
-          }}
+          onCameraReady={() => {}}
           onMountError={(error) => {
             console.error('[ARRIVAL] Erreur de montage de la caméra:', error);
           }}>

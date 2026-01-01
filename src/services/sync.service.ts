@@ -177,8 +177,10 @@ class SyncService {
             case 'baggages':
                 endpoint = `${apiUrl}/api/v1/baggage/sync`;
                 method = 'POST';
+                // Supprimer l'ID local (non-UUID) avant d'envoyer à l'API
+                const { id: localBaggageId, ...baggageDataWithoutId } = data;
                 // Wrapper les données dans un tableau pour /sync
-                data = { baggages: [data] };
+                data = { baggages: [baggageDataWithoutId] };
                 break;
             case 'boarding_status':
                 endpoint = `${apiUrl}/api/v1/boarding`;
