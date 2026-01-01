@@ -497,4 +497,132 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
+/**
+ * PATCH /api/v1/baggage/:id/link
+ * Lier un bagage à un passager
+ */
+router.patch('/:id/link', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { passenger_id } = req.body;
+
+    if (!passenger_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'passenger_id est requis'
+      });
+    }
+
+    // Vérifier que le passager existe
+    const { data: passenger, error: passError } = await supabase
+      .from('passengers')
+      .select('id, full_name')
+      .eq('id', passenger_id)
+      .single();
+
+    if (passError || !passenger) {
+      return res.status(404).json({
+        success: false,
+        error: 'Passager non trouvé'
+      });
+    }
+
+    // Mettre à jour le bagage
+    const { data, error } = await supabase
+      .from('baggages')
+      .update({ passenger_id })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: `Bagage lié à ${passenger.full_name}`,
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/baggage/fix-unlinked
+ * Lier automatiquement les bagages orphelins aux passagers
+ */
+router.post('/fix-unlinked', requireAirportCode, async (req: Request & { userAirportCode?: string }, res: Response, next: NextFunction) => {
+  try {
+    const airportCode = req.userAirportCode;
+    let fixed = 0;
+
+    // Récupérer les bagages sans passenger_id
+    const { data: unlinkedBaggages, error: bagError } = await supabase
+      .from('baggages')
+      .select('*')
+      .is('passenger_id', null)
+      .eq('airport_code', airportCode);
+
+    if (bagError) throw bagError;
+
+    if (!unlinkedBaggages || unlinkedBaggages.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Aucun bagage orphelin trouvé',
+        fixed: 0
+      });
+    }
+
+    // Pour chaque bagage non lié, chercher un passager correspondant
+    for (const baggage of unlinkedBaggages) {
+      // Chercher les passagers du même vol avec des bagages manquants
+      const { data: passengers } = await supabase
+        .from('passengers')
+        .select('*, baggages(*)')
+        .eq('flight_number', baggage.flight_number)
+        .eq('airport_code', baggage.airport_code);
+
+      if (!passengers) continue;
+
+      // Trouver un passager qui a moins de bagages liés que son baggage_count
+      for (const passenger of passengers) {
+        const linkedBaggagesCount = passenger.baggages?.length || 0;
+        const expectedBaggages = passenger.baggage_count || 0;
+
+        if (linkedBaggagesCount < expectedBaggages) {
+          // Vérifier si les tags sont proches (même série)
+          const existingTags = passenger.baggages?.map((b: any) => b.tag_number) || [];
+          const isRelated = existingTags.some((tag: string) => {
+            const tagNum = parseInt(tag);
+            const currentTagNum = parseInt(baggage.tag_number);
+            return Math.abs(tagNum - currentTagNum) <= 10;
+          });
+
+          if (isRelated || linkedBaggagesCount === 0) {
+            // Lier le bagage au passager
+            const { error: updateError } = await supabase
+              .from('baggages')
+              .update({ passenger_id: passenger.id })
+              .eq('id', baggage.id);
+
+            if (!updateError) {
+              fixed++;
+              console.log(`[FIX] Bagage ${baggage.tag_number} lié à ${passenger.full_name}`);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${fixed} bagages corrigés`,
+      fixed
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
