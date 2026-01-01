@@ -38,10 +38,14 @@ interface InternationalBaggage {
 
 type BaggageType = 'all' | 'national' | 'international' | 'rush';
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   checked: { label: 'Enregistré', color: 'bg-blue-100 text-blue-800', icon: Package },
+  loaded: { label: 'Chargé', color: 'bg-indigo-100 text-indigo-800', icon: Package },
+  in_transit: { label: 'En transit', color: 'bg-yellow-100 text-yellow-800', icon: Plane },
   arrived: { label: 'Arrivé', color: 'bg-green-900/40 backdrop-blur-sm text-green-800', icon: CheckCircle },
+  delivered: { label: 'Livré', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   rush: { label: 'RUSH', color: 'bg-red-100 text-red-800', icon: AlertCircle },
+  lost: { label: 'Perdu', color: 'bg-red-900/40 backdrop-blur-sm text-red-300', icon: AlertCircle },
   scanned: { label: 'Scanné', color: 'bg-purple-100 text-purple-800', icon: Package },
   reconciled: { label: 'Réconcilié', color: 'bg-green-900/40 backdrop-blur-sm text-green-800', icon: CheckCircle },
   unmatched: { label: 'Non matché', color: 'bg-yellow-900/40 backdrop-blur-sm text-yellow-800', icon: AlertCircle },
@@ -169,7 +173,13 @@ export default function Baggages() {
 
   const renderBaggageCard = (baggage: Baggage | InternationalBaggage) => {
     const isNational = 'tagNumber' in baggage;
-    const StatusIcon = statusConfig[baggage.status].icon;
+    // Fallback pour les statuts inconnus
+    const statusInfo = statusConfig[baggage.status] || { 
+      label: baggage.status || 'Inconnu', 
+      color: 'bg-gray-100 text-gray-800', 
+      icon: Package 
+    };
+    const StatusIcon = statusInfo.icon;
 
     return (
       <div key={baggage.id} className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -194,9 +204,9 @@ export default function Baggages() {
               </p>
             )}
           </div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig[baggage.status].color}`}>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>
             <StatusIcon className="w-4 h-4 mr-1" />
-            {statusConfig[baggage.status].label}
+            {statusInfo.label}
           </span>
         </div>
 

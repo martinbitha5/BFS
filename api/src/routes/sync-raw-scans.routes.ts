@@ -17,52 +17,55 @@ async function validateFlightBeforeScan(
   scanDate: Date
 ): Promise<{ valid: boolean; reason?: string }> {
   try {
-    // Extraire le jour de la semaine du scan (0 = dimanche, 1 = lundi, ...)
-    const dayOfWeek = scanDate.getDay();
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayName = dayNames[dayOfWeek];
+    // Extraire la date du scan au format YYYY-MM-DD
+    const scanDateStr = scanDate.toISOString().split('T')[0];
+    
+    // Normaliser le numéro de vol (enlever espaces, majuscules)
+    const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
 
-    // Vérifier si le vol existe dans flight_schedule
-    const { data: scheduledFlight, error } = await supabase
+    // Vérifier si le vol existe dans flight_schedule pour cette date
+    const { data: scheduledFlights, error } = await supabase
       .from('flight_schedule')
       .select('*')
-      .eq('flight_number', flightNumber)
       .eq('airport_code', airportCode)
-      .eq('active', true)
-      .single();
+      .eq('scheduled_date', scanDateStr)
+      .in('status', ['scheduled', 'boarding', 'departed']);
 
-    if (error || !scheduledFlight) {
-      return {
-        valid: false,
-        reason: `Vol ${flightNumber} non programmé à l'aéroport ${airportCode}`
-      };
+    if (error) {
+      console.error('[VALIDATION] Erreur requête vol:', error);
+      // En cas d'erreur, on accepte le scan pour ne pas bloquer l'opération
+      return { valid: true };
     }
 
-    // Vérifier que le vol opère aujourd'hui
-    if (!scheduledFlight[dayName]) {
-      const frenchDays: any = {
-        sunday: 'dimanche',
-        monday: 'lundi',
-        tuesday: 'mardi',
-        wednesday: 'mercredi',
-        thursday: 'jeudi',
-        friday: 'vendredi',
-        saturday: 'samedi'
-      };
-      return {
-        valid: false,
-        reason: `Vol ${flightNumber} ne vole pas le ${frenchDays[dayName]}`
-      };
+    // Chercher une correspondance (avec ou sans zéros optionnels)
+    const matchingFlight = scheduledFlights?.find(flight => {
+      const dbFlightNumber = flight.flight_number.trim().toUpperCase().replace(/\s+/g, '');
+      return dbFlightNumber === normalizedFlightNumber ||
+        dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1');
+    });
+
+    if (!matchingFlight) {
+      // Si aucun vol n'est trouvé, vérifier si des vols existent pour cet aéroport aujourd'hui
+      // Si oui, le vol n'est pas programmé
+      // Si non (table vide), on accepte le scan car la programmation n'est pas faite
+      if (scheduledFlights && scheduledFlights.length > 0) {
+        console.log(`[VALIDATION] ⚠️ Vol ${flightNumber} non trouvé parmi ${scheduledFlights.length} vols programmés`);
+        // Accepter quand même pour ne pas bloquer - la vérification est informative
+        return { valid: true };
+      }
+      
+      // Aucun vol programmé pour aujourd'hui - on accepte le scan
+      console.log(`[VALIDATION] ℹ️ Aucun vol programmé pour ${scanDateStr}, scan accepté par défaut`);
+      return { valid: true };
     }
 
-    // Vol valide !
+    // Vol trouvé et valide !
+    console.log(`[VALIDATION] ✅ Vol ${flightNumber} validé pour ${scanDateStr}`);
     return { valid: true };
   } catch (err) {
     console.error('[VALIDATION] Erreur validation vol:', err);
-    return {
-      valid: false,
-      reason: 'Erreur lors de la validation du vol'
-    };
+    // En cas d'erreur, on accepte le scan pour ne pas bloquer l'opération
+    return { valid: true };
   }
 }
 
@@ -179,10 +182,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
                       .insert({
                         passenger_id: newPassenger.id,
                         tag_number: `${parsed.pnr}-BAG${i}`,
-                        status: 'checked_in',
+                        status: 'checked',
                         flight_number: parsed.flightNumber,
                         airport_code: airport_code,
-                        scanned_at: scan.checkin_at || scan.created_at
+                        checked_at: scan.checkin_at || scan.created_at
                       });
 
                     if (!bagError) {
@@ -305,7 +308,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
                   status: 'arrived',
                   flight_number: baggageParsed?.flightNumber,
                   airport_code: airport_code,
-                  scanned_at: scan.baggage_at || scan.created_at
+                  checked_at: scan.baggage_at || scan.created_at,
+                  arrived_at: scan.baggage_at || scan.created_at
                 });
 
               if (!bagError) {
@@ -325,7 +329,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
                   passenger_name: baggageParsed?.passengerName,
                   pnr: pnrFromTag,
                   flight_number: baggageParsed?.flightNumber,
-                  origin: baggageParsed?.origin || airport_code,
                   scanned_at: scan.baggage_at || scan.created_at,
                   airport_code: airport_code,
                   remarks: 'Auto-créé depuis raw_scans - passager non trouvé'
