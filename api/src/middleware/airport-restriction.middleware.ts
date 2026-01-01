@@ -42,8 +42,9 @@ export const requireAirportCode = async (
   next: NextFunction
 ) => {
   try {
-    // Récupérer et normaliser l'aéroport depuis les query params, body, ou headers
+    // Récupérer et normaliser l'aéroport depuis les params, query, body, ou headers
     const airportCode = normalizeAirportCode(
+      req.params.airport as string ||
       req.query.airport as string | string[] ||
       req.body.airport_code as string ||
       req.headers['x-airport-code'] as string
