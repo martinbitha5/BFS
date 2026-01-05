@@ -281,9 +281,14 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
             
             // Extraire le PNR du tag s'il est disponible
             const pnrFromTag = baggageParsed?.pnr || extractPNRFromTag(scan.baggage_rfid_tag);
+            
+            // Récupérer le numéro de vol depuis le scan
+            const flightFromScan = scan.flight_number || baggageParsed?.flightNumber;
 
             // Chercher si un passager avec ce PNR existe
             let passengerId = null;
+            let passengerFlightNumber = null;
+            
             if (pnrFromTag) {
               const { data: passenger } = await supabase
                 .from('passengers')
@@ -294,7 +299,39 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
               
               if (passenger) {
                 passengerId = passenger.id;
+                passengerFlightNumber = passenger.flight_number;
                 console.log(`[SYNC] 🔗 Passager trouvé pour bagage ${scan.baggage_rfid_tag}: PNR ${pnrFromTag}`);
+              }
+            }
+            
+            // Si pas de PNR, chercher par numéro de vol + passager avec bagages manquants
+            if (!passengerId && flightFromScan) {
+              // Chercher les passagers sur ce vol qui ont baggageCount > nombre de bagages liés
+              const { data: passengersOnFlight } = await supabase
+                .from('passengers')
+                .select('id, pnr, full_name, baggage_count, flight_number')
+                .eq('airport_code', airport_code)
+                .ilike('flight_number', `%${flightFromScan.replace(/^[A-Z]{2}0*/, '')}%`);
+              
+              if (passengersOnFlight && passengersOnFlight.length > 0) {
+                // Pour chaque passager, compter ses bagages actuels
+                for (const pax of passengersOnFlight) {
+                  const { count: linkedBaggages } = await supabase
+                    .from('baggages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('passenger_id', pax.id);
+                  
+                  const expectedBags = pax.baggage_count || 0;
+                  const actualBags = linkedBaggages || 0;
+                  
+                  // Si ce passager a des bagages manquants, lui lier ce bagage
+                  if (actualBags < expectedBags) {
+                    passengerId = pax.id;
+                    passengerFlightNumber = pax.flight_number;
+                    console.log(`[SYNC] 🔗 Bagage ${scan.baggage_rfid_tag} lié au passager ${pax.full_name} (${pax.pnr}) - ${actualBags}/${expectedBags} bagages`);
+                    break;
+                  }
+                }
               }
             }
 
@@ -372,6 +409,97 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (error) {
     console.error('[SYNC] Erreur générale:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/sync-raw-scans/relink-baggages
+ * Re-lie les bagages non associés aux passagers correspondants
+ */
+router.post('/relink-baggages', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { airport_code } = req.body;
+    
+    if (!airport_code) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le code aéroport est requis' 
+      });
+    }
+
+    console.log(`[RELINK] Recherche des bagages non associés pour ${airport_code}`);
+
+    // Récupérer tous les bagages sans passenger_id
+    const { data: unlinkedBaggages, error: bagError } = await supabase
+      .from('baggages')
+      .select('*')
+      .eq('airport_code', airport_code)
+      .is('passenger_id', null);
+
+    if (bagError) throw bagError;
+
+    if (!unlinkedBaggages || unlinkedBaggages.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Aucun bagage non associé trouvé',
+        stats: { processed: 0, linked: 0 }
+      });
+    }
+
+    console.log(`[RELINK] ${unlinkedBaggages.length} bagages non associés trouvés`);
+
+    let linked = 0;
+
+    for (const baggage of unlinkedBaggages) {
+      // Chercher un passager sur le même vol avec des bagages manquants
+      if (baggage.flight_number) {
+        const flightNum = baggage.flight_number.replace(/^[A-Z]{2}0*/, '');
+        
+        const { data: passengersOnFlight } = await supabase
+          .from('passengers')
+          .select('id, pnr, full_name, baggage_count, flight_number')
+          .eq('airport_code', airport_code)
+          .ilike('flight_number', `%${flightNum}%`);
+
+        if (passengersOnFlight && passengersOnFlight.length > 0) {
+          for (const pax of passengersOnFlight) {
+            // Compter les bagages déjà liés à ce passager
+            const { count: linkedCount } = await supabase
+              .from('baggages')
+              .select('*', { count: 'exact', head: true })
+              .eq('passenger_id', pax.id);
+
+            const expected = pax.baggage_count || 0;
+            const actual = linkedCount || 0;
+
+            if (actual < expected) {
+              // Lier ce bagage au passager
+              const { error: updateError } = await supabase
+                .from('baggages')
+                .update({ passenger_id: pax.id })
+                .eq('id', baggage.id);
+
+              if (!updateError) {
+                linked++;
+                console.log(`[RELINK] ✅ Bagage ${baggage.tag_number} lié à ${pax.full_name} (${pax.pnr})`);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[RELINK] Terminé: ${linked}/${unlinkedBaggages.length} bagages reliés`);
+
+    res.json({
+      success: true,
+      message: `${linked} bagage(s) relié(s) sur ${unlinkedBaggages.length}`,
+      stats: { processed: unlinkedBaggages.length, linked }
+    });
+  } catch (error) {
+    console.error('[RELINK] Erreur:', error);
     next(error);
   }
 });

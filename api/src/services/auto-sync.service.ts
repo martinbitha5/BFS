@@ -1,13 +1,14 @@
 import { supabase } from '../config/database';
 import { logAudit } from './audit.service';
 
-// Cache pour éviter de re-sync trop souvent (5 minutes)
+// Cache pour éviter de re-sync trop souvent (2 minutes pour être plus réactif)
 const syncCache: Map<string, number> = new Map();
-const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const SYNC_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
 
 /**
- * Auto-sync si la table passengers/baggages est vide mais que des raw_scans existent
- * Cette fonction est appelée automatiquement par les routes passengers et baggages
+ * Auto-sync si des raw_scans non traités existent
+ * Cette fonction est appelée automatiquement par les routes stats/passengers/baggages
+ * AMÉLIORATION: Ne vérifie plus si passengers est vide, mais si des raw_scans non traités existent
  */
 export async function autoSyncIfNeeded(airportCode: string): Promise<boolean> {
   try {
@@ -17,28 +18,18 @@ export async function autoSyncIfNeeded(airportCode: string): Promise<boolean> {
       return false; // Sync récent, ne pas re-sync
     }
 
-    // Vérifier s'il y a des passagers pour cet aéroport
-    const { count: passengerCount } = await supabase
-      .from('passengers')
-      .select('*', { count: 'exact', head: true })
-      .eq('airport_code', airportCode);
-
-    // S'il y a déjà des passagers, pas besoin de sync
-    if (passengerCount && passengerCount > 0) {
-      return false;
-    }
-
-    // Vérifier s'il y a des raw_scans pour cet aéroport
-    const { count: rawScansCount } = await supabase
+    // ✅ AMÉLIORATION: Vérifier s'il y a des raw_scans NON TRAITÉS
+    const { count: unprocessedCount } = await supabase
       .from('raw_scans')
       .select('*', { count: 'exact', head: true })
-      .eq('airport_code', airportCode);
+      .eq('airport_code', airportCode)
+      .or('processed.is.null,processed.eq.false');
 
-    if (!rawScansCount || rawScansCount === 0) {
-      return false; // Pas de raw_scans à traiter
+    if (!unprocessedCount || unprocessedCount === 0) {
+      return false; // Pas de raw_scans non traités
     }
 
-    console.log(`[AUTO-SYNC] Déclenchement automatique pour ${airportCode} (${rawScansCount} raw_scans trouvés)`);
+    console.log(`[AUTO-SYNC] Déclenchement automatique pour ${airportCode} (${unprocessedCount} raw_scans non traités)`);
 
     // Mettre à jour le cache avant le sync pour éviter les doublons
     syncCache.set(airportCode, Date.now());
@@ -127,95 +118,146 @@ function parseSimpleBoardingPass(rawData: string): any {
 
 /**
  * Effectue la synchronisation en arrière-plan
+ * ✅ AMÉLIORATION: Traite uniquement les raw_scans non traités et les marque comme traités
  */
 async function performSyncInBackground(airportCode: string): Promise<void> {
   try {
-    // Récupérer tous les raw_scans pour cet aéroport
+    // ✅ Récupérer uniquement les raw_scans NON TRAITÉS pour cet aéroport
     const { data: rawScans, error: scanError } = await supabase
       .from('raw_scans')
       .select('*')
       .eq('airport_code', airportCode)
-      .order('created_at', { ascending: false });
+      .or('processed.is.null,processed.eq.false')
+      .order('created_at', { ascending: false })
+      .limit(100); // Limiter à 100 pour éviter surcharge
 
     if (scanError || !rawScans || rawScans.length === 0) {
       return;
     }
 
-    console.log(`[AUTO-SYNC] ${rawScans.length} raw_scans à traiter pour ${airportCode}`);
+    console.log(`[AUTO-SYNC] ${rawScans.length} raw_scans non traités à synchroniser pour ${airportCode}`);
 
     let passengersCreated = 0;
     let baggagesCreated = 0;
+    let scansProcessed = 0;
 
     // Parser chaque raw_scan de type boarding_pass pour créer les passagers
     for (const scan of rawScans) {
-      if (scan.scan_type === 'boarding_pass' && scan.raw_data) {
-        const parsed = parseSimpleBoardingPass(scan.raw_data);
-        
-        if (parsed && parsed.pnr) {
-          // Vérifier si le passager existe déjà
-          const { data: existing } = await supabase
-            .from('passengers')
-            .select('id')
-            .eq('pnr', parsed.pnr)
-            .eq('airport_code', airportCode)
-            .single();
-
-          if (!existing) {
-            // Créer le passager
-            const { data: newPassenger, error: passError } = await supabase
+      try {
+        if (scan.scan_type === 'boarding_pass' && scan.raw_data && scan.status_checkin) {
+          const parsed = parseSimpleBoardingPass(scan.raw_data);
+          
+          if (parsed && parsed.pnr) {
+            // Vérifier si le passager existe déjà
+            const { data: existing } = await supabase
               .from('passengers')
-              .insert({
-                full_name: parsed.fullName || 'UNKNOWN',
-                pnr: parsed.pnr,
-                flight_number: parsed.flightNumber || 'UNKNOWN',
-                departure: parsed.departure || airportCode,
-                arrival: parsed.arrival || 'UNK',
-                seat_number: parsed.seatNumber,
-                baggage_count: parsed.baggageCount || 0,
-                checked_in_at: scan.checkin_at || scan.created_at,
-                airport_code: airportCode
-              })
-              .select()
+              .select('id')
+              .eq('pnr', parsed.pnr)
+              .eq('airport_code', airportCode)
               .single();
 
-            if (!passError && newPassenger) {
-              passengersCreated++;
+            if (!existing) {
+              // Créer le passager
+              const { data: newPassenger, error: passError } = await supabase
+                .from('passengers')
+                .insert({
+                  full_name: parsed.fullName || 'UNKNOWN',
+                  pnr: parsed.pnr,
+                  flight_number: parsed.flightNumber || 'UNKNOWN',
+                  departure: parsed.departure || airportCode,
+                  arrival: parsed.arrival || 'UNK',
+                  seat_number: parsed.seatNumber,
+                  baggage_count: parsed.baggageCount || 0,
+                  checked_in_at: scan.checkin_at || scan.created_at,
+                  airport_code: airportCode
+                })
+                .select()
+                .single();
 
-              // Créer des bagages si baggageCount > 0
-              if (parsed.baggageCount > 0) {
-                for (let i = 1; i <= parsed.baggageCount; i++) {
-                  const { error: bagError } = await supabase
-                    .from('baggages')
-                    .insert({
-                      passenger_id: newPassenger.id,
-                      tag_number: `${parsed.pnr}-BAG${i}`,
-                      status: 'checked',
-                      flight_number: parsed.flightNumber,
-                      airport_code: airportCode,
-                      checked_at: scan.checkin_at || scan.created_at
-                    });
+              if (!passError && newPassenger) {
+                passengersCreated++;
 
-                  if (!bagError) {
-                    baggagesCreated++;
+                // Créer des bagages si baggageCount > 0
+                if (parsed.baggageCount > 0) {
+                  for (let i = 1; i <= parsed.baggageCount; i++) {
+                    const { error: bagError } = await supabase
+                      .from('baggages')
+                      .insert({
+                        passenger_id: newPassenger.id,
+                        tag_number: `${parsed.pnr}-BAG${i}`,
+                        status: 'checked',
+                        flight_number: parsed.flightNumber,
+                        airport_code: airportCode,
+                        checked_at: scan.checkin_at || scan.created_at
+                      });
+
+                    if (!bagError) {
+                      baggagesCreated++;
+                    }
                   }
                 }
               }
             }
+            
+            // ✅ Marquer le scan comme traité
+            await supabase
+              .from('raw_scans')
+              .update({ processed: true })
+              .eq('id', scan.id);
+            
+            scansProcessed++;
           }
         }
+        
+        // Traiter aussi les scans de bagages
+        if (scan.scan_type === 'baggage_tag' && scan.baggage_rfid_tag && scan.status_baggage) {
+          // Vérifier si le bagage existe déjà
+          const { data: existingBag } = await supabase
+            .from('baggages')
+            .select('id')
+            .eq('tag_number', scan.baggage_rfid_tag)
+            .single();
+          
+          if (!existingBag) {
+            // Créer le bagage (sans passager pour l'instant)
+            const { error: bagError } = await supabase
+              .from('baggages')
+              .insert({
+                tag_number: scan.baggage_rfid_tag,
+                status: 'checked',
+                airport_code: airportCode,
+                checked_at: scan.baggage_at || scan.created_at
+              });
+            
+            if (!bagError) {
+              baggagesCreated++;
+            }
+          }
+          
+          // ✅ Marquer le scan comme traité
+          await supabase
+            .from('raw_scans')
+            .update({ processed: true })
+            .eq('id', scan.id);
+          
+          scansProcessed++;
+        }
+      } catch (scanErr) {
+        console.error(`[AUTO-SYNC] Erreur traitement scan ${scan.id}:`, scanErr);
+        // Continuer avec le scan suivant
       }
     }
 
-    console.log(`[AUTO-SYNC] Terminé pour ${airportCode}: ${passengersCreated} passagers, ${baggagesCreated} bagages créés`);
+    console.log(`[AUTO-SYNC] Terminé pour ${airportCode}: ${scansProcessed} scans traités, ${passengersCreated} passagers, ${baggagesCreated} bagages créés`);
 
     // Enregistrer dans l'audit log si des données ont été créées
     if (passengersCreated > 0 || baggagesCreated > 0) {
       await logAudit({
         action: 'SYNC_RAW_SCANS',
         entityType: 'raw_scan',
-        description: `Synchronisation automatique: ${passengersCreated} passager(s), ${baggagesCreated} bagage(s) créé(s)`,
+        description: `Synchronisation automatique: ${passengersCreated} passager(s), ${baggagesCreated} bagage(s) créé(s) depuis ${scansProcessed} scans`,
         airportCode,
-        metadata: { passengersCreated, baggagesCreated, rawScansProcessed: rawScans.length }
+        metadata: { passengersCreated, baggagesCreated, scansProcessed, totalScans: rawScans.length }
       });
     }
   } catch (err) {

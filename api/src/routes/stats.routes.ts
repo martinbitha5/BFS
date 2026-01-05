@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { autoSyncIfNeeded } from '../services/auto-sync.service';
 
 const router = Router();
 
@@ -18,6 +19,11 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     // Si l'aéroport demandé est ALL, ne pas filtrer par aéroport
     const today = new Date().toISOString().split('T')[0];
     const filterAirport = airport.toUpperCase() === 'ALL' && hasFullAccess;
+
+    // ✅ AUTO-SYNC: Synchroniser automatiquement les raw_scans non traités
+    autoSyncIfNeeded(airport.toUpperCase()).catch(err => 
+      console.warn('[AUTO-SYNC] Erreur:', err)
+    );
 
     // Récupérer tous les passagers
     let passQuery = supabase.from('passengers').select('*');
@@ -89,7 +95,7 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
     const today = new Date().toISOString().split('T')[0];
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
-    // 1. Passagers récents (aujourd'hui) avec infos parsées
+    // 1. Passagers récents (tous, pas seulement aujourd'hui) avec infos parsées
     let passQuery = supabase
       .from('passengers')
       .select(`
@@ -102,7 +108,6 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
         baggage_count,
         checked_in_at
       `)
-      .gte('checked_in_at', today)
       .order('checked_in_at', { ascending: false })
       .limit(limit);
     
@@ -114,10 +119,25 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
 
     if (passError) throw passError;
 
-    // 2. Bagages récents - requête simplifiée
+    // 2. Bagages récents - inclure les infos passagers
     let bagQuery = supabase
       .from('baggages')
-      .select('*')
+      .select(`
+        id,
+        tag_number,
+        status,
+        weight,
+        checked_at,
+        arrived_at,
+        passenger_id,
+        passengers!passenger_id (
+          full_name,
+          pnr,
+          flight_number,
+          departure,
+          arrival
+        )
+      `)
       .order('created_at', { ascending: false })
       .limit(limit);
     
@@ -156,12 +176,19 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
       checkedInAt: p.checked_in_at,
     })) || [];
 
-    const formattedBaggages = recentBaggages?.map(b => ({
+    const formattedBaggages = recentBaggages?.map((b: any) => ({
       id: b.id,
-      tag: b.tag_number || b.id,
+      tagNumber: b.tag_number || b.id,
       status: b.status || 'unknown',
-      passengerId: b.passenger_id,
-      createdAt: b.created_at,
+      weight: b.weight,
+      checkedAt: b.checked_at,
+      arrivedAt: b.arrived_at,
+      passenger: b.passengers ? {
+        fullName: b.passengers.full_name,
+        pnr: b.passengers.pnr,
+        flightNumber: b.passengers.flight_number,
+        route: `${b.passengers.departure} → ${b.passengers.arrival}`
+      } : null
     })) || [];
 
     const formattedActivities = recentActivities?.map(a => ({
@@ -195,13 +222,17 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
   try {
     const { airport } = req.params;
     const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
-    // Récupérer les vols programmés aujourd'hui
+    // Récupérer les vols programmés aujourd'hui et demain (pour éviter les disparitions à minuit)
     let flightQuery = supabase
       .from('flight_schedule')
       .select('*')
-      .eq('scheduled_date', today)
+      .gte('scheduled_date', today)
+      .lte('scheduled_date', tomorrow)
+      .in('status', ['scheduled', 'boarding', 'departed'])
+      .order('scheduled_date', { ascending: true })
       .order('scheduled_time', { ascending: true });
     
     if (filterByAirport) {
