@@ -1844,40 +1844,21 @@ class ParserService {
    * Format peut commencer par 0 (ex: 0716055397226 = 7160553972 base, 226 = count)
    */
   private extractBaggageInfoEthiopian(rawData: string): PassengerData['baggageInfo'] | undefined {
-    // FORMAT IATA pour les bagages Ethiopian:
+    // FORMAT IATA pour les bagages Ethiopian/Air Congo:
     // 
-    // PRIORITÉ 1: Format "XA" où X = nombre de bagages (ex: "2A0712157463879" = 2 bagages)
-    // Ce format est le plus fiable et doit être vérifié EN PREMIER
+    // Format: 13 chiffres = base (10) + séquence (3)
+    // Exemple: 9071366379001
+    //   - 9071366379 = Base du tag
+    //   - 001 = Séquence (1er bagage)
     //
-    // PRIORITÉ 2: Format 10+3 chiffres (ex: "4071161870001" = base + count)
+    // Pour 3 bagages avec base 9071366379:
+    //   - Bagage 1: 9071366379001
+    //   - Bagage 2: 9071366380002
+    //   - Bagage 3: 9071366381003
+    //
+    // RÈGLE: Si séquence > 20, c'est invalide → 0 bagages
     
-    // STRATÉGIE 1 (PRIORITAIRE): Chercher pattern "XA" suivi de chiffres
-    // Format: [espace][chiffre]A[10+ chiffres] - ex: " 2A0712157463879"
-    const xaMatch = rawData.match(/\s(\d)A(\d{10,13})/);
-    if (xaMatch) {
-      const count = parseInt(xaMatch[1], 10);
-      const tagNumber = xaMatch[2];
-      // Extraire les 10 premiers chiffres comme base
-      const baseNumber = tagNumber.substring(0, 10);
-      
-      if (count > 0 && count <= 9) {
-        const expectedTags: string[] = [];
-        const baseNum = parseInt(baseNumber, 10);
-        
-        for (let i = 0; i < count; i++) {
-          expectedTags.push((baseNum + i).toString().padStart(10, '0'));
-        }
-        
-        console.log(`[PARSER] Bagages format XA: ${count} bagages, base=${baseNumber}`);
-        return {
-          count,
-          baseNumber,
-          expectedTags,
-        };
-      }
-    }
-    
-    // STRATÉGIE 2: Chercher pattern standard (10 chiffres + 3 chiffres < 100)
+    // Chercher pattern standard (10 chiffres + 3 chiffres)
     const allMatches = Array.from(rawData.matchAll(/(\d{10})(\d{3})/g));
     
     for (const match of allMatches) {
@@ -1913,57 +1894,12 @@ class ParserService {
         };
       }
       
-      // Si count ≥ 100 (ex: "800", "226"), c'est probablement un code spécial
-      // STRATÉGIE 2: Prendre le dernier chiffre uniquement
+      // Si count >= 100 (ex: "879"), c'est un format invalide
+      // Selon la logique Air Congo: séquence > 20 = pas de bagage valide
+      // On continue à chercher d'autres matches
       if (count >= 100) {
-        const lastDigit = parseInt(countStr[2], 10);
-        
-        // Si dernier chiffre = 0, chercher le nombre ailleurs (chiffre avant "ET")
-        if (lastDigit === 0) {
-          // Chercher pattern: [chiffre] suivi de "ET" ou espace
-          const afterMatch = rawData.substring(match.index! + match[0].length);
-          const nextDigitMatch = afterMatch.match(/\s*(\d)\s*[A-Z]{2}/);
-          if (nextDigitMatch) {
-            const actualCount = parseInt(nextDigitMatch[1], 10);
-            if (actualCount > 0 && actualCount <= 20) {
-              const expectedTags: string[] = [];
-              const baseNum = parseInt(baseNumber, 10);
-              
-              for (let i = 0; i < actualCount; i++) {
-                expectedTags.push((baseNum + i).toString().padStart(10, '0'));
-              }
-              
-              return {
-                count: actualCount,
-                baseNumber,
-                expectedTags,
-              };
-            }
-          }
-          
-          // Si pas trouvé, considérer 0 bagages
-          return {
-            count: 0,
-            baseNumber,
-            expectedTags: [],
-          };
-        }
-        
-        // Sinon, utiliser le dernier chiffre
-        if (lastDigit > 0 && lastDigit <= 9) {
-          const expectedTags: string[] = [];
-          const baseNum = parseInt(baseNumber, 10);
-          
-          for (let i = 0; i < lastDigit; i++) {
-            expectedTags.push((baseNum + i).toString().padStart(10, '0'));
-          }
-          
-          return {
-            count: lastDigit,
-            baseNumber,
-            expectedTags,
-          };
-        }
+        // Ce n'est pas un numéro de bagage valide, on ignore
+        continue;
       }
     }
     
@@ -1979,15 +1915,6 @@ class ParserService {
     // Codes aéroports connus à exclure du PNR
     const knownAirports = KNOWN_AIRPORT_CODES;
     
-    // Chercher M1 suivi du nom jusqu'au PNR (6 ou 7 caractères alphanumériques)
-    // Le PNR peut être collé au nom ou séparé par un espace
-    // Utiliser la même logique robuste que Air Congo
-    // Certains PNR font 7 caractères (ex: "EYFMKNE")
-    
-    // Chercher le PNR en cherchant depuis la fin vers le début
-    // On cherche le dernier groupe de 6-7 caractères qui n'est pas un code aéroport
-    // et qui suit le nom (M1 + lettres/espaces/slashes)
-    const pnrPattern = /([A-Z0-9]{6,7})(?:\s|$)/g;
     const matches: Array<{ index: number; pnr: string }> = [];
     
     let match;
