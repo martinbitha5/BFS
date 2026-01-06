@@ -1,7 +1,7 @@
 import { AlertCircle, Check, FileText, Plane, Upload } from 'lucide-react';
 import { useState } from 'react';
-import api from '../config/api';
 import Layout from '../components/Layout';
+import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -78,7 +78,8 @@ export default function Dashboard() {
         destination: destination.toUpperCase(),
         airportCode: airportCode.toUpperCase(),
         airline: airline?.name || '',
-        airlineCode: airline?.code || '',
+        airlineCode: airline?.code || ''
+        // uploadedBy retiré - sera NULL côté serveur (accepté)
       };
 
       const response = await api.post('/api/v1/birs/upload', payload);
