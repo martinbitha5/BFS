@@ -5,7 +5,7 @@ node_modules/
 
 # Expo
 .expo/
-dist/
+# dist/ - Commenté pour permettre api/dist/ dans Git
 web-build/
 expo-env.d.ts
 
