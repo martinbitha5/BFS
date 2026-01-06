@@ -223,10 +223,21 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
 
     console.log('[BIRS Upload] Parsing file:', fileName);
 
+    // Décoder le base64 si nécessaire
+    let decodedContent = fileContent;
+    if (fileContent && !fileContent.includes('\n') && fileContent.length > 100) {
+      try {
+        decodedContent = Buffer.from(fileContent, 'base64').toString('utf-8');
+        console.log('[BIRS Upload] Decoded base64 content');
+      } catch (e) {
+        console.log('[BIRS Upload] Content is not base64, using as-is');
+      }
+    }
+
     // Parser le fichier pour extraire les bagages
     let parsedItems: any[] = [];
     try {
-      const parsedData = await birsParserService.parseFile(fileName, fileContent);
+      const parsedData = await birsParserService.parseFile(fileName, decodedContent);
       parsedItems = parsedData.items;
       console.log(`[BIRS Upload] Parsed ${parsedItems.length} bagages from file`);
     } catch (parseError: any) {
