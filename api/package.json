@@ -7,6 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "postinstall": "npm run build",
     "test": "jest",
     "clear-data": "ts-node scripts/clear-test-data.ts",
     "clear-all": "ts-node scripts/clear-all-data.ts",
