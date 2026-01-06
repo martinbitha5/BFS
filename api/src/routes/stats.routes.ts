@@ -52,6 +52,19 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
 
     if (boardError) throw boardError;
 
+    // Récupérer les vols programmés aujourd'hui depuis flight_schedule
+    let scheduledFlightsQuery = supabase
+      .from('flight_schedule')
+      .select('flight_number')
+      .eq('scheduled_date', today)
+      .in('status', ['scheduled', 'boarding', 'departed']);
+    
+    if (!filterAirport) {
+      scheduledFlightsQuery = scheduledFlightsQuery.eq('airport_code', airport.toUpperCase());
+    }
+    
+    const { data: scheduledFlights } = await scheduledFlightsQuery;
+    
     // Calculer les statistiques
     const totalPassengers = passengers?.length || 0;
     const totalBaggages = baggages?.length || 0;
@@ -59,7 +72,11 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     const arrivedBaggages = baggages?.filter(b => b.status === 'arrived').length || 0;
     const todayPassengers = passengers?.filter(p => p.checked_in_at?.startsWith(today)).length || 0;
     const todayBaggages = baggages?.filter(b => b.created_at?.startsWith(today)).length || 0;
-    const uniqueFlights = [...new Set(passengers?.map(p => p.flight_number) || [])];
+    
+    // Combiner les vols des passagers ET les vols programmés
+    const flightsFromPassengers = passengers?.map(p => p.flight_number) || [];
+    const flightsFromSchedule = scheduledFlights?.map(f => f.flight_number) || [];
+    const uniqueFlights = [...new Set([...flightsFromPassengers, ...flightsFromSchedule])];
 
     res.json({
       success: true,
