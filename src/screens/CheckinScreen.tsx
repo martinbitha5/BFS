@@ -369,14 +369,25 @@ export default function CheckinScreen({ navigation }: Props) {
 
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: colors.text.secondary }]}>Parsing:</Text>
-                  <Badge label="Dashboard web" variant="warning" />
+                  {lastPassenger.format && lastPassenger.format !== 'RAW_STORAGE' ? (
+                    <Badge label="Local ✅" variant="success" />
+                  ) : (
+                    <Badge label="Dashboard web" variant="warning" />
+                  )}
                 </View>
               </View>
 
-              <Text style={[styles.successText, { color: colors.text.secondary }]}>
-                Les données brutes ont été enregistrées avec succès. {'\n'}
-                Le parsing et l'extraction des informations se feront lors de l'export dans le dashboard web.
-              </Text>
+              {lastPassenger.format && lastPassenger.format !== 'RAW_STORAGE' ? (
+                <Text style={[styles.successText, { color: colors.text.secondary }]}>
+                  ✅ Passager créé: {lastPassenger.fullName}{'\n'}
+                  Vol: {lastPassenger.flightNumber} | PNR: {lastPassenger.pnr}
+                </Text>
+              ) : (
+                <Text style={[styles.successText, { color: colors.text.secondary }]}>
+                  Les données brutes ont été enregistrées avec succès. {'\n'}
+                  Le parsing et l'extraction des informations se feront lors de l'export dans le dashboard web.
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               style={[styles.scanAgainButton, { backgroundColor: colors.primary.main }]}
