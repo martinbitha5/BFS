@@ -211,7 +211,6 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       destination,
       airline,
       airlineCode,
-      uploadedBy,
       airportCode
     } = req.body;
 
@@ -222,93 +221,39 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    // Récupérer l'ID utilisateur depuis le token JWT (pour les users, pas les airlines)
-    let userId: string | null = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (!authError && user) {
-          // Vérifier si c'est un utilisateur dans la table users (pas airline)
-          const { data: userData } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', user.id)
-            .single();
-          
-          if (userData) {
-            userId = userData.id;
-          }
-        }
-      } catch (error) {
-        console.error('[BIRS Upload] Error getting user ID:', error);
-      }
-    }
-
     console.log('[BIRS Upload] Parsing file:', fileName);
 
     // Parser le fichier pour extraire les bagages
     let parsedItems: any[] = [];
     try {
-      // Créer un objet FileInfo pour le parser
-      const fileInfo = {
-        name: fileName,
-        size: fileContent.length,
-        type: fileName.endsWith('.pdf') ? 'application/pdf' : 
-              fileName.endsWith('.xlsx') ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-              fileName.endsWith('.csv') ? 'text/csv' :
-              fileName.endsWith('.txt') ? 'text/plain' : 'application/octet-stream',
-        uri: ''
-      };
-
-      // Parser le fichier
       const parsedData = await birsParserService.parseFile(fileName, fileContent);
       parsedItems = parsedData.items;
-
       console.log(`[BIRS Upload] Parsed ${parsedItems.length} bagages from file`);
     } catch (parseError: any) {
       console.error('[BIRS Upload] Parse error:', parseError);
-      // Si le parsing échoue, on continue quand même avec 0 bagages
-      // L'utilisateur verra que 0 bagages ont été traités
     }
 
-    // Créer le rapport BIRS
-    const insertData: any = {
-      report_type: reportType,
-      flight_number: flightNumber || 'UNKNOWN',
-      flight_date: flightDate || new Date().toISOString().split('T')[0],
-      origin: origin || 'UNKNOWN',
-      destination: destination || 'UNKNOWN',
-      airline: airline || 'UNKNOWN',
-      airline_code: airlineCode || 'UNKNOWN',
-      file_name: fileName,
-      file_size: fileContent.length,
-      uploaded_at: new Date().toISOString(),
-      airport_code: airportCode || 'UNKNOWN',
-      total_baggages: parsedItems.length,
-      reconciled_count: 0,
-      unmatched_count: 0,
-      raw_data: JSON.stringify({ items: parsedItems, fileContent }),
-      synced: true
-    };
-
-    // Ajouter uploaded_by seulement si on a un ID utilisateur valide (pas airline)
-    // Les airlines n'ont pas d'entrée dans users, donc on ne met pas uploaded_by
-    if (userId) {
-      insertData.uploaded_by = userId;
-    } else if (uploadedBy && uploadedBy !== 'system') {
-      // Vérifier que c'est un UUID valide
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(uploadedBy)) {
-        insertData.uploaded_by = uploadedBy;
-      }
-    }
-    // Si aucun ID valide, on ne met pas uploaded_by (NULL est accepté)
-
+    // Créer le rapport BIRS - SANS uploaded_by
     const { data: report, error: reportError } = await supabase
       .from('birs_reports')
-      .insert(insertData)
+      .insert({
+        report_type: reportType,
+        flight_number: flightNumber || 'UNKNOWN',
+        flight_date: flightDate || new Date().toISOString().split('T')[0],
+        origin: origin || 'UNKNOWN',
+        destination: destination || 'UNKNOWN',
+        airline: airline || 'UNKNOWN',
+        airline_code: airlineCode || 'UNKNOWN',
+        file_name: fileName,
+        file_size: fileContent.length,
+        uploaded_at: new Date().toISOString(),
+        airport_code: airportCode || 'UNKNOWN',
+        total_baggages: parsedItems.length,
+        reconciled_count: 0,
+        unmatched_count: 0,
+        raw_data: JSON.stringify({ items: parsedItems, fileContent }),
+        synced: true
+      })
       .select()
       .single();
 
