@@ -36,6 +36,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport, date, status } = req.query;
     
+    console.log(`[Flights API] GET /flights - airport=${airport}, date=${date}, status=${status}`);
+    
     let query = supabase
       .from('flight_schedule')
       .select('*')
@@ -54,7 +56,17 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Flights API] Erreur Supabase:', error);
+      throw error;
+    }
+
+    console.log(`[Flights API] ${data?.length || 0} vols trouvés`);
+    if (data && data.length > 0) {
+      data.forEach(f => {
+        console.log(`[Flights API]   - ${f.flight_number}: scheduled_date=${f.scheduled_date}, airport_code=${f.airport_code}`);
+      });
+    }
 
     res.json({
       success: true,

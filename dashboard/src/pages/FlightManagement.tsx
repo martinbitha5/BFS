@@ -70,30 +70,41 @@ export default function FlightManagement() {
         return;
       }
 
-      console.log(`[FlightManagement] Chargement des vols pour ${user.airport_code} à la date ${selectedDate}`);
+      console.log(`[FlightManagement] Chargement des vols pour ${user.airport_code}`);
       
-      // Charger les vols avec filtre de date depuis l'API
-      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}&date=${selectedDate}`);
-      const loadedFlights = response.data.data || [];
+      // Charger TOUS les vols de cet aéroport (sans filtre de date côté API)
+      // pour éviter les problèmes de format de date
+      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}`);
+      const allFlights: Flight[] = response.data.data || [];
       
-      console.log(`[FlightManagement] ✅ ${loadedFlights.length} vols chargés pour ${selectedDate}`);
+      console.log(`[FlightManagement] ${allFlights.length} vols total dans la base`);
       
-      if (loadedFlights.length > 0) {
-        console.log('[FlightManagement] Vols:', loadedFlights.map((f: Flight) => `${f.flightNumber} (${f.scheduledDate})`).join(', '));
+      // Debug: afficher tous les vols et leurs dates
+      if (allFlights.length > 0) {
+        console.log('[FlightManagement] Tous les vols:');
+        allFlights.forEach(f => {
+          console.log(`  - ${f.flightNumber}: scheduledDate=${f.scheduledDate}, airportCode=${f.airportCode}`);
+        });
       }
       
-      setFlights(loadedFlights);
+      // Filtrer côté client pour la date sélectionnée
+      const filteredFlights = allFlights.filter(f => {
+        // Comparer les dates (format YYYY-MM-DD)
+        const flightDate = f.scheduledDate?.split('T')[0]; // Au cas où c'est un datetime
+        const matches = flightDate === selectedDate;
+        if (!matches && f.scheduledDate) {
+          console.log(`[FlightManagement] Vol ${f.flightNumber} exclu: ${f.scheduledDate} != ${selectedDate}`);
+        }
+        return matches;
+      });
+      
+      console.log(`[FlightManagement] ✅ ${filteredFlights.length} vols pour ${selectedDate}`);
+      setFlights(filteredFlights);
+      
     } catch (error: any) {
       console.error('[FlightManagement] Erreur chargement vols:', error);
       console.error('[FlightManagement] Détails:', error.response?.data || error.message);
-      
-      // Ne pas vider les vols en cas d'erreur réseau
-      if (error.response?.status === 404) {
-        console.log('[FlightManagement] Aucun vol trouvé (404)');
-        setFlights([]);
-      } else {
-        console.error('[FlightManagement] Erreur réseau, conservation des vols actuels');
-      }
+      setFlights([]);
     } finally {
       setLoading(false);
     }

@@ -4,16 +4,16 @@
  */
 
 import {
-  AlertTriangle,
-  Bell,
-  CheckCircle,
-  ChevronRight,
-  Clock,
-  Package,
-  Plane,
-  RefreshCw,
-  User,
-  X
+    AlertTriangle,
+    Bell,
+    CheckCircle,
+    ChevronRight,
+    Clock,
+    Package,
+    Plane,
+    RefreshCw,
+    User,
+    X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -109,48 +109,57 @@ export default function AlertsPanel({ className = '', compact = false }: AlertsP
       // Bagages rush
       const rushBaggages = baggagesRes.data.data || [];
       rushBaggages.forEach((bag: any) => {
+        const flightNum = bag.flightNumber || bag.flight_number;
         newAlerts.push({
           id: `rush-${bag.id}`,
           type: 'rush_baggage',
           severity: 'critical',
           title: 'Bagage Rush',
-          message: `Bagage ${bag.tag_number || 'N/A'} en urgence pour le vol ${bag.flight_number || 'N/A'}`,
+          message: `Bagage ${bag.tagNumber || bag.tag_number || 'N/A'} en urgence pour le vol ${flightNum || 'N/A'}`,
           entityId: bag.id,
           entityType: 'baggage',
-          flightNumber: bag.flight_number,
-          createdAt: bag.updated_at || new Date().toISOString()
+          flightNumber: flightNum,
+          createdAt: bag.updatedAt || bag.updated_at || new Date().toISOString()
         });
       });
 
       // Passagers non embarqués (proche du départ)
       const unboardedPassengers = passengersRes.data.data || [];
-      unboardedPassengers.slice(0, 5).forEach((pax: any) => {
+      // Filtrer seulement ceux qui ont un vol assigné et qui ne sont pas embarqués
+      const notBoarded = unboardedPassengers.filter((pax: any) => {
+        const hasBoarding = pax.boarding_status?.some((bs: any) => bs.boarded);
+        return !hasBoarding;
+      });
+      notBoarded.slice(0, 5).forEach((pax: any) => {
+        const flightNum = pax.flightNumber || pax.flight_number;
+        const passengerName = pax.fullName || pax.full_name || 'Passager';
         newAlerts.push({
           id: `unboarded-${pax.id}`,
           type: 'unboarded_passenger',
           severity: 'warning',
           title: 'Passager non embarqué',
-          message: `${pax.full_name || 'Passager'} n'est pas encore embarqué sur ${pax.flight_number || 'vol inconnu'}`,
+          message: `${passengerName} n'est pas encore embarqué sur ${flightNum || 'vol non assigné'}`,
           entityId: pax.id,
           entityType: 'passenger',
-          flightNumber: pax.flight_number,
-          createdAt: pax.updated_at || new Date().toISOString()
+          flightNumber: flightNum,
+          createdAt: pax.updatedAt || pax.updated_at || new Date().toISOString()
         });
       });
 
       // Rapports BIRS en attente
       const pendingBirs = birsRes.data.data || [];
       pendingBirs.forEach((report: any) => {
+        const flightNum = report.flightNumber || report.flight_number;
         newAlerts.push({
           id: `birs-${report.id}`,
           type: 'birs_pending',
           severity: 'info',
           title: 'BIRS en attente',
-          message: `Rapport BIRS pour le vol ${report.flight_number || 'N/A'} nécessite une réconciliation`,
+          message: `Rapport BIRS pour le vol ${flightNum || 'N/A'} nécessite une réconciliation`,
           entityId: report.id,
           entityType: 'birs_report',
-          flightNumber: report.flight_number,
-          createdAt: report.created_at || new Date().toISOString()
+          flightNumber: flightNum,
+          createdAt: report.createdAt || report.created_at || new Date().toISOString()
         });
       });
 
