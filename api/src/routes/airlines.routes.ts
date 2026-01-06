@@ -326,7 +326,32 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Créer une demande d'enregistrement et l'approuver directement
+    // Créer l'airline directement dans la table airlines
+    const { data: airline, error: airlineError } = await supabase
+      .from('airlines')
+      .insert({
+        name,
+        code: code.toUpperCase(),
+        email,
+        password: hashedPassword,
+        approved: true,
+        approved_at: new Date().toISOString(),
+        approved_by: authUser.id,
+      })
+      .select('id, name, code, email')
+      .single();
+
+    if (airlineError) {
+      if (airlineError.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          error: 'Une compagnie aérienne avec cet email ou ce code existe déjà',
+        });
+      }
+      throw airlineError;
+    }
+
+    // Créer une demande d'enregistrement approuvée pour traçabilité
     const { data: request, error: requestError } = await supabase
       .from('airline_registration_requests')
       .insert({
@@ -337,37 +362,33 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
         status: 'approved',
         approved_at: new Date().toISOString(),
         approved_by: authUser.id,
+        airline_id: airline.id,
       })
-      .select('id, name, code, email, status')
+      .select('id')
       .single();
 
     if (requestError) {
-      if (requestError.code === '23505') {
-        return res.status(409).json({
-          success: false,
-          error: 'Une compagnie aérienne avec cet email ou ce code existe déjà',
-        });
-      }
-      throw requestError;
+      console.error('Erreur lors de la création de la demande de traçabilité:', requestError);
+      // Ne pas bloquer si la demande de traçabilité échoue
     }
 
     // Log d'audit
     await supabase.from('audit_logs').insert({
       action: 'CREATE_AIRLINE_BY_SUPPORT',
-      entity_type: 'airline_registration_request',
-      entity_id: request.id,
+      entity_type: 'airline',
+      entity_id: airline.id,
       description: `Création et approbation de la compagnie aérienne ${name} (${code.toUpperCase()}) par le support`,
-      user_id: authUser.id
+      user_id: authUser.id,
+      airport_code: 'ALL'
     });
 
     res.status(201).json({
       success: true,
       data: {
-        id: request.id,
-        name: request.name,
-        code: request.code,
-        email: request.email,
-        status: request.status,
+        id: airline.id,
+        name: airline.name,
+        code: airline.code,
+        email: airline.email,
       },
       message: `Compagnie aérienne "${name}" (${code.toUpperCase()}) créée et approuvée avec succès`,
     });

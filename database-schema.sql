@@ -9,7 +9,7 @@ CREATE TABLE users (
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
   airport_code TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor')),
+  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'support')),
   is_approved BOOLEAN DEFAULT false,
   approved_at TIMESTAMP WITH TIME ZONE,
   approved_by UUID REFERENCES users(id),
@@ -231,7 +231,7 @@ CREATE TABLE user_registration_requests (
   email TEXT NOT NULL,
   full_name TEXT NOT NULL,
   airport_code TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor')),
+  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'support')),
   auth_user_id UUID,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   requested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -554,7 +554,7 @@ USING (
   EXISTS (
     SELECT 1 FROM users u
     WHERE u.id = auth.uid()
-    AND u.role = 'supervisor'
+    AND (u.role = 'supervisor' OR u.role = 'support')
   )
 );
 
