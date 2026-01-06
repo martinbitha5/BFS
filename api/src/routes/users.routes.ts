@@ -425,9 +425,11 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
     if (createUserError) {
       // Nettoyer l'utilisateur créé si l'insertion échoue
       await supabase.auth.admin.deleteUser(authData.user.id);
+      console.error('[Create User] Database insertion error:', createUserError);
       return res.status(500).json({ 
         success: false, 
-        error: 'Erreur lors de la création du profil utilisateur' 
+        error: 'Erreur lors de la création du profil utilisateur',
+        details: createUserError.message || createUserError.hint || null
       });
     }
 
