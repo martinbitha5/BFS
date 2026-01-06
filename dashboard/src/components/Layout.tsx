@@ -36,8 +36,23 @@ export default function Layout({ children }: LayoutProps) {
     });
   }, [user]);
 
-  // Menu de base pour tous les utilisateurs
-  const baseNavItems: NavItem[] = [
+  // Menu simplifié pour les utilisateurs Support
+  const supportNavItems: NavItem[] = [
+    { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
+    { path: '/baggages', label: 'Bagages', icon: Package },
+    { path: '/passengers', label: 'Passagers', icon: Users },
+    {
+      label: 'Support',
+      icon: ShieldCheck,
+      children: [
+        { path: '/administration', label: 'Créer des comptes', icon: UserPlus },
+        { path: '/baggage-authorization', label: 'Autorisations Bagages', icon: Package },
+      ]
+    },
+  ];
+
+  // Menu complet pour supervisor et baggage_dispute
+  const standardNavItems: NavItem[] = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
     { path: '/flights', label: 'Gestion des Vols', icon: Plane },
     { path: '/baggages', label: 'Bagages', icon: Package },
@@ -66,22 +81,11 @@ export default function Layout({ children }: LayoutProps) {
     },
   ];
 
-  // Menu Support (uniquement pour le support)
-  const supportNavItem: NavItem = {
-    label: 'Support',
-    icon: ShieldCheck,
-    children: [
-      { path: '/administration', label: 'Créer des comptes', icon: UserPlus },
-      { path: '/baggage-authorization', label: 'Autorisations Bagages', icon: Package },
-    ]
-  };
-
-  // Filtrer les éléments du menu selon le rôle de l'utilisateur
-  const navItems: NavItem[] = [
-    ...baseNavItems,
-    // Ajouter le menu Support uniquement si l'utilisateur est support
-    ...(user && user.role === 'support' ? [supportNavItem] : [])
-  ];
+  // Sélectionner le menu approprié selon le rôle de l'utilisateur
+  // Support: menu simplifié
+  // Supervisor et baggage_dispute: menu complet
+  // checkin, baggage, boarding, arrival: utilisent l'app mobile, pas le dashboard
+  const navItems: NavItem[] = user && user.role === 'support' ? supportNavItems : standardNavItems;
 
   const isMenuExpanded = (menuLabel: string) => {
     return expandedMenus.includes(menuLabel.toLowerCase().replace(/\s+/g, '-'));
