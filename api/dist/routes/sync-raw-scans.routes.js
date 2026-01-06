@@ -91,10 +91,10 @@ router.get('/debug', async (req, res, next) => {
             .eq('airport_code', airport)
             .order('created_at', { ascending: false })
             .limit(10);
-        // Passagers avec leurs bagages
+        // Passagers avec leurs bagages ET boarding_status
         const { data: passengersWithBags } = await database_1.supabase
             .from('passengers')
-            .select('id, full_name, pnr, flight_number, baggage_count, baggages(id, tag_number, status)')
+            .select('id, full_name, pnr, flight_number, baggage_count, baggages(id, tag_number, status), boarding_status(boarded, boarded_at)')
             .eq('airport_code', airport)
             .limit(10);
         // Bagages orphelins (sans passenger_id)

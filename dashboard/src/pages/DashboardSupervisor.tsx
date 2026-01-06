@@ -132,7 +132,7 @@ export default function DashboardSupervisor() {
     }
   };
 
-  const handleAddFlight = async (flightData: FlightFormType) => {
+  const handleAddFlight = async (flightData: any) => {
     try {
       await api.post('/api/v1/flights', flightData);
       setShowAddFlightModal(false);
