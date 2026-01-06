@@ -60,7 +60,40 @@ export default function TrackResult() {
       const searchParam = pnr ? `pnr=${pnr}` : `tag=${tag}`;
       const response = await axios.get(`${API_URL}/api/v1/public/track?${searchParam}`);
       
-      setTrackingData(response.data.data);
+      const apiData = response.data.data;
+      
+      // Compatibilité: si l'API retourne l'ancien format (sans baggages array)
+      // on le convertit au nouveau format
+      if (apiData && !apiData.baggages) {
+        // Ancien format: données directes du bagage
+        const convertedData: TrackingResult = {
+          passenger_name: apiData.passenger_name || 'N/A',
+          pnr: apiData.pnr || pnr || 'N/A',
+          flight_number: apiData.flight_number || 'N/A',
+          origin: apiData.origin,
+          destination: apiData.destination,
+          summary: {
+            total: 1,
+            arrived: apiData.status === 'arrived' || apiData.status === 'delivered' ? 1 : 0,
+            in_transit: apiData.status === 'in_transit' || apiData.status === 'loaded' ? 1 : 0,
+            checked: apiData.status === 'checked' || apiData.status === 'scanned' ? 1 : 0,
+            rush: apiData.status === 'rush' ? 1 : 0,
+            lost: apiData.status === 'lost' || apiData.status === 'unmatched' ? 1 : 0,
+          },
+          baggages: [{
+            bag_id: apiData.bag_id || apiData.tag_number || 'N/A',
+            status: apiData.status || 'unknown',
+            weight: apiData.weight,
+            current_location: apiData.current_location,
+            last_scanned_at: apiData.last_scanned_at,
+            baggage_type: apiData.baggage_type || 'national'
+          }]
+        };
+        setTrackingData(convertedData);
+      } else {
+        // Nouveau format: déjà structuré correctement
+        setTrackingData(apiData);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Bagage non trouvé. Vérifiez votre numéro.');
     } finally {
