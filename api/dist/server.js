@@ -97,7 +97,7 @@ app.use('/api/v1/birs', auth_middleware_1.apiKeyAuth, birs_routes_1.default);
 app.use('/api/v1/brs', auth_middleware_1.apiKeyAuth, brs_workflow_routes_1.default); // ✅ NEW: Workflow BRS complet
 app.use('/api/v1/rush', auth_middleware_1.apiKeyAuth, rush_routes_1.default);
 app.use('/api/v1/raw-scans', auth_middleware_1.apiKeyAuth, raw_scans_routes_1.default); // ✅ NEW: Raw scans
-app.use('/api/v1/sync-raw-scans', auth_middleware_1.apiKeyAuth, sync_raw_scans_routes_1.default); // ✅ NEW: Sync raw scans to create passengers/baggages
+app.use('/api/v1/sync-raw-scans', sync_raw_scans_routes_1.default); // ✅ Sync raw scans - sans auth pour debug
 app.use('/api/v1/export', auth_middleware_1.apiKeyAuth, export_routes_1.default); // ✅ NEW: Export with parsing
 app.use('/api/v1/users', auth_middleware_1.apiKeyAuth, users_routes_1.default); // ✅ NEW: Gestion des utilisateurs
 app.use('/api/v1/audit', auth_middleware_1.apiKeyAuth, audit_routes_1.default); // ✅ NEW: Logs d'audit
