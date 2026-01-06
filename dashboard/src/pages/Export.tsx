@@ -61,8 +61,10 @@ export default function Export() {
   const fetchFlights = async () => {
     if (!user?.airport_code) return;
     try {
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `airport=${user.airport_code}&`;
       // Récupérer les raw scans et les parser
-      const response = await api.get(`/api/v1/raw-scans?airport=${user.airport_code}&limit=1000`);
+      const response = await api.get(`/api/v1/raw-scans?${airportParam}limit=1000`);
       const rawScans = response.data.data || [];
       
       if (rawScans.length === 0) {
@@ -88,8 +90,10 @@ export default function Export() {
   const fetchDestinations = async () => {
     if (!user?.airport_code) return;
     try {
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `airport=${user.airport_code}&`;
       // Récupérer les raw scans et les parser
-      const response = await api.get(`/api/v1/raw-scans?airport=${user.airport_code}&limit=1000`);
+      const response = await api.get(`/api/v1/raw-scans?${airportParam}limit=1000`);
       const rawScans = response.data.data || [];
       
       if (rawScans.length === 0) {

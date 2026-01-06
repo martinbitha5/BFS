@@ -114,13 +114,22 @@ export default function DashboardEnhanced() {
       if (!stats) setLoading(true);
       setError('');
       
+      // Les utilisateurs support ont un accès limité - pas de statistiques détaillées
+      const isSupport = user.role === 'support';
+      
       // 1. Statistiques principales
-      const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
+      const statsEndpoint = isSupport 
+        ? '/api/v1/stats/global' 
+        : `/api/v1/stats/airport/${user.airport_code}`;
+      const response = await api.get(statsEndpoint);
       setStats(response.data.data);
 
       // 2. Raw scans statistics
       try {
-        const rawScansResponse = await api.get(`/api/v1/raw-scans/stats?airport=${user.airport_code}`);
+        const rawScansEndpoint = isSupport
+          ? '/api/v1/raw-scans/stats'
+          : `/api/v1/raw-scans/stats?airport=${user.airport_code}`;
+        const rawScansResponse = await api.get(rawScansEndpoint);
         setRawScansStats(rawScansResponse.data.data);
       } catch (rawScansErr) {
         console.error('Error fetching raw scans stats:', rawScansErr);
@@ -128,7 +137,10 @@ export default function DashboardEnhanced() {
 
       // 3. Données récentes parsées (passagers, bagages, activités)
       try {
-        const recentResponse = await api.get(`/api/v1/stats/recent/${user.airport_code}?limit=10`);
+        const recentEndpoint = isSupport
+          ? '/api/v1/stats/recent?limit=10'
+          : `/api/v1/stats/recent/${user.airport_code}?limit=10`;
+        const recentResponse = await api.get(recentEndpoint);
         if (recentResponse.data.data) {
           setRecentPassengers(recentResponse.data.data.recentPassengers || []);
           setRecentBaggages(recentResponse.data.data.recentBaggages || []);
@@ -149,7 +161,10 @@ export default function DashboardEnhanced() {
 
       // 4. Vols avec statistiques détaillées
       try {
-        const flightsResponse = await api.get(`/api/v1/stats/flights/${user.airport_code}`);
+        const flightsEndpoint = isSupport
+          ? '/api/v1/stats/flights'
+          : `/api/v1/stats/flights/${user.airport_code}`;
+        const flightsResponse = await api.get(flightsEndpoint);
         if (flightsResponse.data.data) {
           setFlightsWithStats(flightsResponse.data.data.flights || []);
         }
@@ -170,7 +185,7 @@ export default function DashboardEnhanced() {
         setLoading(false);
       }
     }
-  }, [user?.airport_code, stats]);
+  }, [user?.airport_code, user?.role, stats]);
 
   const syncRawScans = async () => {
     if (!user?.airport_code) return;
@@ -180,9 +195,12 @@ export default function DashboardEnhanced() {
       setSyncMessage('');
       setError('');
       
-      const response = await api.post('/api/v1/sync-raw-scans', {
-        airport_code: user.airport_code
-      });
+      // Les utilisateurs support avec airport_code='ALL' synchronisent tous les aéroports
+      const syncData = user.airport_code === 'ALL' 
+        ? {} 
+        : { airport_code: user.airport_code };
+      
+      const response = await api.post('/api/v1/sync-raw-scans', syncData);
       
       const { stats: syncStats } = response.data;
       setSyncMessage(`Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
@@ -264,7 +282,7 @@ export default function DashboardEnhanced() {
     );
   }
 
-  if (!user?.airport_code) {
+  if (!user?.airport_code || (user.airport_code !== 'ALL' && !user.airport_code)) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-white/80">Aucun aéroport assigné</p>
@@ -288,7 +306,7 @@ export default function DashboardEnhanced() {
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span>Vue d'ensemble</span>
               <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-medium bg-primary-100 text-primary-800">
-                {user?.airport_code}
+                {user?.airport_code === 'ALL' ? 'Tous les aéroports' : user?.airport_code}
               </span>
             </h2>
             <p className="mt-1 text-[11px] sm:text-xs md:text-sm text-white/70 flex items-center flex-wrap">

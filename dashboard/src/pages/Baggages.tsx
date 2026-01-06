@@ -76,21 +76,24 @@ export default function Baggages() {
 
       if (!user?.airport_code) return;
 
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `?airport=${user.airport_code}`;
+
       // Charger les bagages selon le type sélectionné
       if (baggageType === 'all' || baggageType === 'national') {
-        const response = await api.get(`/api/v1/baggage?airport=${user.airport_code}`);
+        const response = await api.get(`/api/v1/baggage${airportParam}`);
         const nationalBags = response.data.data.map((b: any) => ({ ...b, baggageType: 'national' }));
         allBaggages.push(...nationalBags);
       }
 
       if (baggageType === 'all' || baggageType === 'international') {
-        const response = await api.get(`/api/v1/birs/international-baggages?airport=${user.airport_code}`);
+        const response = await api.get(`/api/v1/birs/international-baggages${airportParam}`);
         const intlBags = response.data.data.map((b: any) => ({ ...b, baggageType: 'international' }));
         allBaggages.push(...intlBags);
       }
 
       if (baggageType === 'rush') {
-        const response = await api.get(`/api/v1/rush/baggages?airport=${user.airport_code}`);
+        const response = await api.get(`/api/v1/rush/baggages${airportParam}`);
         allBaggages.push(...response.data.data);
       }
 

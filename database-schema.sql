@@ -9,7 +9,7 @@ CREATE TABLE users (
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
   airport_code TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'support')),
+  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'baggage_dispute', 'support')),
   is_approved BOOLEAN DEFAULT false,
   approved_at TIMESTAMP WITH TIME ZONE,
   approved_by UUID REFERENCES users(id),
@@ -226,12 +226,12 @@ EXECUTE FUNCTION update_updated_at_column();
 -- ========================================
 -- Table user_registration_requests (Demandes d'inscription utilisateurs)
 -- ========================================
-CREATE TABLE user_registration_requests (
+CREATE TABLE IF NOT EXISTS user_registration_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
   full_name TEXT NOT NULL,
   airport_code TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'support')),
+  role TEXT NOT NULL CHECK (role IN ('checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'baggage_dispute', 'support')),
   auth_user_id UUID,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   requested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

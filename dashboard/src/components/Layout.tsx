@@ -39,8 +39,6 @@ export default function Layout({ children }: LayoutProps) {
   // Menu simplifié pour les utilisateurs Support
   const supportNavItems: NavItem[] = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
-    { path: '/baggages', label: 'Bagages', icon: Package },
-    { path: '/passengers', label: 'Passagers', icon: Users },
     {
       label: 'Support',
       icon: ShieldCheck,
@@ -149,7 +147,7 @@ export default function Layout({ children }: LayoutProps) {
               </h1>
               {user && (
                 <p className="text-xs text-white/70 font-medium mt-1">
-                  Aéroport {user.airport_code}
+                  {user.role === 'support' ? 'Support - Tous les aéroports' : `Aéroport ${user.airport_code}`}
                 </p>
               )}
             </div>

@@ -4,6 +4,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.birsParserService = void 0;
+const pdf = require('pdf-parse');
 class BirsParserService {
     /**
      * Parse un fichier BIRS (PDF, Excel, TXT, CSV)
@@ -45,12 +46,36 @@ class BirsParserService {
      * Parse un fichier PDF (contenu texte extrait)
      */
     async parsePDF(content) {
-        // Si le contenu est en base64, le décoder
-        if (content.startsWith('data:application/pdf;base64,')) {
-            const base64 = content.split(',')[1];
-            content = Buffer.from(base64, 'base64').toString('utf-8');
+        console.log('[BIRS Parser] PDF parsing - content length:', content.length);
+        try {
+            // Le contenu est en base64, le décoder en Buffer
+            let pdfBuffer;
+            if (content.startsWith('data:application/pdf;base64,')) {
+                const base64 = content.split(',')[1];
+                pdfBuffer = Buffer.from(base64, 'base64');
+            }
+            else {
+                // Assumer que c'est déjà du base64
+                pdfBuffer = Buffer.from(content, 'base64');
+            }
+            console.log('[BIRS Parser] PDF buffer size:', pdfBuffer.length);
+            // Extraire le texte du PDF
+            const data = await pdf(pdfBuffer);
+            const text = data.text;
+            console.log('[BIRS Parser] Extracted text length:', text.length);
+            console.log('[BIRS Parser] Text preview:', text.substring(0, 300));
+            // Parser le texte extrait
+            return this.parseTextLines(text);
         }
-        return this.parseTextLines(content);
+        catch (error) {
+            console.error('[BIRS Parser] PDF parsing error:', error);
+            // Fallback: essayer de parser comme texte si le contenu ressemble à du texte
+            if (content.includes('\n') || content.includes('Bag') || content.includes('TAG')) {
+                console.log('[BIRS Parser] Fallback to text parsing');
+                return this.parseTextLines(content);
+            }
+            return [];
+        }
     }
     /**
      * Parse un fichier Excel (converti en CSV ou JSON)

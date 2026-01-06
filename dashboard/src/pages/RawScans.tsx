@@ -56,10 +56,12 @@ export default function RawScans() {
       setLoading(true);
       setError('');
       
-      let url = `/api/v1/raw-scans?airport=${user.airport_code}`;
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `airport=${user.airport_code}`;
+      let url = `/api/v1/raw-scans${airportParam ? '?' + airportParam : ''}`;
       console.log('[RawScans] Fetching:', url);
       if (statusFilter !== 'all') {
-        url += `&status=${statusFilter}`;
+        url += `${airportParam ? '&' : '?'}status=${statusFilter}`;
       }
 
       const response = await api.get(url);

@@ -1,25 +1,20 @@
-import { 
-  AlertCircle, 
-  CheckCircle, 
-  FileText, 
-  Package, 
-  RefreshCw, 
-  XCircle, 
-  Search,
-  Filter,
-  Download,
-  Eye,
-  TrendingUp,
-  Clock,
-  AlertTriangle,
-  BarChart3,
-  Calendar,
-  Plane,
-  Users,
-  FileDown,
-  X,
-  CheckCircle2,
-  ExternalLink
+import {
+    AlertTriangle,
+    BarChart3,
+    Calendar,
+    CheckCircle,
+    Download,
+    Eye,
+    FileDown,
+    FileText,
+    Filter,
+    Package,
+    Plane,
+    RefreshCw,
+    Search,
+    TrendingUp,
+    X,
+    XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -103,7 +98,9 @@ export default function BIRS() {
     
     try {
       setLoading(true);
-      const response = await api.get(`/api/v1/birs/reports?airport=${user.airport_code}`);
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `?airport=${user.airport_code}`;
+      const response = await api.get(`/api/v1/birs/reports${airportParam}`);
       setReports(response.data.data || []);
     } catch (err: any) {
       console.error('Error fetching reports:', err);
@@ -117,7 +114,11 @@ export default function BIRS() {
     if (!user?.airport_code) return;
     
     try {
-      const response = await api.get(`/api/v1/birs/statistics/${user.airport_code}`);
+      // Pour les utilisateurs support avec airport_code='ALL', utiliser un endpoint global
+      const endpoint = user.airport_code === 'ALL' 
+        ? '/api/v1/birs/statistics' 
+        : `/api/v1/birs/statistics/${user.airport_code}`;
+      const response = await api.get(endpoint);
       const data = response.data.data;
       
       const totalBaggages = data.totalInternationalBaggages || 0;

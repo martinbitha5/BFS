@@ -36,9 +36,12 @@ export default function Passengers() {
       setSyncing(true);
       setSyncMessage('');
       
-      const response = await api.post('/api/v1/sync-raw-scans', {
-        airport_code: user.airport_code
-      });
+      // Les utilisateurs support avec airport_code='ALL' synchronisent tous les aéroports
+      const syncData = user.airport_code === 'ALL' 
+        ? {} 
+        : { airport_code: user.airport_code };
+      
+      const response = await api.post('/api/v1/sync-raw-scans', syncData);
       
       const stats = response.data.stats;
       setSyncMessage(
@@ -62,7 +65,9 @@ export default function Passengers() {
       setLoading(true);
       setError('');
       
-      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`);
+      // Pour les utilisateurs support avec airport_code='ALL', ne pas filtrer par aéroport
+      const airportParam = user.airport_code === 'ALL' ? '' : `airport=${user.airport_code}`;
+      const response = await api.get(`/api/v1/passengers${airportParam ? '?' + airportParam : ''}`);
       setPassengers(response.data.data);
       setFilteredPassengers(response.data.data);
     } catch (err: any) {
