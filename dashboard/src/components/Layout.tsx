@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, Plane, RefreshCw, Search, Settings, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, RefreshCw, Search, Settings, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,7 +52,6 @@ export default function Layout({ children }: LayoutProps) {
   // Menu complet pour supervisor et baggage_dispute
   const standardNavItems: NavItem[] = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
-    { path: '/flights', label: 'Gestion des Vols', icon: Plane },
     { path: '/baggages', label: 'Bagages', icon: Package },
     { path: '/passengers', label: 'Passagers', icon: Users },
     {

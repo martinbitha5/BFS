@@ -12,7 +12,7 @@ import BRSDashboard from './pages/BRSDashboard';
 import BRSTraceability from './pages/BRSTraceability';
 import BRSUnmatched from './pages/BRSUnmatched';
 import BRSWorkflow from './pages/BRSWorkflow';
-import DashboardEnhanced from './pages/DashboardEnhanced';
+import DashboardSupervisor from './pages/DashboardSupervisor';
 import DebugParser from './pages/DebugParser';
 import Export from './pages/Export';
 import FlightManagement from './pages/FlightManagement';
@@ -41,7 +41,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <DashboardEnhanced />
+                  <DashboardSupervisor />
                 </Layout>
               </ProtectedRoute>
             }
