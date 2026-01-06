@@ -1,9 +1,18 @@
 import { supabase } from '../config/database';
 import { logAudit } from './audit.service';
 
-// Cache pour éviter de re-sync trop souvent (2 minutes pour être plus réactif)
+// Cache pour éviter de re-sync trop souvent (30 secondes pour être plus réactif)
 const syncCache: Map<string, number> = new Map();
-const SYNC_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
+const SYNC_COOLDOWN_MS = 30 * 1000; // 30 secondes - plus réactif
+
+// Export pour pouvoir réinitialiser le cache si nécessaire
+export function clearSyncCache(airportCode?: string): void {
+  if (airportCode) {
+    syncCache.delete(airportCode);
+  } else {
+    syncCache.clear();
+  }
+}
 
 /**
  * Auto-sync si des raw_scans non traités existent
@@ -219,12 +228,50 @@ async function performSyncInBackground(airportCode: string): Promise<void> {
             .single();
           
           if (!existingBag) {
-            // Créer le bagage (sans passager pour l'instant)
+            // ✅ Chercher le passager correspondant par baggage_base_number ou flight_number
+            let passengerId = null;
+            const tagBase = scan.baggage_rfid_tag.substring(0, 10);
+            
+            // 1. Chercher par baggage_base_number
+            const { data: passengerByBase } = await supabase
+              .from('passengers')
+              .select('id, pnr, full_name, baggage_base_number')
+              .eq('airport_code', airportCode)
+              .eq('baggage_base_number', tagBase)
+              .single();
+            
+            if (passengerByBase) {
+              passengerId = passengerByBase.id;
+              console.log(`[AUTO-SYNC] ✅ Bagage ${scan.baggage_rfid_tag} lié au passager ${passengerByBase.full_name} par base`);
+            } else {
+              // 2. Chercher tous les passagers avec baggage_base_number similaire
+              const { data: allPassengers } = await supabase
+                .from('passengers')
+                .select('id, pnr, full_name, baggage_base_number, flight_number')
+                .eq('airport_code', airportCode)
+                .not('baggage_base_number', 'is', null);
+              
+              if (allPassengers) {
+                const matched = allPassengers.find(p => {
+                  if (!p.baggage_base_number) return false;
+                  return scan.baggage_rfid_tag.startsWith(p.baggage_base_number) ||
+                         p.baggage_base_number === tagBase;
+                });
+                if (matched) {
+                  passengerId = matched.id;
+                  console.log(`[AUTO-SYNC] ✅ Bagage ${scan.baggage_rfid_tag} lié au passager ${matched.full_name} par recherche`);
+                }
+              }
+            }
+            
+            // Créer le bagage avec ou sans passager
             const { error: bagError } = await supabase
               .from('baggages')
               .insert({
                 tag_number: scan.baggage_rfid_tag,
+                passenger_id: passengerId,
                 status: 'checked',
+                flight_number: scan.flight_number || null,
                 airport_code: airportCode,
                 checked_at: scan.baggage_at || scan.created_at
               });

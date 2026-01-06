@@ -70,12 +70,85 @@ async function validateFlightBeforeScan(
 }
 
 /**
+ * GET /api/v1/sync-raw-scans/debug
+ * Debug: voir l'état des données dans la base
+ */
+router.get('/debug', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { airport } = req.query;
+    
+    if (!airport) {
+      return res.status(400).json({ error: 'airport requis' });
+    }
+
+    // Compter les données
+    const { count: rawScansCount } = await supabase
+      .from('raw_scans')
+      .select('*', { count: 'exact', head: true })
+      .eq('airport_code', airport);
+
+    const { count: passengersCount } = await supabase
+      .from('passengers')
+      .select('*', { count: 'exact', head: true })
+      .eq('airport_code', airport);
+
+    const { count: baggagesCount } = await supabase
+      .from('baggages')
+      .select('*', { count: 'exact', head: true })
+      .eq('airport_code', airport);
+
+    const { count: boardingCount } = await supabase
+      .from('boarding_status')
+      .select('*', { count: 'exact', head: true });
+
+    // Derniers raw_scans
+    const { data: recentScans } = await supabase
+      .from('raw_scans')
+      .select('id, scan_type, status_checkin, status_baggage, status_boarding, baggage_rfid_tag, processed, created_at')
+      .eq('airport_code', airport)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // Passagers avec leurs bagages
+    const { data: passengersWithBags } = await supabase
+      .from('passengers')
+      .select('id, full_name, pnr, flight_number, baggage_count, baggages(id, tag_number, status)')
+      .eq('airport_code', airport)
+      .limit(10);
+
+    // Bagages orphelins (sans passenger_id)
+    const { data: orphanBaggages } = await supabase
+      .from('baggages')
+      .select('*')
+      .eq('airport_code', airport)
+      .is('passenger_id', null);
+
+    res.json({
+      success: true,
+      data: {
+        counts: {
+          raw_scans: rawScansCount || 0,
+          passengers: passengersCount || 0,
+          baggages: baggagesCount || 0,
+          boarding_status: boardingCount || 0
+        },
+        recentScans: recentScans || [],
+        passengersWithBags: passengersWithBags || [],
+        orphanBaggages: orphanBaggages || []
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/sync-raw-scans
  * Parse tous les raw_scans et crée les passagers/bagages manquants
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { airport_code } = req.body;
+    const { airport_code, force } = req.body;
     
     if (!airport_code) {
       return res.status(400).json({ 
@@ -84,14 +157,22 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    console.log(`[SYNC] Démarrage de la synchronisation des raw_scans pour ${airport_code}`);
+    console.log(`[SYNC] Démarrage de la synchronisation des raw_scans pour ${airport_code} (force=${force || false})`);
 
     // 1. Récupérer tous les raw_scans pour cet aéroport
-    const { data: rawScans, error: scanError } = await supabase
+    // Si force=true, récupérer TOUS les scans (même déjà traités)
+    let query = supabase
       .from('raw_scans')
       .select('*')
       .eq('airport_code', airport_code)
       .order('created_at', { ascending: false });
+
+    if (!force) {
+      // Par défaut, ne récupérer que les scans non traités
+      query = query.or('processed.is.null,processed.eq.false');
+    }
+
+    const { data: rawScans, error: scanError } = await query;
 
     if (scanError) {
       console.error('[SYNC] Erreur récupération raw_scans:', scanError);
