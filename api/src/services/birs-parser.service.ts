@@ -31,33 +31,41 @@ class BirsParserService {
     const extension = fileName.toLowerCase().split('.').pop() || '';
     
     console.log(`[BIRS Parser] Parsing ${extension.toUpperCase()} file:`, fileName);
+    console.log(`[BIRS Parser] Content length:`, fileContent.length);
+    console.log(`[BIRS Parser] Content type:`, typeof fileContent);
 
     let items: BirsItem[] = [];
 
     try {
       switch (extension) {
         case 'pdf':
+          console.log('[BIRS Parser] Calling parsePDF...');
           items = await this.parsePDF(fileContent);
+          console.log(`[BIRS Parser] parsePDF returned ${items.length} items`);
           break;
         case 'xlsx':
         case 'xls':
+          console.log('[BIRS Parser] Calling parseExcel...');
           items = await this.parseExcel(fileContent);
           break;
         case 'csv':
+          console.log('[BIRS Parser] Calling parseCSV...');
           items = await this.parseCSV(fileContent);
           break;
         case 'txt':
         case 'tsv':
+          console.log('[BIRS Parser] Calling parseText...');
           items = await this.parseText(fileContent);
           break;
         default:
           console.warn(`[BIRS Parser] Unknown format: ${extension}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[BIRS Parser] Parse error:', error);
+      console.error('[BIRS Parser] Error stack:', error.stack);
     }
 
-    console.log(`[BIRS Parser] Found ${items.length} bagages`);
+    console.log(`[BIRS Parser] Final result: Found ${items.length} bagages`);
 
     return {
       items,

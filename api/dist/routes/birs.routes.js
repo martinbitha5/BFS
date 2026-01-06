@@ -185,26 +185,28 @@ router.post('/upload', async (req, res, next) => {
             });
         }
         console.log('[BIRS Upload] Parsing file:', fileName);
-        // Décoder le base64 si nécessaire
-        let decodedContent = fileContent;
-        if (fileContent && !fileContent.includes('\n') && fileContent.length > 100) {
-            try {
-                decodedContent = Buffer.from(fileContent, 'base64').toString('utf-8');
-                console.log('[BIRS Upload] Decoded base64 content');
-            }
-            catch (e) {
-                console.log('[BIRS Upload] Content is not base64, using as-is');
-            }
-        }
+        console.log('[BIRS Upload] File content length:', fileContent.length);
+        console.log('[BIRS Upload] File extension:', fileName.split('.').pop()?.toLowerCase());
+        // Le contenu est toujours en base64 depuis le frontend
+        // Ne PAS décoder en UTF-8 pour les PDF, passer le base64 directement au parser
+        const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
         // Parser le fichier pour extraire les bagages
         let parsedItems = [];
         try {
-            const parsedData = await birs_parser_service_1.birsParserService.parseFile(fileName, decodedContent);
+            // Passer le contenu base64 directement au parser
+            // Le parser PDF va le décoder correctement en Buffer
+            const parsedData = await birs_parser_service_1.birsParserService.parseFile(fileName, fileContent);
             parsedItems = parsedData.items;
             console.log(`[BIRS Upload] Parsed ${parsedItems.length} bagages from file`);
+            if (parsedItems.length === 0) {
+                console.warn('[BIRS Upload] WARNING: No baggages parsed from file!');
+                console.warn('[BIRS Upload] File type:', fileExtension);
+                console.warn('[BIRS Upload] Content preview:', fileContent.substring(0, 100));
+            }
         }
         catch (parseError) {
             console.error('[BIRS Upload] Parse error:', parseError);
+            console.error('[BIRS Upload] Error details:', parseError.message);
         }
         // Créer le rapport BIRS - SANS uploaded_by
         const { data: report, error: reportError } = await database_1.supabase
