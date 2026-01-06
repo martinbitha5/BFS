@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const database_1 = require("../config/database");
@@ -130,9 +97,57 @@ router.get('/stats', async (req, res, next) => {
     }
 });
 /**
+ * Parse un boarding pass BCBP pour extraire les infos passager
+ */
+function parseBoardingPass(rawData) {
+    try {
+        if (!rawData || !rawData.startsWith('M'))
+            return null;
+        let fullName = 'UNKNOWN';
+        let pnr = null;
+        let departure = null;
+        let arrival = null;
+        let flightNumber = null;
+        let seatNumber = null;
+        let baggageCount = 0;
+        // Pattern BCBP
+        let match = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s*(\d{3,4})/);
+        if (!match) {
+            match = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6})\s*([A-Z]{3})([A-Z]{3})([A-Z]{2})\s*(\d{3,4})/);
+        }
+        if (match) {
+            fullName = match[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+            pnr = match[2];
+            departure = match[3];
+            arrival = match[4];
+            flightNumber = match[5] + match[6];
+        }
+        else {
+            // Extraction basique
+            const pnrMatch = rawData.match(/([A-Z0-9]{6})/);
+            if (pnrMatch)
+                pnr = pnrMatch[1];
+            const nameMatch = rawData.match(/^M1([A-Z\/\s]+)/);
+            if (nameMatch)
+                fullName = nameMatch[1].trim().replace(/\//g, ' ').substring(0, 50);
+        }
+        // Nombre de bagages
+        const bagMatch = rawData.match(/(\d)PC/i);
+        if (bagMatch)
+            baggageCount = parseInt(bagMatch[1], 10);
+        if (!pnr)
+            return null;
+        return { fullName, pnr, departure, arrival, flightNumber, seatNumber, baggageCount };
+    }
+    catch (err) {
+        console.error('[PARSE] Erreur parsing BP:', err);
+        return null;
+    }
+}
+/**
  * POST /api/v1/raw-scans (sync depuis l'app mobile)
  * Créer ou mettre à jour un scan brut
- * VALIDATION: Vérifie que le vol est programmé avant d'accepter le scan
+ * ✅ CRÉE IMMÉDIATEMENT les passagers/bagages pour que le Dashboard les affiche
  */
 router.post('/', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
@@ -142,25 +157,133 @@ router.post('/', airport_restriction_middleware_1.requireAirportCode, async (req
                 error: 'Données manquantes (raw_data, scan_type, airport_code requis)',
             });
         }
-        // VALIDATION: Si c'est un boarding pass (check-in), valider le vol
+        console.log(`[RAW-SCAN] Reçu: type=${scan_type}, airport=${airport_code}, checkin=${status_checkin}, baggage=${status_baggage}`);
+        // ============================================
+        // ✅ CRÉATION IMMÉDIATE DES PASSAGERS/BAGAGES
+        // ============================================
+        // Si c'est un boarding pass au CHECK-IN → créer le passager
         if (scan_type === 'boarding_pass' && status_checkin) {
-            const { validateFlightForScan } = await Promise.resolve().then(() => __importStar(require('../middleware/scan-validation.middleware')));
-            // Extraire le numéro de vol du boarding pass
-            const flightMatch = raw_data.match(/\b([A-Z]{2,3}\d{2,4})\b/);
-            if (flightMatch) {
-                const flightNumber = flightMatch[1];
-                const validation = await validateFlightForScan(flightNumber, airport_code);
-                if (!validation.valid) {
-                    return res.status(403).json({
-                        success: false,
-                        error: validation.reason || 'Vol non programmé',
-                        rejected: true,
-                        flightNumber,
-                        message: `Le scan a été refusé car le vol ${flightNumber} n'est pas programmé à l'aéroport ${airport_code}`
-                    });
+            const parsed = parseBoardingPass(raw_data);
+            if (parsed && parsed.pnr) {
+                console.log(`[RAW-SCAN] Passager détecté: ${parsed.fullName} (${parsed.pnr})`);
+                // Vérifier si passager existe
+                const { data: existingPax } = await database_1.supabase
+                    .from('passengers')
+                    .select('id')
+                    .eq('pnr', parsed.pnr)
+                    .eq('airport_code', airport_code)
+                    .single();
+                if (!existingPax) {
+                    // Créer le passager
+                    const { data: newPax, error: paxError } = await database_1.supabase
+                        .from('passengers')
+                        .insert({
+                        full_name: parsed.fullName,
+                        pnr: parsed.pnr,
+                        flight_number: parsed.flightNumber || 'UNKNOWN',
+                        departure: parsed.departure || airport_code,
+                        arrival: parsed.arrival || 'UNK',
+                        seat_number: parsed.seatNumber,
+                        baggage_count: parsed.baggageCount || 0,
+                        checked_in_at: restData.checkin_at || new Date().toISOString(),
+                        airport_code: airport_code
+                    })
+                        .select()
+                        .single();
+                    if (paxError) {
+                        console.error('[RAW-SCAN] Erreur création passager:', paxError);
+                    }
+                    else {
+                        console.log(`[RAW-SCAN] ✅ Passager créé: ${parsed.pnr}`);
+                    }
+                }
+                else {
+                    console.log(`[RAW-SCAN] Passager existe déjà: ${parsed.pnr}`);
                 }
             }
         }
+        // Si c'est un boarding pass à l'EMBARQUEMENT → mettre à jour boarding_status
+        if (scan_type === 'boarding_pass' && status_boarding) {
+            const parsed = parseBoardingPass(raw_data);
+            if (parsed && parsed.pnr) {
+                const { data: pax } = await database_1.supabase
+                    .from('passengers')
+                    .select('id')
+                    .eq('pnr', parsed.pnr)
+                    .eq('airport_code', airport_code)
+                    .single();
+                if (pax) {
+                    await database_1.supabase
+                        .from('boarding_status')
+                        .upsert({
+                        passenger_id: pax.id,
+                        boarded: true,
+                        boarded_at: restData.boarding_at || new Date().toISOString()
+                    }, { onConflict: 'passenger_id' });
+                    console.log(`[RAW-SCAN] ✅ Passager embarqué: ${parsed.pnr}`);
+                }
+            }
+        }
+        // Si c'est un BAGGAGE TAG → créer le bagage et lier au passager
+        if (scan_type === 'baggage_tag' && status_baggage && restData.baggage_rfid_tag) {
+            const tagNumber = restData.baggage_rfid_tag;
+            console.log(`[RAW-SCAN] Bagage détecté: ${tagNumber}`);
+            // Vérifier si bagage existe
+            const { data: existingBag } = await database_1.supabase
+                .from('baggages')
+                .select('id')
+                .eq('tag_number', tagNumber)
+                .single();
+            if (!existingBag) {
+                // Chercher le passager par flight_number et baggage_count
+                // Extraire le vol du raw_data si possible
+                const flightMatch = raw_data.match(/\b([A-Z]{2,3}\d{2,4})\b/);
+                const flightNumber = flightMatch ? flightMatch[1] : null;
+                let passengerId = null;
+                if (flightNumber) {
+                    // Chercher un passager sur ce vol avec des bagages manquants
+                    const { data: passengers } = await database_1.supabase
+                        .from('passengers')
+                        .select('id, pnr, full_name, baggage_count, baggages(id)')
+                        .eq('airport_code', airport_code)
+                        .ilike('flight_number', `%${flightNumber.replace(/^[A-Z]{2}0*/, '')}%`);
+                    if (passengers) {
+                        for (const pax of passengers) {
+                            const linkedCount = pax.baggages?.length || 0;
+                            const expected = pax.baggage_count || 0;
+                            if (linkedCount < expected) {
+                                passengerId = pax.id;
+                                console.log(`[RAW-SCAN] Bagage lié au passager: ${pax.full_name}`);
+                                break;
+                            }
+                        }
+                    }
+                }
+                // Créer le bagage
+                const { error: bagError } = await database_1.supabase
+                    .from('baggages')
+                    .insert({
+                    tag_number: tagNumber,
+                    passenger_id: passengerId,
+                    status: 'checked',
+                    flight_number: flightNumber,
+                    airport_code: airport_code,
+                    checked_at: restData.baggage_at || new Date().toISOString()
+                });
+                if (bagError) {
+                    console.error('[RAW-SCAN] Erreur création bagage:', bagError);
+                }
+                else {
+                    console.log(`[RAW-SCAN] ✅ Bagage créé: ${tagNumber}`);
+                }
+            }
+            else {
+                console.log(`[RAW-SCAN] Bagage existe déjà: ${tagNumber}`);
+            }
+        }
+        // ============================================
+        // Sauvegarde du raw_scan (comme avant)
+        // ============================================
         // Vérifier si le scan existe déjà  
         const { data: existing, error: existingError } = await database_1.supabase
             .from('raw_scans')
