@@ -222,27 +222,27 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    // Récupérer l'ID de l'airline depuis le token JWT
-    let airlineId: string | null = null;
+    // Récupérer l'ID utilisateur depuis le token JWT (pour les users, pas les airlines)
+    let userId: string | null = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
         if (!authError && user) {
-          // Vérifier si c'est une airline
-          const { data: airlineData } = await supabase
-            .from('airlines')
+          // Vérifier si c'est un utilisateur dans la table users (pas airline)
+          const { data: userData } = await supabase
+            .from('users')
             .select('id')
-            .eq('email', user.email)
+            .eq('id', user.id)
             .single();
           
-          if (airlineData) {
-            airlineId = airlineData.id;
+          if (userData) {
+            userId = userData.id;
           }
         }
       } catch (error) {
-        console.error('[BIRS Upload] Error getting airline ID:', error);
+        console.error('[BIRS Upload] Error getting user ID:', error);
       }
     }
 
@@ -293,12 +293,18 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       synced: true
     };
 
-    // Ajouter uploaded_by seulement si on a un ID valide
-    if (airlineId) {
-      insertData.uploaded_by = airlineId;
+    // Ajouter uploaded_by seulement si on a un ID utilisateur valide (pas airline)
+    // Les airlines n'ont pas d'entrée dans users, donc on ne met pas uploaded_by
+    if (userId) {
+      insertData.uploaded_by = userId;
     } else if (uploadedBy && uploadedBy !== 'system') {
-      insertData.uploaded_by = uploadedBy;
+      // Vérifier que c'est un UUID valide
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(uploadedBy)) {
+        insertData.uploaded_by = uploadedBy;
+      }
     }
+    // Si aucun ID valide, on ne met pas uploaded_by (NULL est accepté)
 
     const { data: report, error: reportError } = await supabase
       .from('birs_reports')
