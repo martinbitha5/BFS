@@ -1844,13 +1844,40 @@ class ParserService {
    * Format peut commencer par 0 (ex: 0716055397226 = 7160553972 base, 226 = count)
    */
   private extractBaggageInfoEthiopian(rawData: string): PassengerData['baggageInfo'] | undefined {
-    // FORMAT IATA pour les bagages:
-    // - 10 chiffres de numéro de bagage de base
-    // - 3 chiffres encodés:
-    //   * Si < 100 (ex: "001", "002") → nombre direct de bagages
-    //   * Si ≥ 100 (ex: "800", "226") → format spécial, prendre dernier chiffre OU chercher ailleurs
+    // FORMAT IATA pour les bagages Ethiopian:
+    // 
+    // PRIORITÉ 1: Format "XA" où X = nombre de bagages (ex: "2A0712157463879" = 2 bagages)
+    // Ce format est le plus fiable et doit être vérifié EN PREMIER
+    //
+    // PRIORITÉ 2: Format 10+3 chiffres (ex: "4071161870001" = base + count)
     
-    // STRATÉGIE 1: Chercher pattern standard (10 chiffres + 3 chiffres < 100)
+    // STRATÉGIE 1 (PRIORITAIRE): Chercher pattern "XA" suivi de chiffres
+    // Format: [espace][chiffre]A[10+ chiffres] - ex: " 2A0712157463879"
+    const xaMatch = rawData.match(/\s(\d)A(\d{10,13})/);
+    if (xaMatch) {
+      const count = parseInt(xaMatch[1], 10);
+      const tagNumber = xaMatch[2];
+      // Extraire les 10 premiers chiffres comme base
+      const baseNumber = tagNumber.substring(0, 10);
+      
+      if (count > 0 && count <= 9) {
+        const expectedTags: string[] = [];
+        const baseNum = parseInt(baseNumber, 10);
+        
+        for (let i = 0; i < count; i++) {
+          expectedTags.push((baseNum + i).toString().padStart(10, '0'));
+        }
+        
+        console.log(`[PARSER] Bagages format XA: ${count} bagages, base=${baseNumber}`);
+        return {
+          count,
+          baseNumber,
+          expectedTags,
+        };
+      }
+    }
+    
+    // STRATÉGIE 2: Chercher pattern standard (10 chiffres + 3 chiffres < 100)
     const allMatches = Array.from(rawData.matchAll(/(\d{10})(\d{3})/g));
     
     for (const match of allMatches) {
