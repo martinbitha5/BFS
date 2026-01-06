@@ -178,39 +178,82 @@ class BirsParserService {
 
   /**
    * Parse les lignes de texte pour extraire les bagages
+   * Gère le format multi-lignes des manifestes (Tag sur une ligne, Nom sur la suivante, etc.)
    */
   private parseTextLines(content: string): BirsItem[] {
     const items: BirsItem[] = [];
     const lines = content.split(/\r?\n/);
     
-    let skippedHeaders = 0;
-    let skippedEmpty = 0;
-    let skippedInvalid = 0;
     let parsed = 0;
+    let i = 0;
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    while (i < lines.length) {
+      const line = lines[i].trim();
       
-      if (!trimmed) {
-        skippedEmpty++;
-        continue;
-      }
+      // Chercher un Tag (9-13 chiffres au début de la ligne)
+      const tagMatch = line.match(/^(\d{9,13})\s*$/);
       
-      if (this.isHeaderLine(trimmed)) {
-        skippedHeaders++;
-        continue;
-      }
-      
-      const item = this.parseTextLine(line);
-      if (item) {
-        items.push(item);
-        parsed++;
-      } else if (trimmed.length > 10) {
-        skippedInvalid++;
+      if (tagMatch) {
+        const bagId = tagMatch[1];
+        let passengerName = '';
+        let weight = 0;
+        let loaded = false;
+        let received = false;
+        
+        // Lire les lignes suivantes pour ce bagage
+        let j = i + 1;
+        let linesRead = 0;
+        
+        while (j < lines.length && linesRead < 10) {
+          const nextLine = lines[j].trim();
+          
+          // Si on trouve un nouveau tag, arrêter
+          if (nextLine.match(/^\d{9,13}\s*$/)) {
+            break;
+          }
+          
+          // Extraire le nom du passager (ligne avec des lettres majuscules)
+          if (!passengerName && nextLine.match(/^[A-Z\/\s\-']{2,}$/)) {
+            passengerName = nextLine;
+          }
+          
+          // Extraire le poids
+          const weightMatch = nextLine.match(/(\d+)\s*$/);
+          if (weightMatch && !weight) {
+            weight = parseInt(weightMatch[1]);
+          }
+          
+          // Vérifier LOADED et Received
+          if (nextLine.includes('LOADED')) {
+            loaded = true;
+          }
+          if (nextLine.includes('Received')) {
+            received = true;
+          }
+          
+          j++;
+          linesRead++;
+        }
+        
+        // Créer l'item si on a au moins un nom
+        if (passengerName) {
+          items.push({
+            bagId: bagId,
+            passengerName: passengerName,
+            weight: weight || undefined,
+            loaded: loaded,
+            received: received
+          });
+          parsed++;
+        }
+        
+        i = j; // Sauter au prochain tag potentiel
+      } else {
+        i++;
       }
     }
 
-    console.log(`[BIRS Parser] Lines stats - Total: ${lines.length}, Parsed: ${parsed}, Headers: ${skippedHeaders}, Empty: ${skippedEmpty}, Invalid: ${skippedInvalid}`);
+    console.log(`[BIRS Parser] Multi-line format - Total lines: ${lines.length}, Parsed bags: ${parsed}`);
 
     return items;
   }
