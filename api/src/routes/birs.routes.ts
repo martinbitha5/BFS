@@ -222,6 +222,30 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
+    // Récupérer l'ID de l'airline depuis le token JWT
+    let airlineId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (!authError && user) {
+          // Vérifier si c'est une airline
+          const { data: airlineData } = await supabase
+            .from('airlines')
+            .select('id')
+            .eq('email', user.email)
+            .single();
+          
+          if (airlineData) {
+            airlineId = airlineData.id;
+          }
+        }
+      } catch (error) {
+        console.error('[BIRS Upload] Error getting airline ID:', error);
+      }
+    }
+
     console.log('[BIRS Upload] Parsing file:', fileName);
 
     // Parser le fichier pour extraire les bagages
@@ -250,27 +274,35 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
     }
 
     // Créer le rapport BIRS
+    const insertData: any = {
+      report_type: reportType,
+      flight_number: flightNumber || 'UNKNOWN',
+      flight_date: flightDate || new Date().toISOString().split('T')[0],
+      origin: origin || 'UNKNOWN',
+      destination: destination || 'UNKNOWN',
+      airline: airline || 'UNKNOWN',
+      airline_code: airlineCode || 'UNKNOWN',
+      file_name: fileName,
+      file_size: fileContent.length,
+      uploaded_at: new Date().toISOString(),
+      airport_code: airportCode || 'UNKNOWN',
+      total_baggages: parsedItems.length,
+      reconciled_count: 0,
+      unmatched_count: 0,
+      raw_data: JSON.stringify({ items: parsedItems, fileContent }),
+      synced: true
+    };
+
+    // Ajouter uploaded_by seulement si on a un ID valide
+    if (airlineId) {
+      insertData.uploaded_by = airlineId;
+    } else if (uploadedBy && uploadedBy !== 'system') {
+      insertData.uploaded_by = uploadedBy;
+    }
+
     const { data: report, error: reportError } = await supabase
       .from('birs_reports')
-      .insert({
-        report_type: reportType,
-        flight_number: flightNumber || 'UNKNOWN',
-        flight_date: flightDate || new Date().toISOString().split('T')[0],
-        origin: origin || 'UNKNOWN',
-        destination: destination || 'UNKNOWN',
-        airline: airline || 'UNKNOWN',
-        airline_code: airlineCode || 'UNKNOWN',
-        file_name: fileName,
-        file_size: fileContent.length,
-        uploaded_at: new Date().toISOString(),
-        uploaded_by: uploadedBy || 'system',
-        airport_code: airportCode || 'UNKNOWN',
-        total_baggages: parsedItems.length,
-        reconciled_count: 0,
-        unmatched_count: 0,
-        raw_data: JSON.stringify({ items: parsedItems, fileContent }),
-        synced: true
-      })
+      .insert(insertData)
       .select()
       .single();
 
