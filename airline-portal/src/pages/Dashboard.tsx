@@ -52,21 +52,18 @@ export default function Dashboard() {
     setMessage('');
 
     try {
-      let fileContent: string;
-      
-      // Pour les PDF, utiliser base64, pour les autres fichiers texte
-      if (fileExtension === '.pdf') {
-        // Lire le fichier PDF en base64
-        const reader = new FileReader();
-        fileContent = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      } else {
-        // Lire le contenu texte pour TXT, CSV, TSV, XLSX
-        fileContent = await file.text();
-      }
+      // Encoder TOUS les fichiers en base64 pour éviter les problèmes avec les caractères spéciaux
+      const reader = new FileReader();
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Extraire seulement la partie base64 (après la virgule)
+          const base64Content = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64Content);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       const payload = {
         fileName: file.name,
