@@ -119,14 +119,18 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(500).json({ error: 'Erreur lors de la création de l\'utilisateur' });
     }
 
-    await supabase.from('audit_logs').insert({
-      action: 'CREATE_USER',
-      entity_type: 'user',
-      entity_id: userData.id,
-      description: `Création de l'utilisateur ${full_name} (${email}) avec le rôle ${role}`,
-      airport_code,
-      user_id: req.headers['x-user-id'] as string
-    });
+    // ⛔ Ne pas logger les actions du support (pas de trace)
+    const userRole = req.headers['x-user-role'] as string;
+    if (userRole !== 'support') {
+      await supabase.from('audit_logs').insert({
+        action: 'CREATE_USER',
+        entity_type: 'user',
+        entity_id: userData.id,
+        description: `Création de l'utilisateur ${full_name} (${email}) avec le rôle ${role}`,
+        airport_code,
+        user_id: req.headers['x-user-id'] as string
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -184,14 +188,18 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
     }
 
-    await supabase.from('audit_logs').insert({
-      action: 'UPDATE_USER',
-      entity_type: 'user',
-      entity_id: id,
-      description: `Modification de l'utilisateur ${updatedUser.full_name}`,
-      airport_code: existingUser.airport_code,
-      user_id: req.headers['x-user-id'] as string
-    });
+    // ⛔ Ne pas logger les actions du support (pas de trace)
+    const userRole = req.headers['x-user-role'] as string;
+    if (userRole !== 'support') {
+      await supabase.from('audit_logs').insert({
+        action: 'UPDATE_USER',
+        entity_type: 'user',
+        entity_id: id,
+        description: `Modification de l'utilisateur ${updatedUser.full_name}`,
+        airport_code: existingUser.airport_code,
+        user_id: req.headers['x-user-id'] as string
+      });
+    }
 
     res.json({
       success: true,
@@ -236,14 +244,18 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       console.error('Error deleting auth user:', authDeleteError);
     }
 
-    await supabase.from('audit_logs').insert({
-      action: 'DELETE_USER',
-      entity_type: 'user',
-      entity_id: id,
-      description: `Suppression de l'utilisateur ${existingUser.full_name} (${existingUser.email})`,
-      airport_code: existingUser.airport_code,
-      user_id: req.headers['x-user-id'] as string
-    });
+    // ⛔ Ne pas logger les actions du support (pas de trace)
+    const userRole = req.headers['x-user-role'] as string;
+    if (userRole !== 'support') {
+      await supabase.from('audit_logs').insert({
+        action: 'DELETE_USER',
+        entity_type: 'user',
+        entity_id: id,
+        description: `Suppression de l'utilisateur ${existingUser.full_name} (${existingUser.email})`,
+        airport_code: existingUser.airport_code,
+        user_id: req.headers['x-user-id'] as string
+      });
+    }
 
     res.json({
       success: true,

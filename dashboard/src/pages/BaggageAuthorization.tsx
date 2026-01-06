@@ -1,4 +1,4 @@
-import { AlertCircle, Package, ShieldAlert, UserCheck, UserX } from 'lucide-react';
+import { AlertCircle, Package, Plus, ShieldAlert, UserCheck, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -42,6 +42,17 @@ export default function BaggageAuthorization() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  
+  // États pour le formulaire de création manuelle
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    pnr: '',
+    tag_number: '',
+    additional_baggage_count: 1,
+    notes: ''
+  });
+  const [creatingManual, setCreatingManual] = useState(false);
+  const [manualError, setManualError] = useState('');
 
   // Vérifier que l'utilisateur est support
   useEffect(() => {
@@ -129,6 +140,48 @@ export default function BaggageAuthorization() {
     }
   };
 
+  const handleCreateManual = async () => {
+    if (!manualForm.pnr.trim() || !manualForm.tag_number.trim()) {
+      setManualError('PNR et Tag RFID sont requis');
+      return;
+    }
+
+    if (manualForm.additional_baggage_count < 1) {
+      setManualError('Le nombre de bagages supplémentaires doit être au moins 1');
+      return;
+    }
+
+    try {
+      setCreatingManual(true);
+      setManualError('');
+      
+      const response = await api.post('/api/v1/baggage-authorization/requests/manual', {
+        pnr: manualForm.pnr.trim().toUpperCase(),
+        tag_number: manualForm.tag_number.trim(),
+        additional_baggage_count: manualForm.additional_baggage_count,
+        notes: manualForm.notes.trim() || 'Autorisation manuelle créée par le support'
+      });
+
+      if (response.data.success) {
+        await fetchRequests();
+        setShowManualForm(false);
+        setManualForm({
+          pnr: '',
+          tag_number: '',
+          additional_baggage_count: 1,
+          notes: ''
+        });
+        alert('Autorisation manuelle créée et bagage enregistré avec succès');
+      } else {
+        setManualError(response.data.error || 'Erreur lors de la création');
+      }
+    } catch (err: any) {
+      setManualError(err.response?.data?.error || 'Erreur lors de la création de l\'autorisation');
+    } finally {
+      setCreatingManual(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -183,6 +236,13 @@ export default function BaggageAuthorization() {
           </h1>
           <p className="text-gray-600 mt-1">Approuver ou rejeter les demandes de bagages dépassant le nombre déclaré dans le boarding pass</p>
         </div>
+        <button
+          onClick={() => setShowManualForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          Créer une autorisation manuelle
+        </button>
       </div>
 
       {/* Filtres */}
@@ -377,6 +437,119 @@ export default function BaggageAuthorization() {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {rejecting ? 'Rejet en cours...' : 'Rejeter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de création manuelle */}
+      {showManualForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-green-600" />
+              Créer une autorisation manuelle
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Créez directement une autorisation de bagage supplémentaire en recherchant le passager par PNR
+            </p>
+
+            {manualError && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start">
+                <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 text-sm">{manualError}</p>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PNR du passager *
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.pnr}
+                  onChange={(e) => setManualForm({ ...manualForm, pnr: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent uppercase"
+                  placeholder="Ex: ABC123"
+                  maxLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tag RFID du bagage *
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.tag_number}
+                  onChange={(e) => setManualForm({ ...manualForm, tag_number: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Ex: RFID123456789"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre de bagages supplémentaires *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={manualForm.additional_baggage_count}
+                  onChange={(e) => setManualForm({ ...manualForm, additional_baggage_count: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes (optionnel)
+                </label>
+                <textarea
+                  value={manualForm.notes}
+                  onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Raison de cette autorisation manuelle..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowManualForm(false);
+                  setManualForm({
+                    pnr: '',
+                    tag_number: '',
+                    additional_baggage_count: 1,
+                    notes: ''
+                  });
+                  setManualError('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={creatingManual}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCreateManual}
+                disabled={creatingManual || !manualForm.pnr.trim() || !manualForm.tag_number.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {creatingManual ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Création en cours...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Créer l'autorisation
+                  </>
+                )}
               </button>
             </div>
           </div>

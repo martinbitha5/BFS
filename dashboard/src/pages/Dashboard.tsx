@@ -165,14 +165,17 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={syncRawScans}
-            disabled={syncing}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            Synchroniser Raw Scans
-          </button>
+          {/* Bouton Synchroniser Raw Scans - masqué pour le support */}
+          {user?.role !== 'support' && (
+            <button
+              onClick={syncRawScans}
+              disabled={syncing}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              Synchroniser Raw Scans
+            </button>
+          )}
           <button
             onClick={fetchStats}
             disabled={loading}

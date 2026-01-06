@@ -261,6 +261,123 @@ router.post('/requests/:id/approve', requireSupport, async (req: Request, res: R
 });
 
 /**
+ * POST /api/v1/baggage-authorization/requests/manual
+ * Créer une autorisation manuelle de bagage (sans demande préalable)
+ */
+router.post('/requests/manual', requireSupport, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supportUserId = (req as any).supportUserId;
+    const { pnr, tag_number, additional_baggage_count, notes, airport_code } = req.body;
+
+    if (!pnr || !tag_number || !additional_baggage_count) {
+      return res.status(400).json({
+        success: false,
+        error: 'PNR, tag RFID et nombre de bagages supplémentaires sont requis'
+      });
+    }
+
+    // Rechercher le passager par PNR
+    const { data: passenger, error: passengerError } = await supabase
+      .from('passengers')
+      .select('*')
+      .eq('pnr', pnr.toUpperCase())
+      .single();
+
+    if (passengerError || !passenger) {
+      return res.status(404).json({
+        success: false,
+        error: 'Passager non trouvé avec ce PNR'
+      });
+    }
+
+    // Vérifier si le tag existe déjà
+    const { data: existingBaggage } = await supabase
+      .from('baggages')
+      .select('id')
+      .eq('tag_number', tag_number)
+      .single();
+
+    if (existingBaggage) {
+      return res.status(409).json({
+        success: false,
+        error: 'Un bagage avec ce tag RFID existe déjà'
+      });
+    }
+
+    // Créer la demande d'autorisation manuelle (déjà approuvée)
+    const { data: authRequest, error: authError } = await supabase
+      .from('baggage_authorization_requests')
+      .insert({
+        passenger_id: passenger.id,
+        tag_number: tag_number,
+        requested_baggage_count: passenger.baggage_count + additional_baggage_count,
+        declared_baggage_count: passenger.baggage_count,
+        current_baggage_count: passenger.baggage_count,
+        status: 'approved',
+        requested_at: new Date().toISOString(),
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: supportUserId,
+        notes: notes || 'Autorisation manuelle créée par le support',
+        airport_code: airport_code || passenger.airport_code,
+        flight_number: passenger.flight_number
+      })
+      .select()
+      .single();
+
+    if (authError) throw authError;
+
+    // Créer le bagage directement
+    const { data: baggage, error: baggageError } = await supabase
+      .from('baggages')
+      .insert({
+        passenger_id: passenger.id,
+        tag_number: tag_number,
+        flight_number: passenger.flight_number,
+        airport_code: airport_code || passenger.airport_code,
+        status: 'checked',
+        manually_authorized: true,
+        authorization_request_id: authRequest.id,
+        checked_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (baggageError) {
+      if (baggageError.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          error: 'Un bagage avec ce tag RFID existe déjà'
+        });
+      }
+      throw baggageError;
+    }
+
+    // Mettre à jour la demande avec l'ID du bagage
+    await supabase
+      .from('baggage_authorization_requests')
+      .update({ baggage_id: baggage.id })
+      .eq('id', authRequest.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Autorisation manuelle créée et bagage enregistré avec succès',
+      data: {
+        authorizationId: authRequest.id,
+        baggageId: baggage.id,
+        passenger: {
+          id: passenger.id,
+          full_name: passenger.full_name,
+          pnr: passenger.pnr,
+          flight_number: passenger.flight_number
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/baggage-authorization/requests/:id/reject
  * Rejeter une demande d'autorisation
  */

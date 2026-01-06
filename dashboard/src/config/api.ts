@@ -52,6 +52,8 @@ api.interceptors.request.use((config) => {
         
         // Ajouter aussi dans les headers pour les routes qui l'utilisent
         config.headers['x-airport-code'] = user.airport_code;
+        config.headers['x-user-id'] = user.id;
+        config.headers['x-user-role'] = user.role;
         
         // Ajouter dans le body pour les requêtes POST/PUT si nécessaire
         if (config.data && typeof config.data === 'object' && !config.data.airport_code) {

@@ -36,15 +36,23 @@ interface AuditLogParams {
   userId?: string;
   userName?: string;
   userEmail?: string;
+  userRole?: string;
   airportCode: string;
   metadata?: Record<string, any>;
 }
 
 /**
  * Enregistre une action dans les logs d'audit
+ * IMPORTANT: Les actions du rôle 'support' ne sont JAMAIS enregistrées (pas de trace)
  */
 export async function logAudit(params: AuditLogParams): Promise<void> {
   try {
+    // ⛔ BLOQUER l'enregistrement pour le rôle support (pas de trace)
+    if (params.userRole === 'support') {
+      console.log('[AUDIT] Action support non enregistrée (pas de trace):', params.action);
+      return;
+    }
+
     const { error } = await supabase
       .from('audit_logs')
       .insert({
