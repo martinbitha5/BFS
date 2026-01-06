@@ -407,6 +407,7 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
     }
 
     // Créer l'entrée dans la table users (directement approuvé)
+    // Note: Ne pas mettre approved_by car cela crée une contrainte FK circulaire
     const { data: userData, error: createUserError } = await supabase
       .from('users')
       .insert({
@@ -416,8 +417,7 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
         role,
         airport_code: finalAirportCode,
         is_approved: true, // Créé par support = approuvé automatiquement
-        approved_at: new Date().toISOString(),
-        approved_by: authUser.id
+        approved_at: new Date().toISOString()
       })
       .select()
       .single();
