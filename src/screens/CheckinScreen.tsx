@@ -101,15 +101,12 @@ export default function CheckinScreen({ navigation }: Props) {
         flightNumber = parsedData.flightNumber || '';
         departure = parsedData.departure || '';
         arrival = parsedData.arrival || '';
-        console.log('[CHECK-IN] Vol extrait du boarding pass:', flightNumber, departure, '->', arrival);
       } catch (parseError) {
-        console.warn('[CHECK-IN] Impossible de parser le boarding pass:', parseError);
-        // On continue quand même, le vol sera vérifié côté serveur
+        // Parsing error - continue
       }
 
       // ✅ ÉTAPE 2: Valider que le vol est programmé pour aujourd'hui
       if (flightNumber) {
-        console.log('[CHECK-IN] 🔍 Validation du vol...');
         const validation = await flightService.validateFlightForToday(
           flightNumber,
           user.airportCode,
@@ -137,9 +134,6 @@ export default function CheckinScreen({ navigation }: Props) {
           return;
         }
 
-        console.log('[CHECK-IN] ✅ Vol validé:', validation.flight?.flightNumber || flightNumber);
-      } else {
-        console.warn('[CHECK-IN] ⚠️ Impossible d\'extraire le numéro de vol - vérification ignorée');
       }
 
       // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
@@ -211,10 +205,8 @@ export default function CheckinScreen({ navigation }: Props) {
             synced: false,
           });
           
-          console.log('[CHECK-IN] ✅ Passager créé en base SQLite:', passengerId, 'avec', parsedData.baggageInfo?.count || 1, 'bagages');
         } else {
           // Mettre à jour le passager existant avec les données du boarding pass
-          console.log('[CHECK-IN] ℹ️ Passager existe déjà, mise à jour des données');
         }
       }
 
@@ -257,7 +249,6 @@ export default function CheckinScreen({ navigation }: Props) {
           selectedAt: new Date().toISOString(),
           selectedBy: user.id,
         });
-        console.log('[CHECK-IN] ✅ Vol défini automatiquement:', parsedData.flightNumber);
       }
 
       // Message selon si c'est nouveau ou mise à jour
@@ -293,7 +284,6 @@ export default function CheckinScreen({ navigation }: Props) {
     setProcessing(false);
     setShowScanner(true);
     setScanning(true);
-    console.log('[CHECK-IN] Scanner réinitialisé - Prêt pour un nouveau check-in');
   };
 
   if (!permission) {
@@ -417,9 +407,7 @@ export default function CheckinScreen({ navigation }: Props) {
             // Production: accepte tous les formats possibles (PDF417, QR, Aztec, DataMatrix, Code128, Code39, etc.)
             barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
           }}
-          onCameraReady={() => {
-            console.log('Caméra prête pour le scan');
-          }}
+          onCameraReady={() => {}}
           onMountError={(error) => {
             console.error('Erreur de montage de la caméra:', error);
             const errorMessage = error?.message || 'Inconnue';

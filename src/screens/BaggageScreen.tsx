@@ -77,7 +77,6 @@ export default function BaggageScreen({ navigation }: Props) {
         return;
       }
 
-      console.log('[BAGGAGE] Tag RFID scanné:', cleanedData);
 
       // ✅ Parser l'étiquette de bagage pour extraire les informations
       let baggageTagData;
@@ -86,17 +85,6 @@ export default function BaggageScreen({ navigation }: Props) {
       try {
         baggageTagData = parserService.parseBaggageTag(cleanedData);
         tagNumber = baggageTagData.tagNumber.trim();
-        
-        console.log('[BAGGAGE] Données extraites du tag:', {
-          tagNumber,
-          passengerName: baggageTagData.passengerName,
-          pnr: baggageTagData.pnr,
-          flightNumber: baggageTagData.flightNumber,
-          origin: baggageTagData.origin,
-          destination: baggageTagData.destination,
-          baggageCount: baggageTagData.baggageCount,
-          baggageSequence: baggageTagData.baggageSequence,
-        });
         
         // Si le parsing n'a pas extrait de tag RFID valide, utiliser les données brutes
         if (!tagNumber || tagNumber === 'UNKNOWN' || tagNumber.length === 0) {
@@ -153,36 +141,20 @@ export default function BaggageScreen({ navigation }: Props) {
       let passenger: Passenger | null = null;
       
       // 1. D'abord chercher par tag attendu (le plus fiable pour les tags numériques)
-      console.log('[BAGGAGE] 🔍 Recherche passager par tag attendu:', tagNumber);
-      passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
-      
-      if (passenger) {
-        console.log('[BAGGAGE] ✅ Passager trouvé par tag attendu:', passenger.fullName);
-      }
+passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
 
       // 2. Si pas trouvé, chercher par PNR (si le tag contient un PNR)
       if (!passenger && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
-        console.log('[BAGGAGE] Recherche passager par PNR:', baggageTagData.pnr);
         passenger = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
-        
-        if (passenger) {
-          console.log('[BAGGAGE] ✅ Passager trouvé par PNR:', passenger.fullName);
-        }
       }
 
       // 3. Si toujours pas trouvé, chercher par nom
       if (!passenger && baggageTagData.passengerName && baggageTagData.passengerName !== 'UNKNOWN') {
-        console.log('[BAGGAGE] Recherche passager par nom:', baggageTagData.passengerName);
         passenger = await databaseServiceInstance.getPassengerByName(baggageTagData.passengerName);
-        
-        if (passenger) {
-          console.log('[BAGGAGE] ✅ Passager trouvé par nom:', passenger.fullName);
-        }
       }
 
       // ❌ REFUSER LE SCAN SI LE PASSAGER N'EST PAS TROUVÉ
       if (!passenger) {
-        console.log('[BAGGAGE] ❌ Tag non reconnu - Scan refusé:', tagNumber);
         await playErrorSound();
         setProcessing(false);
         
@@ -211,15 +183,8 @@ export default function BaggageScreen({ navigation }: Props) {
       // Récupérer le nombre de bagages attendus depuis les données du passager
       const expectedBaggageCount = passenger.baggageCount || passenger.expectedTags?.length || 1;
       
-      console.log('[BAGGAGE] Vérification quota:', {
-        passager: passenger.fullName,
-        bagagesEnregistres: baggageCount,
-        bagagesAttendus: expectedBaggageCount,
-      });
-
       // Si le passager a déjà atteint ou dépassé son quota de bagages
       if (baggageCount >= expectedBaggageCount) {
-        console.log('[BAGGAGE] ❌ Quota de bagages dépassé !');
         await playErrorSound();
         setProcessing(false);
         
@@ -242,8 +207,6 @@ export default function BaggageScreen({ navigation }: Props) {
       }
 
       // ✅ Passager trouvé et quota OK → Enregistrer le bagage
-      console.log('[BAGGAGE] Création bagage pour passager:', passenger.fullName, `(${baggageCount + 1}/${expectedBaggageCount})`);
-      
       // Créer le bagage avec TOUTES les données nécessaires pour la sync
       const baggageId = await databaseServiceInstance.createBaggage({
         passengerId: passenger.id,
@@ -517,9 +480,7 @@ export default function BaggageScreen({ navigation }: Props) {
             barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec', 'pdf417'],
             interval: 1000,
           }}
-          onCameraReady={() => {
-            console.log('[BAGGAGE SCAN] Caméra prête - Mode: Scan Tag RFID uniquement');
-          }}
+          onCameraReady={() => {}}
           onMountError={(error) => {
             console.error('[BAGGAGE SCAN] Erreur de montage de la caméra:', error);
             setToastMessage('Erreur de caméra: ' + (error?.message || 'Inconnue'));

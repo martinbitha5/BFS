@@ -33,7 +33,6 @@ class DatabaseService {
       // Initialiser le service raw-scan
       const { rawScanService } = await import('./raw-scan.service');
       rawScanService.initialize(this.db);
-      console.log('Database initialized successfully (with BIRS and RawScan support)');
     } catch (error) {
       console.error('Error initializing database:', error);
       throw error;
@@ -252,7 +251,7 @@ class DatabaseService {
       try {
         await this.db.runAsync(table);
       } catch (e) {
-        console.log('[DB] Table creation skipped (might already exist):', e);
+        // Table might already exist
       }
     }
 
@@ -261,11 +260,10 @@ class DatabaseService {
       try {
         await this.db.runAsync(index);
       } catch (e) {
-        console.log('[DB] Index creation skipped:', e);
+        // Index might already exist
       }
     }
 
-    console.log('[DB] All tables and indexes created individually');
   }
 
   private async runMigrations(): Promise<void> {
@@ -278,7 +276,6 @@ class DatabaseService {
       );
       
       if (tables.length === 0) {
-        console.log('[DB] baggages table does not exist yet, skipping migrations');
         return;
       }
 
@@ -288,11 +285,9 @@ class DatabaseService {
       );
       
       const existingColumnNames = baggagesInfo.map((col: any) => col.name);
-      console.log('[DB] Existing baggages columns:', existingColumnNames.join(', '));
       const hasTagNumber = existingColumnNames.includes('tag_number');
       
       if (!hasTagNumber) {
-        console.log('[DB] ⚠️ tag_number column MISSING - recreating baggages table');
         try {
           // Supprimer l'ancienne table et la recréer avec le bon schéma
           await this.db.runAsync(`DROP TABLE IF EXISTS baggages`);
@@ -320,13 +315,10 @@ class DatabaseService {
           )`);
           await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_baggages_tag_number ON baggages(tag_number)`);
           await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_baggages_passenger_id ON baggages(passenger_id)`);
-          console.log('[DB] ✅ baggages table recreated with tag_number column');
         } catch (e: any) {
           console.error('[DB] Failed to recreate baggages table:', e?.message || e);
         }
         return; // Skip other migrations since we recreated the table
-      } else {
-        console.log('[DB] ✅ tag_number column already exists');
       }
 
       // Check if other expected columns exist in baggages
@@ -334,13 +326,12 @@ class DatabaseService {
       
       for (const col of expectedColumns) {
         if (!existingColumnNames.includes(col)) {
-          console.log(`[DB] Adding missing column ${col} to baggages table`);
           let columnDef = `${col} TEXT`;
           if (col === 'weight') columnDef = `${col} REAL`;
           try {
             await this.db.runAsync(`ALTER TABLE baggages ADD COLUMN ${columnDef}`);
           } catch (e) {
-            console.log(`[DB] Column ${col} might already exist`);
+            // Column might already exist
           }
         }
       }
@@ -355,18 +346,16 @@ class DatabaseService {
       
       for (const col of passengerExpectedColumns) {
         if (!passengerExistingColumnNames.includes(col)) {
-          console.log(`[DB] Adding missing column ${col} to passengers table`);
           let columnDef = `${col} TEXT`;
           if (col === 'baggage_count') columnDef = `${col} INTEGER DEFAULT 0`;
           try {
             await this.db.runAsync(`ALTER TABLE passengers ADD COLUMN ${columnDef}`);
           } catch (e) {
-            console.log(`[DB] Column ${col} might already exist`);
+            // Column might already exist
           }
         }
       }
 
-      console.log('[DB] Migrations completed successfully');
     } catch (error) {
       console.error('[DB] Migration error:', error);
       // Don't throw - migrations are optional, database should still work
@@ -520,27 +509,19 @@ class DatabaseService {
     if (cleanTag.length === 13 && /^\d{13}$/.test(cleanTag)) {
       scannedBase = cleanTag.substring(0, 10);
       scannedSequence = parseInt(cleanTag.substring(10, 13), 10);
-      console.log(`[DB] Tag 13 chiffres détecté: base=${scannedBase}, séquence=${scannedSequence}`);
     } else if (cleanTag.length === 10 && /^\d{10}$/.test(cleanTag)) {
       scannedBase = cleanTag;
-      console.log(`[DB] Tag 10 chiffres détecté: base=${scannedBase}`);
     } else {
-      // Format non reconnu, essayer quand même avec les 10 premiers chiffres
       const numericPart = cleanTag.replace(/\D/g, '');
       if (numericPart.length >= 10) {
         scannedBase = numericPart.substring(0, 10);
-        console.log(`[DB] Tag format inconnu, extraction base: ${scannedBase}`);
       } else {
-        console.log(`[DB] ❌ Format de tag non reconnu: ${cleanTag}`);
         return null;
       }
     }
     
     const scannedBaseNum = parseInt(scannedBase, 10);
-    if (isNaN(scannedBaseNum)) {
-      console.log(`[DB] ❌ Base non numérique: ${scannedBase}`);
-      return null;
-    }
+    if (isNaN(scannedBaseNum)) return null;
     
     // Récupérer tous les passagers avec un numéro de base de bagage
     const passengers = await this.db.getAllAsync<any>(
@@ -563,9 +544,6 @@ class DatabaseService {
         
         // Le tag scanné correspond si sa base correspond
         if (scannedBaseNum === expectedBaseNum) {
-          console.log(`[DB] ✅ Tag ${cleanTag} correspond au passager ${passenger.full_name}`);
-          console.log(`[DB]    Base passager: ${baseNumber}, Bagage #${i + 1}/${baggageCount}`);
-          // Mapper les colonnes snake_case vers camelCase
           return {
             id: passenger.id,
             pnr: passenger.pnr,
@@ -597,7 +575,6 @@ class DatabaseService {
       }
     }
 
-    console.log(`[DB] ❌ Aucun passager trouvé avec le tag: ${cleanTag} (base: ${scannedBase})`);
     return null;
   }
 

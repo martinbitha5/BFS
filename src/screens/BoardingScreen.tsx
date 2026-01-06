@@ -31,16 +31,8 @@ export default function BoardingScreen({ navigation }: Props) {
   const [torchEnabled, setTorchEnabled] = useState(false);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || processing) {
-      console.log('Scan ignoré - déjà en cours de traitement');
-      return;
-    }
+    if (scanned || processing) return;
 
-    console.log('[BOARDING] ========== SCAN DÉTECTÉ ==========');
-    console.log('[BOARDING] Code-barres scanné - Longueur:', data.length, 'caractères');
-    console.log('[BOARDING] Données complètes:', data);
-    console.log('[BOARDING] Type détecté: PDF417/Boarding Pass');
-    
     // Jouer le son de scan automatique
     await playScanSound();
     
@@ -69,14 +61,12 @@ export default function BoardingScreen({ navigation }: Props) {
         flightNumber = parsedData.flightNumber || '';
         departure = parsedData.departure || '';
         arrival = parsedData.arrival || '';
-        console.log('[BOARDING] Vol extrait du boarding pass:', flightNumber, departure, '->', arrival);
       } catch (parseError) {
-        console.warn('[BOARDING] Impossible de parser le boarding pass:', parseError);
+        // Parsing error - continue
       }
 
       // ✅ ÉTAPE 2: Valider que le vol est programmé pour aujourd'hui
       if (flightNumber) {
-        console.log('[BOARDING] 🔍 Validation du vol...');
         const validation = await flightService.validateFlightForToday(
           flightNumber,
           user.airportCode,
@@ -93,9 +83,6 @@ export default function BoardingScreen({ navigation }: Props) {
           return;
         }
 
-        console.log('[BOARDING] ✅ Vol validé:', validation.flight?.flightNumber || flightNumber);
-      } else {
-        console.warn('[BOARDING] ⚠️ Impossible d\'extraire le numéro de vol - vérification ignorée');
       }
 
       // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
@@ -351,13 +338,7 @@ export default function BoardingScreen({ navigation }: Props) {
           facing="back"
           enableTorch={torchEnabled}
           onBarcodeScanned={(event) => {
-            // Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
-            if (scanned || processing || !showScanner || lastPassenger) {
-              console.log('[BOARDING] Scan ignoré - déjà en traitement ou résultat affiché');
-              return;
-            }
-            console.log('[BOARDING] Code-barres détecté! Type:', event.type, 'Longueur données:', event.data.length);
-            console.log('[BOARDING] Premiers caractères:', event.data.substring(0, 50));
+            if (scanned || processing || !showScanner || lastPassenger) return;
             handleBarCodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
@@ -365,9 +346,7 @@ export default function BoardingScreen({ navigation }: Props) {
             // Production: accepte tous les formats possibles (PDF417, QR, Aztec, DataMatrix, Code128, Code39, etc.)
             barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
           }}
-          onCameraReady={() => {
-            console.log('Caméra prête pour le scan');
-          }}
+          onCameraReady={() => {}}
           onMountError={(error) => {
             console.error('Erreur de montage de la caméra:', error);
           }}>

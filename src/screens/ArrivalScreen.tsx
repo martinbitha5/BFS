@@ -65,7 +65,6 @@ export default function ArrivalScreen({ navigation }: Props) {
       }
 
       const tagNumber = data.trim();
-      console.log('[ARRIVAL] Scan:', tagNumber);
       
       // 1️⃣ Chercher dans les BAGAGES LOCAUX (enregistrés au check-in local)
       let found = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
@@ -114,8 +113,6 @@ export default function ArrivalScreen({ navigation }: Props) {
             const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(tagNumber);
             
             if (birsItemFound) {
-              console.log('[ARRIVAL] ✅ BIRS:', birsItemFound.bagId, '-', birsItemFound.passengerName);
-              
               // Marquer l'item BIRS comme reçu
               await birsDatabaseService.updateBirsReportItem(birsItemFound.id, {
                 received: true,
@@ -155,7 +152,6 @@ export default function ArrivalScreen({ navigation }: Props) {
         }
         
         // 3️⃣ ❌ BAGAGE NON RECONNU - NI LOCAL, NI INTERNATIONAL → BLOQUER
-        console.log('[ARRIVAL] ⚠️ SUSPECT:', tagNumber);
         await playErrorSound();
         
         // Enregistrer l'action d'audit pour le bagage suspect
