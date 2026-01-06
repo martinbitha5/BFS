@@ -5,7 +5,7 @@ interface StatCardProps {
   value: number | string;
   subtitle?: string;
   icon: LucideIcon;
-  color?: 'blue' | 'green' | 'yellow' | 'red';
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'orange';
 }
 
 const colorClasses = {
@@ -13,6 +13,7 @@ const colorClasses = {
   green: 'bg-green-50 text-green-600',
   yellow: 'bg-black/25 backdrop-blur-md text-yellow-300',
   red: 'bg-red-900/30 backdrop-blur-md text-red-600',
+  orange: 'bg-orange-500/20 backdrop-blur-md text-orange-400',
 };
 
 export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps) {

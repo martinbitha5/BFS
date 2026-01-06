@@ -8,18 +8,34 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface BaggageInfo {
+interface BaggageItem {
   bag_id: string;
+  status: string;
+  weight?: number;
+  current_location?: string;
+  last_scanned_at?: string;
+  baggage_type?: 'national' | 'international' | 'birs';
+  origin?: string;
+  destination?: string;
+}
+
+interface StatusSummary {
+  total: number;
+  arrived: number;
+  in_transit: number;
+  checked: number;
+  rush: number;
+  lost: number;
+}
+
+interface TrackingResult {
   passenger_name: string;
   pnr: string;
   flight_number: string;
-  status: string;
-  current_location?: string;
-  last_scanned_at?: string;
-  destination?: string;
   origin?: string;
-  weight?: number;
-  baggage_type?: 'national' | 'international' | 'birs';
+  destination?: string;
+  summary: StatusSummary;
+  baggages: BaggageItem[];
 }
 
 export default function TrackResult() {
@@ -30,7 +46,7 @@ export default function TrackResult() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [baggage, setBaggage] = useState<BaggageInfo | null>(null);
+  const [trackingData, setTrackingData] = useState<TrackingResult | null>(null);
 
   useEffect(() => {
     fetchBaggageInfo();
@@ -44,7 +60,7 @@ export default function TrackResult() {
       const searchParam = pnr ? `pnr=${pnr}` : `tag=${tag}`;
       const response = await axios.get(`${API_URL}/api/v1/public/track?${searchParam}`);
       
-      setBaggage(response.data.data);
+      setTrackingData(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Bagage non trouvé. Vérifiez votre numéro.');
     } finally {
@@ -179,37 +195,71 @@ export default function TrackResult() {
                 </div>
               </div>
             </div>
-          ) : baggage ? (
+          ) : trackingData ? (
             <div className="space-y-8">
               {/* Header Info */}
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-4xl font-bold text-white">{t('track.title')}</h1>
-                  {baggage.baggage_type === 'international' && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                      🌍 International
-                    </span>
-                  )}
-                  {baggage.baggage_type === 'birs' && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-400/30">
-                      📋 BIRS Report
-                    </span>
-                  )}
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-white/70">
-                  <span>{t('track.pnr')}: <span className="font-semibold text-white">{baggage.pnr}</span></span>
+                  <span>{t('track.pnr')}: <span className="font-semibold text-white">{trackingData.pnr}</span></span>
                   <span>•</span>
-                  <span>{t('track.flight')}: <span className="font-semibold text-white">{baggage.flight_number}</span></span>
+                  <span>{t('track.flight')}: <span className="font-semibold text-white">{trackingData.flight_number}</span></span>
                   <span>•</span>
-                  <span>{t('track.passenger')}: <span className="font-semibold text-white">{baggage.passenger_name}</span></span>
+                  <span>{t('track.passenger')}: <span className="font-semibold text-white">{trackingData.passenger_name}</span></span>
                 </div>
               </div>
 
+              {/* Résumé des bagages */}
+              {trackingData.summary && trackingData.summary.total > 1 && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Package className="w-6 h-6 text-white" />
+                    <h2 className="text-xl font-bold text-white">
+                      {trackingData.summary.total} bagage{trackingData.summary.total > 1 ? 's' : ''} enregistré{trackingData.summary.total > 1 ? 's' : ''}
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {trackingData.summary?.arrived > 0 && (
+                      <div className="bg-green-900/40 border border-green-500/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-green-400">{trackingData.summary.arrived}</p>
+                        <p className="text-xs text-green-300">Arrivé{trackingData.summary.arrived > 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                    {trackingData.summary?.in_transit > 0 && (
+                      <div className="bg-yellow-900/40 border border-yellow-500/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-yellow-400">{trackingData.summary.in_transit}</p>
+                        <p className="text-xs text-yellow-300">En transit</p>
+                      </div>
+                    )}
+                    {trackingData.summary?.checked > 0 && (
+                      <div className="bg-blue-900/40 border border-blue-500/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-blue-400">{trackingData.summary.checked}</p>
+                        <p className="text-xs text-blue-300">Enregistré{trackingData.summary.checked > 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                    {trackingData.summary?.rush > 0 && (
+                      <div className="bg-orange-900/40 border border-orange-500/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-orange-400">{trackingData.summary.rush}</p>
+                        <p className="text-xs text-orange-300">Rush</p>
+                      </div>
+                    )}
+                    {trackingData.summary?.lost > 0 && (
+                      <div className="bg-red-900/40 border border-red-500/30 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-red-400">{trackingData.summary.lost}</p>
+                        <p className="text-xs text-red-300">En recherche</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Main Content Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column - Timeline */}
+                {/* Left Column - Baggages List */}
                 <div className="lg:col-span-2 space-y-6">
-                  {/* Current Status */}
+                  {/* Liste de tous les bagages */}
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl font-bold text-white">{t('track.status.title')}</h2>
@@ -222,35 +272,55 @@ export default function TrackResult() {
                       </button>
                     </div>
 
-                    {(() => {
-                      const statusInfo = getStatusInfo(baggage.status);
-                      const StatusIcon = statusInfo.icon;
-                      return (
-                        <div className="flex items-center space-x-4">
-                          <div className={`${statusInfo.bgColor} p-4 rounded-lg`}>
-                            <StatusIcon className={`w-8 h-8 ${statusInfo.color}`} />
+                    <div className="space-y-4">
+                      {trackingData.baggages?.map((baggage, index) => {
+                        const statusInfo = getStatusInfo(baggage.status);
+                        const StatusIcon = statusInfo.icon;
+                        return (
+                          <div key={baggage.bag_id || index} className="bg-black/20 rounded-lg p-4 border border-white/10">
+                            <div className="flex items-center space-x-4">
+                              <div className={`${statusInfo.bgColor} p-3 rounded-lg flex-shrink-0`}>
+                                <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg font-bold text-white">{statusInfo.label}</h3>
+                                  {baggage.baggage_type === 'international' && (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">International</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-white/70 font-mono">{t('track.details.tag')}: {baggage.bag_id}</p>
+                                {baggage.weight && (
+                                  <p className="text-sm text-white/60">{baggage.weight} kg</p>
+                                )}
+                                {baggage.origin && baggage.destination && (
+                                  <p className="text-sm text-white/60 flex items-center gap-1 mt-1">
+                                    <Plane className="w-3 h-3" />
+                                    {baggage.origin} → {baggage.destination}
+                                  </p>
+                                )}
+                                {baggage.current_location && !baggage.destination && (
+                                  <p className="text-sm text-white/60 flex items-center gap-1 mt-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {baggage.current_location}
+                                  </p>
+                                )}
+                              </div>
+                              {baggage.last_scanned_at && (
+                                <div className="text-right text-xs text-white/50">
+                                  <p>Dernière MAJ</p>
+                                  <p>{new Date(baggage.last_scanned_at).toLocaleDateString('fr-FR')}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h3 className="text-2xl font-bold text-white mb-1">{statusInfo.label}</h3>
-                            {baggage.current_location && (
-                              <p className="text-white/80 flex items-center space-x-2">
-                                <MapPin className="w-4 h-4" />
-                                <span>{baggage.current_location}</span>
-                              </p>
-                            )}
-                            {baggage.last_scanned_at && (
-                              <p className="text-sm text-white/60 mt-1">
-                                {t('track.updated')}: {new Date(baggage.last_scanned_at).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Journey Timeline */}
-                  {(baggage.origin || baggage.destination) && (
+                  {(trackingData.origin || trackingData.destination) && (
                     <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
                       <h2 className="text-xl font-bold text-white mb-6">{t('track.journey.title')}</h2>
                       <div className="flex items-center justify-between">
@@ -259,7 +329,7 @@ export default function TrackResult() {
                             <Plane className="w-8 h-8 text-white" />
                           </div>
                           <p className="text-sm text-white/70 mb-1">{t('track.journey.origin')}</p>
-                          <p className="text-2xl font-bold text-white">{baggage.origin || '-'}</p>
+                          <p className="text-2xl font-bold text-white">{trackingData.origin || '-'}</p>
                         </div>
 
                         <div className="flex-1 mx-8">
@@ -275,7 +345,7 @@ export default function TrackResult() {
                             <MapPin className="w-8 h-8 text-white" />
                           </div>
                           <p className="text-sm text-white/70 mb-1">{t('track.journey.destination')}</p>
-                          <p className="text-2xl font-bold text-white">{baggage.destination || '-'}</p>
+                          <p className="text-2xl font-bold text-white">{trackingData.destination || '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -284,27 +354,25 @@ export default function TrackResult() {
 
                 {/* Right Column - Details */}
                 <div className="space-y-6">
-                  {/* Baggage Details */}
+                  {/* Passenger Details */}
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
                     <h3 className="font-bold text-white mb-4">{t('track.details.title')}</h3>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs text-white/60 mb-1">{t('track.details.tag')}</p>
-                        <p className="font-semibold text-white">{baggage.bag_id}</p>
+                        <p className="text-xs text-white/60 mb-1">{t('track.details.passenger')}</p>
+                        <p className="font-semibold text-white">{trackingData.passenger_name}</p>
                       </div>
-                      {baggage.weight && (
-                        <div>
-                          <p className="text-xs text-white/60 mb-1">{t('track.details.weight')}</p>
-                          <p className="font-semibold text-white">{baggage.weight} kg</p>
-                        </div>
-                      )}
+                      <div>
+                        <p className="text-xs text-white/60 mb-1">PNR</p>
+                        <p className="font-semibold text-white font-mono">{trackingData.pnr}</p>
+                      </div>
                       <div>
                         <p className="text-xs text-white/60 mb-1">{t('track.details.flight')}</p>
-                        <p className="font-semibold text-white">{baggage.flight_number}</p>
+                        <p className="font-semibold text-white">{trackingData.flight_number}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-white/60 mb-1">{t('track.details.passenger')}</p>
-                        <p className="font-semibold text-white">{baggage.passenger_name}</p>
+                        <p className="text-xs text-white/60 mb-1">Nombre de bagages</p>
+                        <p className="font-semibold text-white">{trackingData.summary?.total || trackingData.baggages?.length || 1}</p>
                       </div>
                     </div>
                   </div>

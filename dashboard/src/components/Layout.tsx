@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, RefreshCw, Search, Settings, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
+import { Activity, AlertCircle, BarChart3, Barcode, ChevronDown, ChevronRight, Download, LayoutDashboard, LogOut, Menu, Package, RefreshCw, Search, Settings, ShieldCheck, UserPlus, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,15 +25,16 @@ export default function Layout({ children }: LayoutProps) {
 
   // Mettre à jour les menus ouverts quand l'utilisateur change
   useEffect(() => {
-    setExpandedMenus(prev => {
-      const hasSupport = prev.includes('support');
-      if (user && user.role === 'support' && !hasSupport) {
-        return [...prev, 'support'];
-      } else if ((!user || user.role !== 'support') && hasSupport) {
-        return prev.filter(m => m !== 'support');
-      }
-      return prev;
-    });
+    if (!user) return;
+    
+    // Définir les menus à ouvrir par défaut selon le rôle
+    if (user.role === 'support') {
+      setExpandedMenus(['support']);
+    } else if (user.role === 'baggage_dispute') {
+      setExpandedMenus(['gestion-litiges', 'administration']);
+    } else {
+      setExpandedMenus(['brs-international']);
+    }
   }, [user]);
 
   // Menu simplifié pour les utilisateurs Support
@@ -49,8 +50,29 @@ export default function Layout({ children }: LayoutProps) {
     },
   ];
 
-  // Menu complet pour supervisor et baggage_dispute
-  const standardNavItems: NavItem[] = [
+  // Menu pour les utilisateurs Litiges Bagages (baggage_dispute)
+  const baggageDisputeNavItems: NavItem[] = [
+    { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
+    {
+      label: 'Gestion Litiges',
+      icon: Package,
+      children: [
+        { path: '/baggages', label: 'Tous les Bagages', icon: Package },
+        { path: '/passengers', label: 'Passagers', icon: Users },
+      ]
+    },
+    {
+      label: 'Administration',
+      icon: Settings,
+      children: [
+        { path: '/audit-logs', label: 'Historique', icon: Activity },
+        { path: '/settings', label: 'Paramètres', icon: Settings },
+      ]
+    },
+  ];
+
+  // Menu complet pour supervisor
+  const supervisorNavItems: NavItem[] = [
     { path: '/dashboard', label: "Vue d'ensemble", icon: LayoutDashboard },
     { path: '/baggages', label: 'Bagages', icon: Package },
     { path: '/passengers', label: 'Passagers', icon: Users },
@@ -61,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/brs-dashboard', label: 'Dashboard', icon: BarChart3 },
         { path: '/birs', label: 'Rapports', icon: Package },
         { path: '/brs-workflow', label: 'Workflow', icon: RefreshCw },
-        { path: '/brs-unmatched', label: 'Non Matchés', icon: AlertTriangle },
+        { path: '/brs-unmatched', label: 'Non Matchés', icon: AlertCircle },
         { path: '/brs-traceability', label: 'Traçabilité', icon: Search },
       ]
     },
@@ -79,10 +101,22 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   // Sélectionner le menu approprié selon le rôle de l'utilisateur
-  // Support: menu simplifié
-  // Supervisor et baggage_dispute: menu complet
+  // Support: menu simplifié (création de comptes)
+  // baggage_dispute: menu litiges bagages (gestion des bagages, RUSH, historique)
+  // Supervisor: menu complet
   // checkin, baggage, boarding, arrival: utilisent l'app mobile, pas le dashboard
-  const navItems: NavItem[] = user && user.role === 'support' ? supportNavItems : standardNavItems;
+  const getNavItems = (): NavItem[] => {
+    if (!user) return supervisorNavItems;
+    switch (user.role) {
+      case 'support':
+        return supportNavItems;
+      case 'baggage_dispute':
+        return baggageDisputeNavItems;
+      default:
+        return supervisorNavItems;
+    }
+  };
+  const navItems: NavItem[] = getNavItems();
 
   const isMenuExpanded = (menuLabel: string) => {
     return expandedMenus.includes(menuLabel.toLowerCase().replace(/\s+/g, '-'));
@@ -146,7 +180,11 @@ export default function Layout({ children }: LayoutProps) {
               </h1>
               {user && (
                 <p className="text-xs text-white/70 font-medium mt-1">
-                  {user.role === 'support' ? 'Support - Tous les aéroports' : `Aéroport ${user.airport_code}`}
+                  {user.role === 'support' 
+                    ? 'Support - Tous les aéroports' 
+                    : user.role === 'baggage_dispute'
+                    ? 'Litiges Bagages - Tous les aéroports'
+                    : `Aéroport ${user.airport_code}`}
                 </p>
               )}
             </div>
