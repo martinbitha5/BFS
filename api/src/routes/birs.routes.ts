@@ -344,8 +344,13 @@ router.post('/upload', async (req: Request, res: Response, next: NextFunction) =
       processedCount: parsedItems.length,
       data: report
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error('[BIRS Upload] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erreur lors de l\'upload du fichier BIRS',
+      details: error.details || error.hint || null
+    });
   }
 });
 
