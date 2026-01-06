@@ -123,10 +123,12 @@ export default function FlightManagement() {
   const handleEditSuccess = async (updatedFlight: Flight) => {
     try {
       const response = await api.put(`/api/v1/flights/${updatedFlight.id}`, updatedFlight);
-      setFlights(flights.map(f => f.id === updatedFlight.id ? response.data.data : f));
       setShowEditModal(false);
       setSelectedFlight(null);
       alert(`Vol ${updatedFlight.flightNumber} modifié avec succès`);
+      
+      // Recharger tous les vols pour s'assurer que les modifications sont bien affichées
+      await loadFlights();
     } catch (error) {
       console.error('Erreur modification vol:', error);
       alert('Erreur lors de la modification du vol');
