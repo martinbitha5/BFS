@@ -65,25 +65,34 @@ export default function FlightManagement() {
       setLoading(true);
       
       if (!user?.airport_code) {
-        console.warn('Pas de code aéroport');
+        console.warn('[FlightManagement] Pas de code aéroport');
         setFlights([]);
         return;
       }
 
-      // Charger TOUS les vols sans filtre de date pour éviter les problèmes de timezone
-      // puis filtrer côté client
-      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}`);
-      const allFlights = response.data.data || [];
+      console.log(`[FlightManagement] Chargement des vols pour ${user.airport_code} à la date ${selectedDate}`);
       
-      // Filtrer côté client pour la date sélectionnée
-      const filteredFlights = allFlights.filter((f: Flight) => f.scheduledDate === selectedDate);
-      setFlights(filteredFlights);
+      // Charger les vols avec filtre de date depuis l'API
+      const response = await api.get(`/api/v1/flights?airport=${user.airport_code}&date=${selectedDate}`);
+      const loadedFlights = response.data.data || [];
       
-      console.log(`${filteredFlights.length} vols pour ${selectedDate} (sur ${allFlights.length} total)`);
+      console.log(`[FlightManagement] ✅ ${loadedFlights.length} vols chargés pour ${selectedDate}`);
+      
+      if (loadedFlights.length > 0) {
+        console.log('[FlightManagement] Vols:', loadedFlights.map((f: Flight) => `${f.flightNumber} (${f.scheduledDate})`).join(', '));
+      }
+      
+      setFlights(loadedFlights);
     } catch (error: any) {
-      console.error('Erreur chargement vols:', error);
+      console.error('[FlightManagement] Erreur chargement vols:', error);
+      console.error('[FlightManagement] Détails:', error.response?.data || error.message);
+      
+      // Ne pas vider les vols en cas d'erreur réseau
       if (error.response?.status === 404) {
+        console.log('[FlightManagement] Aucun vol trouvé (404)');
         setFlights([]);
+      } else {
+        console.error('[FlightManagement] Erreur réseau, conservation des vols actuels');
       }
     } finally {
       setLoading(false);
@@ -110,13 +119,20 @@ export default function FlightManagement() {
 
   const handleAddSuccess = async (newFlight: Flight) => {
     try {
+      console.log('[FlightManagement] Ajout du vol:', newFlight);
       const response = await api.post('/api/v1/flights', newFlight);
-      setFlights([...flights, response.data.data]);
+      console.log('[FlightManagement] Vol ajouté:', response.data.data);
+      
       setShowAddModal(false);
       alert(`Vol ${newFlight.flightNumber} ajouté avec succès`);
-    } catch (error) {
-      console.error('Erreur ajout vol:', error);
-      alert('Erreur lors de l\'ajout du vol');
+      
+      // Recharger tous les vols depuis la base de données pour garantir la persistance
+      console.log('[FlightManagement] Rechargement des vols après ajout...');
+      await loadFlights();
+    } catch (error: any) {
+      console.error('[FlightManagement] Erreur ajout vol:', error);
+      console.error('[FlightManagement] Détails:', error.response?.data || error.message);
+      alert(`Erreur lors de l'ajout du vol: ${error.response?.data?.error || error.message}`);
     }
   };
 
