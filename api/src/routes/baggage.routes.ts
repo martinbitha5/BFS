@@ -294,7 +294,43 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
       }
     }
 
-    // Si pas de dépassement ou pas de passenger_id, créer le bagage normalement
+    // Si pas de passenger_id fourni, essayer de trouver le passager automatiquement
+    if (!baggageData.passenger_id && baggageData.flight_number && baggageData.airport_code) {
+      console.log('[BAGGAGE] Recherche automatique du passager pour vol:', baggageData.flight_number);
+      
+      // Chercher les passagers sur ce vol qui ont des bagages manquants
+      const { data: passengersOnFlight } = await supabase
+        .from('passengers')
+        .select('id, pnr, full_name, baggage_count, flight_number')
+        .eq('airport_code', baggageData.airport_code)
+        .eq('flight_number', baggageData.flight_number);
+      
+      if (passengersOnFlight && passengersOnFlight.length > 0) {
+        // Pour chaque passager, compter ses bagages actuels
+        for (const pax of passengersOnFlight) {
+          const { count: linkedBaggages } = await supabase
+            .from('baggages')
+            .select('*', { count: 'exact', head: true })
+            .eq('passenger_id', pax.id);
+          
+          const expectedBags = pax.baggage_count || 0;
+          const actualBags = linkedBaggages || 0;
+          
+          // Si ce passager a des bagages manquants, lui lier ce bagage
+          if (actualBags < expectedBags) {
+            baggageData.passenger_id = pax.id;
+            console.log(`[BAGGAGE] ✅ Bagage lié automatiquement au passager ${pax.full_name} (${pax.pnr}) - ${actualBags}/${expectedBags} bagages`);
+            break;
+          }
+        }
+      }
+      
+      if (!baggageData.passenger_id) {
+        console.log('[BAGGAGE] ⚠️ Aucun passager trouvé avec bagages manquants sur ce vol');
+      }
+    }
+
+    // Créer le bagage (avec ou sans passenger_id)
     const { data, error } = await supabase
       .from('baggages')
       .insert(baggageData)
@@ -305,7 +341,8 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
 
     res.status(201).json({
       success: true,
-      data
+      data,
+      autoLinked: !!baggageData.passenger_id
     });
   } catch (error) {
     next(error);
