@@ -28,6 +28,7 @@ export default function Passengers() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [relinking, setRelinking] = useState(false);
 
   const syncRawScans = async () => {
     if (!user?.airport_code) return;
@@ -55,6 +56,32 @@ export default function Passengers() {
       setSyncMessage((err.response?.data?.error || 'Erreur lors de la synchronisation'));
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const relinkBaggages = async () => {
+    if (!user?.airport_code) return;
+    
+    try {
+      setRelinking(true);
+      setSyncMessage('');
+      
+      const response = await api.post('/api/v1/sync-raw-scans/relink-baggages', {
+        airport_code: user.airport_code
+      });
+      
+      const stats = response.data.stats;
+      setSyncMessage(
+        `Re-liaison terminée: ${stats.linked} bagage(s) lié(s) sur ${stats.processed}`
+      );
+      
+      // Recharger les passagers
+      await fetchPassengers();
+    } catch (err: any) {
+      console.error('Error relinking baggages:', err);
+      setSyncMessage((err.response?.data?.error || 'Erreur lors de la re-liaison'));
+    } finally {
+      setRelinking(false);
     }
   };
 
@@ -168,7 +195,7 @@ export default function Passengers() {
           <div className="flex gap-2">
             <button
               onClick={syncRawScans}
-              disabled={syncing}
+              disabled={syncing || relinking}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {syncing ? (
@@ -178,6 +205,20 @@ export default function Passengers() {
                 </>
               ) : (
                 'Synchroniser les scans'
+              )}
+            </button>
+            <button
+              onClick={relinkBaggages}
+              disabled={syncing || relinking}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {relinking ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Re-liaison...
+                </>
+              ) : (
+                'Re-lier bagages'
               )}
             </button>
             <button
