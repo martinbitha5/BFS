@@ -22,17 +22,22 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
 
     const allBaggages: any[] = [];
     let passengerInfo: any = null;
+    const searchPnr = pnr ? (pnr as string).toUpperCase() : null;
+
+    console.log('[TRACK] Recherche avec PNR:', searchPnr, 'ou TAG:', tag);
 
     // 1. Rechercher dans les bagages nationaux
-    if (pnr) {
+    if (searchPnr) {
       // D'abord trouver le passager par PNR
       const { data: passenger, error: passengerError } = await supabase
         .from('passengers')
         .select('id, full_name, pnr, flight_number, departure, arrival')
-        .eq('pnr', (pnr as string).toUpperCase())
+        .eq('pnr', searchPnr)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
+
+      console.log('[TRACK] Passager national trouvé:', passenger, 'Erreur:', passengerError?.message);
 
       if (passenger && !passengerError) {
         passengerInfo = {
@@ -108,12 +113,14 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // 2. Chercher aussi dans bagages internationaux (pour PNR, ajouter aux résultats)
-    if (pnr) {
+    if (searchPnr) {
       const { data: internationalBaggages, error: intlError } = await supabase
         .from('international_baggages')
         .select('*')
-        .ilike('pnr', (pnr as string).toUpperCase())
+        .ilike('pnr', searchPnr)
         .order('created_at', { ascending: false });
+
+      console.log('[TRACK] Bagages internationaux trouvés:', internationalBaggages?.length, 'Erreur:', intlError?.message);
 
       if (internationalBaggages && internationalBaggages.length > 0 && !intlError) {
         if (!passengerInfo) {
@@ -167,7 +174,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
     // 3. Chercher dans les rapports BIRS
     // IMPORTANT: Si un bagage est dans un rapport BIRS, ça signifie que le vol est arrivé
     // Donc le statut par défaut est "arrived" (le manifeste = preuve d'arrivée)
-    if (pnr) {
+    if (searchPnr) {
       const { data: birsItems, error: birsError } = await supabase
         .from('birs_report_items')
         .select(`
@@ -188,8 +195,10 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
             uploaded_at
           )
         `)
-        .ilike('pnr', (pnr as string).toUpperCase())
+        .ilike('pnr', searchPnr)
         .order('created_at', { ascending: false });
+
+      console.log('[TRACK] BIRS items trouvés:', birsItems?.length, 'Erreur:', birsError?.message);
 
       if (birsItems && birsItems.length > 0 && !birsError) {
         for (const item of birsItems) {
@@ -282,6 +291,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // 4. Aucun bagage trouvé
+    console.log('[TRACK] Total bagages trouvés:', allBaggages.length);
     if (allBaggages.length === 0) {
       return res.status(404).json({
         success: false,
