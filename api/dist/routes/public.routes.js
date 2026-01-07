@@ -47,6 +47,7 @@ router.get('/track', async (req, res, next) => {
                     .select('id, tag_number, status, weight, current_location, last_scanned_at')
                     .eq('passenger_id', passenger.id)
                     .order('created_at', { ascending: false });
+                console.log('[TRACK] Bagages par passenger_id:', nationalBaggages?.length || 0);
                 if (nationalBaggages && nationalBaggages.length > 0 && !nationalError) {
                     for (const bag of nationalBaggages) {
                         allBaggages.push({
@@ -57,6 +58,34 @@ router.get('/track', async (req, res, next) => {
                             last_scanned_at: bag.last_scanned_at,
                             baggage_type: 'national'
                         });
+                    }
+                }
+                // Si aucun bagage trouvé par passenger_id, chercher les bagages orphelins du même vol
+                // (bagages avec passenger_id NULL mais même flight_number)
+                if (allBaggages.length === 0 && passenger.flight_number) {
+                    const { data: orphanBaggages, error: orphanError } = await database_1.supabase
+                        .from('baggages')
+                        .select('id, tag_number, status, weight, current_location, last_scanned_at')
+                        .is('passenger_id', null)
+                        .eq('flight_number', passenger.flight_number)
+                        .order('created_at', { ascending: false });
+                    console.log('[TRACK] Bagages orphelins même vol:', orphanBaggages?.length || 0);
+                    if (orphanBaggages && orphanBaggages.length > 0 && !orphanError) {
+                        // Calculer combien de bagages pour ce passager basé sur baggage_count
+                        const passengerBaggageCount = passenger.baggage_count || orphanBaggages.length;
+                        // Prendre les bagages orphelins (on ne peut pas savoir exactement lesquels appartiennent à qui)
+                        // Pour l'instant, on affiche tous les bagages orphelins du vol
+                        for (const bag of orphanBaggages) {
+                            allBaggages.push({
+                                bag_id: bag.tag_number,
+                                status: bag.status,
+                                weight: bag.weight,
+                                current_location: bag.current_location,
+                                last_scanned_at: bag.last_scanned_at,
+                                baggage_type: 'national',
+                                note: 'Bagage du vol (non lié individuellement)'
+                            });
+                        }
                     }
                 }
             }
