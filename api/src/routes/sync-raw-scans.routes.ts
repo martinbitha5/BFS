@@ -228,7 +228,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
             // Vérifier si le passager existe déjà
             const { data: existing } = await supabase
               .from('passengers')
-              .select('id')
+              .select('id, baggage_count')
               .eq('pnr', parsed.pnr)
               .eq('airport_code', airport_code)
               .single();
@@ -278,6 +278,42 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
               } else {
                 console.error(`[SYNC] ❌ Erreur création passager ${parsed.pnr}:`, passError);
                 errors++;
+              }
+            } else {
+              // Passager existe déjà - vérifier si les bagages manquent
+              const expectedBaggageCount = existing.baggage_count || 0;
+              
+              if (expectedBaggageCount > 0) {
+                // Compter les bagages existants
+                const { count: existingBaggageCount } = await supabase
+                  .from('baggages')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('passenger_id', existing.id);
+                
+                const actualCount = existingBaggageCount || 0;
+                
+                // Créer les bagages manquants
+                if (actualCount < expectedBaggageCount) {
+                  console.log(`[SYNC] 🔧 Passager ${parsed.pnr} existe mais manque ${expectedBaggageCount - actualCount} bagage(s)`);
+                  
+                  for (let i = actualCount + 1; i <= expectedBaggageCount; i++) {
+                    const { error: bagError } = await supabase
+                      .from('baggages')
+                      .insert({
+                        passenger_id: existing.id,
+                        tag_number: `${parsed.pnr}-BAG${i}`,
+                        status: 'checked',
+                        flight_number: parsed.flightNumber,
+                        airport_code: airport_code,
+                        checked_at: scan.checkin_at || scan.created_at
+                      });
+
+                    if (!bagError) {
+                      baggagesCreated++;
+                      console.log(`[SYNC] ✅ Bagage ${i}/${expectedBaggageCount} créé pour passager existant ${parsed.pnr}`);
+                    }
+                  }
+                }
               }
             }
           }
