@@ -470,16 +470,18 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
 
         // Si passenger_pnr est fourni, chercher le passager par PNR
         if (cleanBaggage.passenger_pnr && cleanBaggage.airport_code) {
-          const { data: passengerByPnr } = await supabase
+          const { data: passengerByPnr, error: pnrError } = await supabase
             .from('passengers')
             .select('id')
             .eq('pnr', cleanBaggage.passenger_pnr.toUpperCase())
             .eq('airport_code', cleanBaggage.airport_code)
-            .single();
+            .maybeSingle();
 
           if (passengerByPnr) {
             console.log(`[BAGGAGE SYNC] ✅ Passager trouvé par PNR ${cleanBaggage.passenger_pnr}: ${passengerByPnr.id}`);
             return { ...cleanBaggage, passenger_id: passengerByPnr.id };
+          } else {
+            console.log(`[BAGGAGE SYNC] ⚠️ Passager non trouvé pour PNR ${cleanBaggage.passenger_pnr}`);
           }
         }
 
@@ -492,12 +494,12 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
         const tagBase = tagNumber.substring(0, 10);
 
         // Rechercher un passager avec ce baggage_base_number
-        const { data: passenger } = await supabase
+        const { data: passenger, error: baseError } = await supabase
           .from('passengers')
           .select('id')
           .eq('baggage_base_number', tagBase)
           .eq('airport_code', cleanBaggage.airport_code)
-          .single();
+          .maybeSingle();
 
         if (passenger) {
           console.log(`[BAGGAGE SYNC] ✅ Passager trouvé pour tag ${tagNumber}: ${passenger.id}`);
