@@ -648,13 +648,23 @@ class DatabaseService {
     );
 
     // ✅ SYNCHRONISATION: Ajouter à la queue pour envoi vers PostgreSQL
-    // Note: passenger_id n'est pas inclus car c'est un ID local, pas un UUID PostgreSQL
+    // Récupérer le PNR du passager pour que l'API puisse retrouver le passenger_id PostgreSQL
+    let passengerPnr: string | null = null;
+    if (baggage.passengerId) {
+      const passenger = await this.db.getFirstAsync<any>(
+        'SELECT pnr FROM passengers WHERE id = ?',
+        [baggage.passengerId]
+      );
+      passengerPnr = passenger?.pnr || null;
+    }
+
     await this.addToSyncQueue({
       tableName: 'baggages',
       recordId: id,
       operation: 'CREATE',
       data: JSON.stringify({
         tag_number: baggage.tagNumber,
+        passenger_pnr: passengerPnr, // Envoyer le PNR pour que l'API trouve le passenger_id
         status: baggage.status,
         weight: baggage.weight || null,
         flight_number: baggage.flightNumber || null,

@@ -408,7 +408,7 @@ router.post('/sync', async (req, res, next) => {
                 error: 'baggages must be an array'
             });
         }
-        // Pour chaque bagage, rechercher le passager correspondant par tag_number
+        // Pour chaque bagage, rechercher le passager correspondant par tag_number ou PNR
         const baggagesWithPassenger = await Promise.all(baggages.map(async (baggage) => {
             // Supprimer l'ID local s'il n'est pas un UUID valide (format: baggage_xxx)
             // PostgreSQL attend un UUID, pas un ID local
@@ -418,6 +418,19 @@ router.post('/sync', async (req, res, next) => {
             // Si passenger_id déjà présent, ne pas chercher
             if (cleanBaggage.passenger_id) {
                 return cleanBaggage;
+            }
+            // Si passenger_pnr est fourni, chercher le passager par PNR
+            if (cleanBaggage.passenger_pnr && cleanBaggage.airport_code) {
+                const { data: passengerByPnr } = await database_1.supabase
+                    .from('passengers')
+                    .select('id')
+                    .eq('pnr', cleanBaggage.passenger_pnr.toUpperCase())
+                    .eq('airport_code', cleanBaggage.airport_code)
+                    .single();
+                if (passengerByPnr) {
+                    console.log(`[BAGGAGE SYNC] ✅ Passager trouvé par PNR ${cleanBaggage.passenger_pnr}: ${passengerByPnr.id}`);
+                    return { ...cleanBaggage, passenger_id: passengerByPnr.id };
+                }
             }
             const tagNumber = cleanBaggage.tag_number;
             if (!tagNumber) {
