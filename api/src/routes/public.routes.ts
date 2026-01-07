@@ -25,29 +25,16 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
 
     // 1. Rechercher dans les bagages nationaux
     if (pnr) {
-      // Rechercher par PNR - trouver TOUS les bagages du passager
-      const { data: nationalBaggages, error: nationalError } = await supabase
-        .from('baggages')
-        .select(`
-          id,
-          tag_number,
-          status,
-          weight,
-          current_location,
-          last_scanned_at,
-          passengers!inner (
-            full_name,
-            pnr,
-            flight_number,
-            departure,
-            arrival
-          )
-        `)
-        .eq('passengers.pnr', (pnr as string).toUpperCase())
-        .order('created_at', { ascending: false });
+      // D'abord trouver le passager par PNR
+      const { data: passenger, error: passengerError } = await supabase
+        .from('passengers')
+        .select('id, full_name, pnr, flight_number, departure, arrival')
+        .eq('pnr', (pnr as string).toUpperCase())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-      if (nationalBaggages && nationalBaggages.length > 0 && !nationalError) {
-        const passenger = (nationalBaggages[0] as any).passengers;
+      if (passenger && !passengerError) {
         passengerInfo = {
           passenger_name: passenger.full_name,
           pnr: passenger.pnr,
@@ -55,16 +42,25 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
           origin: passenger.departure,
           destination: passenger.arrival
         };
-        
-        for (const bag of nationalBaggages) {
-          allBaggages.push({
-            bag_id: bag.tag_number,
-            status: bag.status,
-            weight: bag.weight,
-            current_location: bag.current_location,
-            last_scanned_at: bag.last_scanned_at,
-            baggage_type: 'national'
-          });
+
+        // Ensuite récupérer TOUS les bagages de ce passager par passenger_id
+        const { data: nationalBaggages, error: nationalError } = await supabase
+          .from('baggages')
+          .select('id, tag_number, status, weight, current_location, last_scanned_at')
+          .eq('passenger_id', passenger.id)
+          .order('created_at', { ascending: false });
+
+        if (nationalBaggages && nationalBaggages.length > 0 && !nationalError) {
+          for (const bag of nationalBaggages) {
+            allBaggages.push({
+              bag_id: bag.tag_number,
+              status: bag.status,
+              weight: bag.weight,
+              current_location: bag.current_location,
+              last_scanned_at: bag.last_scanned_at,
+              baggage_type: 'national'
+            });
+          }
         }
       }
     } else if (tag) {
