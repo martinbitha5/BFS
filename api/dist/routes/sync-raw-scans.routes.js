@@ -189,12 +189,12 @@ router.post('/', async (req, res, next) => {
                             continue; // Passer au scan suivant
                         }
                         // Vérifier si le passager existe déjà
-                        const { data: existing } = await database_1.supabase
+                        const { data: existing, error: existingError } = await database_1.supabase
                             .from('passengers')
                             .select('id, baggage_count')
                             .eq('pnr', parsed.pnr)
                             .eq('airport_code', airport_code)
-                            .single();
+                            .maybeSingle();
                         if (!existing) {
                             // Créer le passager
                             const { data: newPassenger, error: passError } = await database_1.supabase

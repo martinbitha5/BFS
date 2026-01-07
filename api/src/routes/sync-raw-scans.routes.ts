@@ -226,12 +226,12 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
               continue; // Passer au scan suivant
             }
             // Vérifier si le passager existe déjà
-            const { data: existing } = await supabase
+            const { data: existing, error: existingError } = await supabase
               .from('passengers')
               .select('id, baggage_count')
               .eq('pnr', parsed.pnr)
               .eq('airport_code', airport_code)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               // Créer le passager
