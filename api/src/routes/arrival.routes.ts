@@ -1,7 +1,8 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { validateArrivalScan } from '../middleware/arrival-validation.middleware';
+import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ const router = Router();
 router.post('/scan', 
   requireAirportCode,
   validateArrivalScan,
-  async (req: Request & { userAirportCode?: string }, res: Response, next: NextFunction) => {
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { tag_number, validated, passenger_id } = req.body;
       const airport_code = req.userAirportCode;
