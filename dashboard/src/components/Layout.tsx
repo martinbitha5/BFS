@@ -1,4 +1,4 @@
-import { Download, LayoutDashboard, LogOut, Menu, Package, X } from 'lucide-react';
+import { Download, LayoutDashboard, LogOut, Menu, Package, Plane, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +22,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems: NavItem[] = [
     { path: '/dashboard', label: "Dashboard", icon: LayoutDashboard },
+    { path: '/flights', label: 'Gestion Vols', icon: Plane },
     { path: '/brs', label: 'BRS International', icon: Package },
     { path: '/export', label: 'Export', icon: Download },
   ];

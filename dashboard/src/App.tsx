@@ -6,6 +6,7 @@ import About from './pages/About';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
 import Export from './pages/Export';
+import FlightManagement from './pages/FlightManagement';
 import Legal from './pages/Legal';
 import Login from './pages/Login';
 import Privacy from './pages/Privacy';
@@ -57,6 +58,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Export />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Gestion des Vols */}
+          <Route
+            path="/flights"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FlightManagement />
                 </Layout>
               </ProtectedRoute>
             }
