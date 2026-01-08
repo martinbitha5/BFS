@@ -226,17 +226,15 @@ export default function RushScreen() {
           facing="back"
           enableTorch={torchEnabled}
           onBarcodeScanned={(event) => {
-            // Ne pas scanner si on est déjà en traitement
-            if (scanned || processing || isProcessingRef.current || !showScanner) {
+            if (isProcessingRef.current || !event || !event.data) {
               return;
             }
-            if (!event || !event.data) {
-              return;
-            }
-            handleBarcodeScanned({ data: event.data });
+            handleBarcodeScanned(event);
           }}
           barcodeScannerSettings={{
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
+            // Formats de tags RFID / étiquettes bagages (même config que BaggageScreen)
+            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec', 'pdf417'],
+            interval: 1000,
           }}
           onCameraReady={() => {}}
           onMountError={(error) => {
