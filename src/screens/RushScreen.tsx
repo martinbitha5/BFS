@@ -226,13 +226,17 @@ export default function RushScreen() {
           facing="back"
           enableTorch={torchEnabled}
           onBarcodeScanned={(event) => {
-            if (isProcessingRef.current || !event || !event.data) {
+            // Ne pas scanner si on est déjà en traitement
+            if (scanned || processing || isProcessingRef.current || !showScanner) {
               return;
             }
-            handleBarcodeScanned(event);
+            if (!event || !event.data) {
+              return;
+            }
+            handleBarcodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'upc_a', 'upc_e', 'datamatrix', 'aztec', 'pdf417'],
+            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
           }}
           onCameraReady={() => {}}
           onMountError={(error) => {
