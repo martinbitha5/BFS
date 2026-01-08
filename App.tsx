@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from './src/contexts/AuthContext';
 import { FlightProvider } from './src/contexts/FlightContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import RootStack from './src/navigation/RootStack';
@@ -64,7 +65,9 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

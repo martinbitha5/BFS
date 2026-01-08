@@ -20,14 +20,16 @@ const ROLE_LABELS: Record<string, string> = {
   boarding: 'Embarquement',
   arrival: 'Arrivée',
   supervisor: 'Superviseur',
+  rush: 'Agent RUSH',
 };
 
-const ROLE_COLORS: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'secondary'> = {
+const ROLE_COLORS: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'secondary' | 'error'> = {
   checkin: 'primary',
   baggage: 'success',
   boarding: 'info',
   arrival: 'warning',
   supervisor: 'secondary',
+  rush: 'error',
 };
 
 export default function HomeScreen({ navigation }: Props) {
@@ -37,6 +39,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingSync, setPendingSync] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [isRushAgent, setIsRushAgent] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -60,6 +63,7 @@ export default function HomeScreen({ navigation }: Props) {
   const loadUser = async () => {
     const currentUser = await authServiceInstance.getCurrentUser();
     setUser(currentUser);
+    setIsRushAgent(currentUser?.role === 'rush');
   };
 
   const loadSyncStatus = async () => {
@@ -179,6 +183,25 @@ export default function HomeScreen({ navigation }: Props) {
                   <View style={styles.menuCardText}>
                     <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Embarquement</Text>
                     <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Validation de l'embarquement</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
+                </View>
+              </Card>
+            </TouchableOpacity>
+          )}
+
+          {user.role === 'rush' && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Rush' as any)}>
+              <Card style={styles.menuCard} elevated>
+                <View style={styles.menuCardContent}>
+                  <View style={[styles.iconContainer, { backgroundColor: colors.error.light + '15' }]}>
+                    <Ionicons name="warning" size={28} color={colors.error.main} />
+                  </View>
+                  <View style={styles.menuCardText}>
+                    <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Gestion RUSH</Text>
+                    <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Scanner et déclarer les bagages RUSH</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                 </View>

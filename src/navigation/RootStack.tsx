@@ -16,6 +16,7 @@ import LegalScreen from '../screens/LegalScreen';
 import LoginScreen from '../screens/LoginScreen';
 import PassengerDetailScreen from '../screens/PassengerDetailScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import RushScreen from '../screens/RushScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   FAQ: undefined;
   Legal: undefined;
   Credits: undefined;
+  Rush: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -67,6 +69,7 @@ export default function RootStack() {
       <Stack.Screen name="FAQ" component={FAQScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Legal" component={LegalScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Rush" component={RushScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

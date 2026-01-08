@@ -166,7 +166,7 @@ router.post('/declare', async (req, res, next) => {
                 else {
                     return res.status(404).json({
                         success: false,
-                        error: 'Bagage non trouvé avec ce numéro d\'étiquette'
+                        error: `Bagage avec étiquette ${tagNumber} non trouvé. Le bagage doit d'abord être enregistré (checkin/embarquement).`
                     });
                 }
             }

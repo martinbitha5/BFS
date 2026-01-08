@@ -109,6 +109,8 @@ export default function TrackResult() {
           color: 'text-blue-400',
           bgColor: 'bg-blue-900/40',
           icon: Package,
+          progress: 20,
+          description: 'Votre bagage est enregistré et en attente d\'être chargé',
         };
       case 'loaded':
         return {
@@ -116,6 +118,8 @@ export default function TrackResult() {
           color: 'text-green-400',
           bgColor: 'bg-green-900/40',
           icon: Plane,
+          progress: 40,
+          description: 'Votre bagage est chargé dans l\'avion et prêt pour le départ',
         };
       case 'in_transit':
         return {
@@ -123,6 +127,8 @@ export default function TrackResult() {
           color: 'text-yellow-400',
           bgColor: 'bg-yellow-900/40',
           icon: Clock,
+          progress: 60,
+          description: 'Votre bagage est en cours d\'acheminement vers sa destination',
         };
       case 'arrived':
         return {
@@ -130,6 +136,8 @@ export default function TrackResult() {
           color: 'text-green-400',
           bgColor: 'bg-green-900/40',
           icon: CheckCircle,
+          progress: 80,
+          description: 'Votre bagage est arrivé et sera bientôt disponible à la récupération',
         };
       case 'delivered':
         return {
@@ -137,6 +145,8 @@ export default function TrackResult() {
           color: 'text-green-400',
           bgColor: 'bg-green-900/40',
           icon: CheckCircle,
+          progress: 100,
+          description: 'Votre bagage a été récupéré avec succès',
         };
       case 'rush':
         return {
@@ -144,6 +154,8 @@ export default function TrackResult() {
           color: 'text-orange-400',
           bgColor: 'bg-orange-900/40',
           icon: AlertCircle,
+          progress: 50,
+          description: 'Votre bagage est en cours de réacheminement prioritaire',
         };
       case 'scanned':
         return {
@@ -151,6 +163,8 @@ export default function TrackResult() {
           color: 'text-blue-400',
           bgColor: 'bg-blue-900/40',
           icon: Package,
+          progress: 30,
+          description: 'Votre bagage a été scanné et est en cours de traitement',
         };
       case 'reconciled':
         return {
@@ -158,6 +172,8 @@ export default function TrackResult() {
           color: 'text-green-400',
           bgColor: 'bg-green-900/40',
           icon: CheckCircle,
+          progress: 70,
+          description: 'Votre bagage a été vérifié et confirmé',
         };
       case 'unmatched':
         return {
@@ -165,6 +181,8 @@ export default function TrackResult() {
           color: 'text-yellow-400',
           bgColor: 'bg-yellow-900/40',
           icon: AlertCircle,
+          progress: 40,
+          description: 'Votre bagage est en cours de vérification',
         };
       case 'pending':
         return {
@@ -172,6 +190,8 @@ export default function TrackResult() {
           color: 'text-gray-400',
           bgColor: 'bg-gray-900/40',
           icon: Clock,
+          progress: 10,
+          description: 'Votre bagage est en attente de traitement',
         };
       default:
         return {
@@ -179,6 +199,8 @@ export default function TrackResult() {
           color: 'text-gray-400',
           bgColor: 'bg-gray-900/40',
           icon: Package,
+          progress: 0,
+          description: 'Statut inconnu',
         };
     }
   };
@@ -311,40 +333,60 @@ export default function TrackResult() {
                         const StatusIcon = statusInfo.icon;
                         return (
                           <div key={baggage.bag_id || index} className="bg-black/20 rounded-lg p-4 border border-white/10">
-                            <div className="flex items-center space-x-4">
-                              <div className={`${statusInfo.bgColor} p-3 rounded-lg flex-shrink-0`}>
-                                <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="text-lg font-bold text-white">{statusInfo.label}</h3>
-                                  {baggage.baggage_type === 'international' && (
-                                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">International</span>
+                            <div className="space-y-4">
+                              <div className="flex items-center space-x-4">
+                                <div className={`${statusInfo.bgColor} p-3 rounded-lg flex-shrink-0`}>
+                                  <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="text-lg font-bold text-white">{statusInfo.label}</h3>
+                                    {baggage.baggage_type === 'international' && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">International</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-white/70">{statusInfo.description}</p>
+                                  <p className="text-sm text-white/70 font-mono mt-1">{t('track.details.tag')}: {baggage.bag_id}</p>
+                                  {baggage.weight && (
+                                    <p className="text-sm text-white/60">{baggage.weight} kg</p>
                                   )}
                                 </div>
-                                <p className="text-sm text-white/70 font-mono">{t('track.details.tag')}: {baggage.bag_id}</p>
-                                {baggage.weight && (
-                                  <p className="text-sm text-white/60">{baggage.weight} kg</p>
-                                )}
-                                {baggage.origin && baggage.destination && (
-                                  <p className="text-sm text-white/60 flex items-center gap-1 mt-1">
-                                    <Plane className="w-3 h-3" />
-                                    {baggage.origin} → {baggage.destination}
-                                  </p>
-                                )}
-                                {baggage.current_location && !baggage.destination && (
-                                  <p className="text-sm text-white/60 flex items-center gap-1 mt-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {baggage.current_location}
-                                  </p>
+                                {baggage.last_scanned_at && (
+                                  <div className="text-right text-xs text-white/50">
+                                    <p>Dernière MAJ</p>
+                                    <p>{new Date(baggage.last_scanned_at).toLocaleDateString('fr-FR', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}</p>
+                                  </div>
                                 )}
                               </div>
-                              {baggage.last_scanned_at && (
-                                <div className="text-right text-xs text-white/50">
-                                  <p>Dernière MAJ</p>
-                                  <p>{new Date(baggage.last_scanned_at).toLocaleDateString('fr-FR')}</p>
+
+                              {/* Progress Bar */}
+                              <div className="relative pt-1">
+                                <div className="flex mb-2 items-center justify-between">
+                                  <div>
+                                    {baggage.origin && baggage.destination && (
+                                      <p className="text-sm text-white/60 flex items-center gap-1">
+                                        <Plane className="w-3 h-3" />
+                                        {baggage.origin} → {baggage.destination}
+                                      </p>
+                                    )}
+                                    {baggage.current_location && !baggage.destination && (
+                                      <p className="text-sm text-white/60 flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" />
+                                        {baggage.current_location}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              )}
+                                <div className="flex h-2 mb-4 overflow-hidden rounded bg-white/10">
+                                  <div
+                                    style={{ width: `${statusInfo.progress}%` }}
+                                    className={`shadow-none flex flex-col justify-center ${statusInfo.bgColor}`}
+                                  ></div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );

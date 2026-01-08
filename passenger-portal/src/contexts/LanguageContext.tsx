@@ -94,12 +94,12 @@ const translations: Record<Language, Record<string, string>> = {
     'track.updated': 'Dernière mise à jour',
     
     // Baggage Status
-    'status.checked': 'Enregistré',
-    'status.loaded': 'Chargé dans l\'avion',
-    'status.in_transit': 'En transit',
-    'status.arrived': 'Arrivé',
-    'status.delivered': 'Livré',
-    'status.rush': 'En réacheminement urgent',
+    'status.checked': 'Bagage enregistré et en attente',
+    'status.loaded': 'Chargé à bord de l\'avion',
+    'status.in_transit': 'En transit vers la destination',
+    'status.arrived': 'Arrivé à destination',
+    'status.delivered': 'Livré et récupéré',
+    'status.rush': 'En réacheminement prioritaire',
     
     // Footer
     'footer.about.title': 'À PROPOS',

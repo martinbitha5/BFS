@@ -17,6 +17,7 @@ const ROLES: { label: string; value: UserRole }[] = [
   { label: 'Bagages', value: 'baggage' },
   { label: 'Embarquement', value: 'boarding' },
   { label: 'Arrivée', value: 'arrival' },
+  { label: 'Agent RUSH', value: 'rush' },
 ];
 
 // Convertir les aéroports au format SelectField
