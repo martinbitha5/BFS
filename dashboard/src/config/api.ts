@@ -29,7 +29,7 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('bfs_token');
   const userData = localStorage.getItem('bfs_user');
   
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -44,20 +44,24 @@ api.interceptors.request.use((config) => {
       const user = JSON.parse(userData);
       if (user.airport_code) {
         // Ajouter l'aéroport aux query params si ce n'est pas déjà présent
-        if (config.params && !config.params.airport) {
-          config.params.airport = user.airport_code;
+        const params = config.params as Record<string, unknown> | undefined;
+        if (params && !params.airport) {
+          params.airport = user.airport_code;
         } else if (!config.params) {
           config.params = { airport: user.airport_code };
         }
         
         // Ajouter aussi dans les headers pour les routes qui l'utilisent
-        config.headers['x-airport-code'] = user.airport_code;
-        config.headers['x-user-id'] = user.id;
-        config.headers['x-user-role'] = user.role;
+        if (config.headers) {
+          config.headers['x-airport-code'] = user.airport_code;
+          config.headers['x-user-id'] = user.id;
+          config.headers['x-user-role'] = user.role;
+        }
         
         // Ajouter dans le body pour les requêtes POST/PUT si nécessaire
-        if (config.data && typeof config.data === 'object' && !config.data.airport_code) {
-          config.data.airport_code = user.airport_code;
+        const data = config.data as Record<string, unknown> | undefined;
+        if (data && typeof data === 'object' && !data.airport_code) {
+          data.airport_code = user.airport_code;
         }
       }
     } catch (e) {

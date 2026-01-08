@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import api from '../config/api';
 
 interface User {
@@ -45,8 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      if (response.data.success) {
-        const userData = response.data.data;
+      const resData = response.data as { success: boolean; data: User };
+      if (resData.success) {
+        const userData = resData.data;
         setUser(userData);
         localStorage.setItem('bfs_user', JSON.stringify(userData)); // Mettre à jour les données utilisateur
       } else {
@@ -68,13 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password
       });
 
-      if (response.data.success) {
-        const { user: userData, token } = response.data.data;
+      const resData = response.data as { success: boolean; data: { user: User; token: string }; error?: string };
+      if (resData.success) {
+        const { user: userData, token } = resData.data;
         setUser(userData);
         localStorage.setItem('bfs_token', token);
-        localStorage.setItem('bfs_user', JSON.stringify(userData)); // Stocker aussi les données utilisateur
+        localStorage.setItem('bfs_user', JSON.stringify(userData));
       } else {
-        throw new Error(response.data.error || 'Erreur de connexion');
+        throw new Error(resData.error || 'Erreur de connexion');
       }
     } catch (error: any) {
       console.error('Login error:', error);

@@ -263,11 +263,20 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
     // Pour chaque vol, récupérer les stats de passagers et bagages
     const flightsWithStats = await Promise.all(
       (scheduledFlights || []).map(async (flight) => {
-        // Compter les passagers de ce vol
+        // Normaliser le numéro de vol pour la comparaison
+        // Ex: "ET64" -> pattern pour matcher "ET64", "ET0064", "ET064"
+        const flightNum = flight.flight_number.trim().toUpperCase();
+        const companyCode = flightNum.match(/^([A-Z]{2})/)?.[1] || '';
+        const numericPart = flightNum.replace(/^[A-Z]{2}0*/, ''); // Enlever le code et les zéros
+        
+        // Pattern pour matcher avec ou sans zéros: ET64, ET064, ET0064
+        const flightPattern = `${companyCode}%${numericPart}`;
+
+        // Compter les passagers de ce vol (avec pattern flexible)
         let passCountQuery = supabase
           .from('passengers')
           .select('*', { count: 'exact', head: true })
-          .eq('flight_number', flight.flight_number);
+          .ilike('flight_number', flightPattern);
         
         if (filterByAirport) {
           passCountQuery = passCountQuery.eq('airport_code', airport.toUpperCase());
@@ -276,23 +285,34 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         const { count: passengerCount } = await passCountQuery;
 
         // Compter les passagers embarqués
-        let boardedQuery = supabase
-          .from('boarding_status')
-          .select('passenger_id, passengers!inner(flight_number, airport_code)')
-          .eq('boarded', true)
-          .eq('passengers.flight_number', flight.flight_number);
+        // D'abord récupérer les IDs des passagers de ce vol
+        let passengersQuery = supabase
+          .from('passengers')
+          .select('id')
+          .ilike('flight_number', flightPattern);
         
         if (filterByAirport) {
-          boardedQuery = boardedQuery.eq('passengers.airport_code', airport.toUpperCase());
+          passengersQuery = passengersQuery.eq('airport_code', airport.toUpperCase());
         }
         
-        const { data: boardedData } = await boardedQuery;
+        const { data: flightPassengers } = await passengersQuery;
+        const passengerIds = flightPassengers?.map(p => p.id) || [];
+        
+        let boardedCount = 0;
+        if (passengerIds.length > 0) {
+          const { count } = await supabase
+            .from('boarding_status')
+            .select('*', { count: 'exact', head: true })
+            .eq('boarded', true)
+            .in('passenger_id', passengerIds);
+          boardedCount = count || 0;
+        }
 
-        // Compter les bagages de ce vol
+        // Compter les bagages de ce vol (avec pattern flexible)
         let bagCountQuery = supabase
           .from('baggages')
           .select('*', { count: 'exact', head: true })
-          .eq('flight_number', flight.flight_number);
+          .ilike('flight_number', flightPattern);
         
         if (filterByAirport) {
           bagCountQuery = bagCountQuery.eq('airport_code', airport.toUpperCase());
@@ -313,9 +333,9 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
           baggageRestriction: flight.baggage_restriction || 'block',
           stats: {
             totalPassengers: passengerCount || 0,
-            boardedPassengers: boardedData?.length || 0,
+            boardedPassengers: boardedCount,
             totalBaggages: baggageCount || 0,
-            boardingProgress: passengerCount ? Math.round(((boardedData?.length || 0) / passengerCount) * 100) : 0,
+            boardingProgress: passengerCount ? Math.round((boardedCount / passengerCount) * 100) : 0,
           }
         };
       })

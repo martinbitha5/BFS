@@ -1,278 +1,362 @@
-import { CheckCircle, MapPin, Package, Plane, RefreshCw, Users, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import StatCard from '../components/StatCard';
+import { CheckCircle, Clock, Package, Plane, RefreshCw, Users } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useRealtimeStats } from '../hooks/useRealtimeStats';
 
 interface AirportStats {
   totalPassengers: number;
   totalBaggages: number;
   boardedPassengers: number;
   notBoardedPassengers: number;
-  arrivedBaggages: number;
-  inTransitBaggages: number;
   todayPassengers: number;
   todayBaggages: number;
   flightsCount: number;
-  uniqueFlights: string[];
+}
+
+interface FlightStats {
+  id: string;
+  flightNumber: string;
+  airline: string;
+  departure: string;
+  arrival: string;
+  scheduledTime: string;
+  status: string;
+  stats: {
+    totalPassengers: number;
+    boardedPassengers: number;
+    totalBaggages: number;
+    boardingProgress: number;
+  };
+}
+
+interface RecentPassenger {
+  id: string;
+  pnr: string;
+  fullName: string;
+  flightNumber: string;
+  route: string;
+  baggageCount: number;
+  checkedInAt: string;
+}
+
+interface RecentBaggage {
+  id: string;
+  tagNumber: string;
+  status: string;
+  passenger: {
+    fullName: string;
+    flightNumber: string;
+  } | null;
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
-  
-  // ✅ TEMPS RÉEL: Utiliser le hook SSE pour les mises à jour instantanées
-  const { 
-    stats: realtimeStats, 
-    isConnected, 
-    lastUpdate,
-    error: sseError,
-    fetchStats: fetchRealtimeStats
-  } = useRealtimeStats(user?.airport_code);
-  
   const [stats, setStats] = useState<AirportStats | null>(null);
+  const [flights, setFlights] = useState<FlightStats[]>([]);
+  const [recentPassengers, setRecentPassengers] = useState<RecentPassenger[]>([]);
+  const [recentBaggages, setRecentBaggages] = useState<RecentBaggage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState('');
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // ✅ Synchroniser les stats du SSE avec l'état local
-  useEffect(() => {
-    if (realtimeStats) {
-      setStats(realtimeStats);
-      setLoading(false);
-    }
-  }, [realtimeStats]);
-
-  useEffect(() => {
-    if (sseError) {
-      setError(sseError);
-    }
-  }, [sseError]);
-
-  const fetchStats = async () => {
+  const fetchData = useCallback(async () => {
     if (!user?.airport_code) return;
-    
+
     try {
-      setLoading(true);
       setError('');
-      const response = await api.get(`/api/v1/stats/airport/${user.airport_code}`);
-      setStats(response.data.data);
-    } catch (err: any) {
-      console.error('Error fetching stats:', err);
-      setError(err.response?.data?.error || 'Erreur lors du chargement des statistiques');
+
+      const [statsRes, flightsRes, recentRes] = await Promise.all([
+        api.get(`/api/v1/stats/airport/${user.airport_code}`),
+        api.get(`/api/v1/stats/flights/${user.airport_code}`),
+        api.get(`/api/v1/stats/recent/${user.airport_code}?limit=5`)
+      ]);
+
+      setStats((statsRes.data as { data: AirportStats }).data);
+      setFlights((flightsRes.data as { data: { flights: FlightStats[] } }).data.flights || []);
+      
+      const recentData = (recentRes.data as { data: { recentPassengers: RecentPassenger[]; recentBaggages: RecentBaggage[] } }).data;
+      setRecentPassengers(recentData.recentPassengers || []);
+      setRecentBaggages(recentData.recentBaggages || []);
+      
+      setLastUpdate(new Date());
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error.response?.data?.error || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.airport_code]);
 
   useEffect(() => {
-    if (user?.airport_code) {
-      // Charger les données initiales
-      fetchStats();
-      // Les mises à jour sont maintenant gérées par SSE en temps réel !
-    }
-  }, [user]);
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
-  const syncRawScans = async () => {
-    if (!user?.airport_code) return;
-    
-    try {
-      setSyncing(true);
-      setSyncMessage('');
-      setError('');
-      
-      const response = await api.post('/api/v1/sync-raw-scans', {
-        airport_code: user.airport_code
-      });
-      
-      const { stats: syncStats } = response.data;
-      setSyncMessage(`Synchronisation terminée ! ${syncStats.passengersCreated} passagers et ${syncStats.baggagesCreated} bagages créés.`);
-      
-      // Recharger les stats après sync
-      await fetchStats();
-    } catch (err: any) {
-      console.error('Error syncing raw scans:', err);
-      setError(err.response?.data?.error || 'Erreur lors de la synchronisation');
-    } finally {
-      setSyncing(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+      case 'boarding': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'departed': return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+      default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
     }
   };
 
-  if (loading && !stats) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary-600" />
-        <p className="ml-3 text-white/80">Chargement...</p>
-      </div>
-    );
-  }
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'Programmé';
+      case 'boarding': return 'Embarquement';
+      case 'departed': return 'Parti';
+      default: return status;
+    }
+  };
 
-  if (!user?.airport_code) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-white/80">Aucun aéroport assigné</p>
+        <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Message d'erreur (affiché en haut mais n'empêche pas l'affichage des données) */}
-      {error && (
-        <div className="bg-red-900/30 backdrop-blur-md border border-red-400/30 rounded-lg p-4">
-          <p className="text-red-300">{error}</p>
-        </div>
-      )}
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            Tableau de bord - {user?.airport_code}
-            {/* Indicateur de connexion temps réel */}
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              isConnected 
-                ? 'bg-green-900/40 text-green-300 animate-pulse' 
-                : 'bg-red-900/40 text-red-300'
-            }`}>
-              {isConnected ? (
-                <>
-                  <Wifi className="w-3 h-3 mr-1" />
-                  <span>Temps réel</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3 h-3 mr-1" />
-                  <span>Hors ligne</span>
-                </>
-              )}
-            </span>
-          </h2>
-          <p className="mt-1 text-sm text-white/90 flex items-center">
-            {isConnected ? (
-              <>
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                Mises à jour instantanées
-                {lastUpdate && (
-                  <span className="ml-2 text-white/60">
-                    • Dernière: {lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </span>
-                )}
-              </>
-            ) : (
-              'Vue d\'ensemble des opérations aéroportuaires'
+          <h1 className="text-2xl font-bold text-white">
+            Dashboard - {user?.airport_code}
+          </h1>
+          <p className="text-sm text-white/60">
+            Données traitées par l'application mobile
+            {lastUpdate && (
+              <span className="ml-2">
+                • Mise à jour: {lastUpdate.toLocaleTimeString('fr-FR')}
+              </span>
             )}
           </p>
         </div>
-        <div className="flex gap-3">
-          {/* Bouton Synchroniser Raw Scans - masqué pour le support */}
-          {user?.role !== 'support' && (
-            <button
-              onClick={syncRawScans}
-              disabled={syncing}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-              Synchroniser Raw Scans
-            </button>
+        <button
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
+          <p className="text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* Statistiques */}
+      {stats && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-500/20 rounded-lg">
+                <Users className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.totalPassengers}</p>
+                <p className="text-sm text-white/60">Passagers</p>
+                <p className="text-xs text-blue-400">+{stats.todayPassengers} aujourd'hui</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-500/20 rounded-lg">
+                <Package className="w-6 h-6 text-green-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.totalBaggages}</p>
+                <p className="text-sm text-white/60">Bagages</p>
+                <p className="text-xs text-green-400">+{stats.todayBaggages} aujourd'hui</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-500/20 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {flights.reduce((sum, f) => sum + f.stats.boardedPassengers, 0)}
+                </p>
+                <p className="text-sm text-white/60">Embarqués</p>
+                <p className="text-xs text-orange-400">
+                  {flights.reduce((sum, f) => sum + (f.stats.totalPassengers - f.stats.boardedPassengers), 0)} en attente
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-purple-500/20 rounded-lg">
+                <Plane className="w-6 h-6 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{flights.length}</p>
+                <p className="text-sm text-white/60">Vols actifs</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vols du jour */}
+      <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
+        <div className="px-6 py-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Plane className="w-5 h-5 text-primary-400" />
+            Vols du jour
+          </h2>
+        </div>
+        <div className="p-6">
+          {flights.length === 0 ? (
+            <p className="text-center text-white/50 py-8">Aucun vol programmé</p>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {flights.map((flight) => (
+                <div
+                  key={flight.id}
+                  className="bg-black/20 border border-white/5 rounded-lg p-4"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <span className="text-lg font-bold text-white">{flight.flightNumber}</span>
+                      <span className={`ml-2 px-2 py-0.5 text-xs rounded border ${getStatusColor(flight.status)}`}>
+                        {getStatusLabel(flight.status)}
+                      </span>
+                    </div>
+                    {flight.scheduledTime && (
+                      <span className="text-sm text-white/60 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {flight.scheduledTime}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-white/70 mb-3">
+                    {flight.departure} → {flight.arrival}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-blue-400">{flight.stats.totalPassengers}</p>
+                      <p className="text-xs text-white/50">Passagers</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-green-400">{flight.stats.boardedPassengers}</p>
+                      <p className="text-xs text-white/50">Embarqués</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-orange-400">{flight.stats.totalBaggages}</p>
+                      <p className="text-xs text-white/50">Bagages</p>
+                    </div>
+                  </div>
+
+                  {flight.stats.totalPassengers > 0 && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-white/50 mb-1">
+                        <span>Embarquement</span>
+                        <span>{flight.stats.boardingProgress}%</span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full transition-all"
+                          style={{ width: `${flight.stats.boardingProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
-          <button
-            onClick={fetchStats}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </button>
         </div>
       </div>
 
-      {/* Messages */}
-      {syncMessage && (
-        <div className="bg-green-50/95 backdrop-blur-lg border border-green-200 rounded-lg p-4">
-          <p className="text-green-800">{syncMessage}</p>
-        </div>
-      )}
-      
-      {error && (
-        <div className="bg-red-900/30 backdrop-blur-md/95 backdrop-blur-lg border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      {/* Stats Grid */}
-      {stats && (
-        <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Total Passagers"
-              value={stats.totalPassengers}
-              subtitle={`Aujourd'hui: ${stats.todayPassengers}`}
-              icon={Users}
-              color="blue"
-            />
-            <StatCard
-              title="Total Bagages"
-              value={stats.totalBaggages}
-              subtitle={`Aujourd'hui: ${stats.todayBaggages}`}
-              icon={Package}
-              color="green"
-            />
-            <StatCard
-              title="Embarqués"
-              value={stats.boardedPassengers}
-              subtitle={`Non embarqués: ${stats.notBoardedPassengers}`}
-              icon={CheckCircle}
-              color="green"
-            />
-            <StatCard
-              title="Vols actifs"
-              value={stats.flightsCount}
-              icon={Plane}
-              color="blue"
-            />
+      {/* Données récentes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Passagers récents */}
+        <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
+          <div className="px-6 py-4 border-b border-white/10">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              Passagers récents
+            </h2>
           </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <StatCard
-              title="Bagages arrivés"
-              value={stats.arrivedBaggages}
-              icon={MapPin}
-              color="green"
-            />
-            <StatCard
-              title="Bagages en transit"
-              value={stats.inTransitBaggages}
-              icon={Package}
-              color="yellow"
-            />
+          <div className="p-4">
+            {recentPassengers.length === 0 ? (
+              <p className="text-center text-white/50 py-4">Aucun passager</p>
+            ) : (
+              <div className="space-y-2">
+                {recentPassengers.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                    <div>
+                      <p className="font-medium text-white">{p.fullName}</p>
+                      <p className="text-xs text-white/50">{p.pnr} • {p.flightNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-white/70">{p.route}</p>
+                      <p className="text-xs text-white/40">{p.baggageCount} bagage(s)</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* Flights List */}
-          {stats.uniqueFlights.length > 0 && (
-            <div className="bg-black/30 backdrop-blur-md border border-white/20 shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200/50">
-                <h3 className="text-lg font-medium text-white">
-                  Vols ({stats.flightsCount})
-                </h3>
+        {/* Bagages récents */}
+        <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
+          <div className="px-6 py-4 border-b border-white/10">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Package className="w-5 h-5 text-green-400" />
+              Bagages récents
+            </h2>
+          </div>
+          <div className="p-4">
+            {recentBaggages.length === 0 ? (
+              <p className="text-center text-white/50 py-4">Aucun bagage</p>
+            ) : (
+              <div className="space-y-2">
+                {recentBaggages.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                    <div>
+                      <p className="font-mono font-medium text-white">{b.tagNumber}</p>
+                      <p className="text-xs text-white/50">
+                        {b.passenger?.fullName || 'Non assigné'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-0.5 text-xs rounded ${
+                        b.status === 'arrived' ? 'bg-green-500/20 text-green-300' :
+                        b.status === 'in_transit' ? 'bg-blue-500/20 text-blue-300' :
+                        'bg-gray-500/20 text-gray-300'
+                      }`}>
+                        {b.status}
+                      </span>
+                      {b.passenger?.flightNumber && (
+                        <p className="text-xs text-white/40 mt-1">{b.passenger.flightNumber}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="px-6 py-4">
-                <div className="flex flex-wrap gap-2">
-                  {stats.uniqueFlights.map((flight) => (
-                    <span
-                      key={flight}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                    >
-                      <Plane className="w-4 h-4 mr-1" />
-                      {flight}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
