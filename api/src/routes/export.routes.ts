@@ -60,10 +60,12 @@ router.get('/raw-scans', async (req: Request, res: Response) => {
             .order('last_scanned_at', { ascending: false });
 
         if (start_date) {
-            query = query.gte('first_scanned_at', start_date);
+            // Début de journée
+            query = query.gte('first_scanned_at', `${start_date}T00:00:00`);
         }
         if (end_date) {
-            query = query.lte('first_scanned_at', end_date);
+            // Fin de journée (23:59:59)
+            query = query.lte('first_scanned_at', `${end_date}T23:59:59`);
         }
 
         if (status) {
