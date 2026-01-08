@@ -19,21 +19,23 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
         if (airportCode) {
             await (0, auto_sync_service_1.autoSyncIfNeeded)(airportCode);
         }
+        // Récupérer tous les bagages avec leurs passagers liés
         let query = database_1.supabase
             .from('baggages')
             .select('*, passengers(*)');
-        if (airportCode) {
-            query = query.eq('airport_code', airportCode);
-        }
+        // Filtre par statut si spécifié
         if (status) {
             query = query.eq('status', status);
         }
+        // Filtre par vol si spécifié
         if (flight) {
             query = query.eq('flight_number', flight);
         }
         const { data, error } = await query;
         if (error)
             throw error;
+        // Transformer et filtrer les données
+        // On filtre par airport_code du bagage OU par departure/arrival du passager lié
         const transformedData = data?.map(baggage => {
             const passenger = Array.isArray(baggage.passengers)
                 ? baggage.passengers[0]
@@ -59,8 +61,22 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
                     flightNumber: passenger.flight_number,
                     departure: passenger.departure,
                     arrival: passenger.arrival
-                } : null
+                } : null,
+                _passengerDeparture: passenger?.departure,
+                _passengerArrival: passenger?.arrival
             };
+        }).filter(baggage => {
+            // Si pas de filtre aéroport, retourner tous
+            if (!airportCode)
+                return true;
+            // Filtrer par airport_code du bagage OU departure/arrival du passager
+            return baggage.airportCode === airportCode ||
+                baggage._passengerDeparture === airportCode ||
+                baggage._passengerArrival === airportCode;
+        }).map(baggage => {
+            // Supprimer les champs temporaires
+            const { _passengerDeparture, _passengerArrival, ...cleanBaggage } = baggage;
+            return cleanBaggage;
         });
         res.json({
             success: true,

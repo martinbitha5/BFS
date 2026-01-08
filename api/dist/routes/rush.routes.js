@@ -88,12 +88,21 @@ router.get('/baggages', async (req, res, next) => {
                 throw nationalError;
             if (nationalBags) {
                 const filtered = airport
-                    ? nationalBags.filter((b) => b.passengers?.departure === airport || b.passengers?.arrival === airport)
+                    ? nationalBags.filter((b) => {
+                        // passengers peut être un tableau ou un objet
+                        const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+                        return pax?.departure === airport || pax?.arrival === airport;
+                    })
                     : nationalBags;
-                rushBaggages.push(...filtered.map((b) => ({
-                    ...b,
-                    baggageType: 'national'
-                })));
+                rushBaggages.push(...filtered.map((b) => {
+                    // Normaliser passengers pour toujours être un objet
+                    const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+                    return {
+                        ...b,
+                        passengers: pax,
+                        baggageType: 'national'
+                    };
+                }));
             }
         }
         // Bagages internationaux en RUSH
@@ -243,7 +252,11 @@ router.get('/statistics/:airport', async (req, res, next) => {
             .eq('status', 'rush');
         if (nationalError)
             throw nationalError;
-        const nationalCount = nationalBags?.filter((b) => b.passengers?.departure === airport || b.passengers?.arrival === airport).length || 0;
+        const nationalCount = nationalBags?.filter((b) => {
+            // passengers peut être un tableau ou un objet
+            const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+            return pax?.departure === airport || pax?.arrival === airport;
+        }).length || 0;
         // Compter les bagages internationaux RUSH
         const { data: internationalBags, error: internationalError } = await database_1.supabase
             .from('international_baggages')
@@ -258,8 +271,10 @@ router.get('/statistics/:airport', async (req, res, next) => {
         today.setHours(0, 0, 0, 0);
         const todayISO = today.toISOString();
         const todayCount = [
-            ...(nationalBags?.filter((b) => (b.passengers?.departure === airport || b.passengers?.arrival === airport) &&
-                b.updated_at >= todayISO) || []),
+            ...(nationalBags?.filter((b) => {
+                const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+                return (pax?.departure === airport || pax?.arrival === airport) && b.updated_at >= todayISO;
+            }) || []),
             ...(internationalBags?.filter((b) => b.updated_at >= todayISO) || [])
         ].length;
         res.json({

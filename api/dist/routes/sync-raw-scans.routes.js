@@ -564,7 +564,6 @@ function parseSimpleBoardingPass(rawData) {
     try {
         console.log('[PARSE BP] === DÉBUT PARSING ===');
         console.log('[PARSE BP] Données brutes:', rawData.substring(0, 100) + '...');
-        console.log('[PARSE BP] Longueur:', rawData.length);
         if (!rawData || !rawData.startsWith('M')) {
             console.log('[PARSE BP] ❌ Format non reconnu (ne commence pas par M)');
             return null;
@@ -576,94 +575,133 @@ function parseSimpleBoardingPass(rawData) {
         let flightNumber = null;
         let seatNumber = null;
         let baggageCount = 0;
-        // Format BCBP standard : M1 + Nom(variable) + PNR(6-7) + Dep(3) + Arr(3) + Code(2) + Vol(4) + ...
-        // Exemples réels vus :
-        // M1RAZIOU/MOUSTAPHA    E7T5GVL FIHNBOKQ 0555 335M031G0009 (avec espaces)
-        // M1MASIMANGO/ISSIAKA GROIFLBU FIHMDKET 0080 235Y031J0095 (collé)
-        // STRATÉGIE 1: Essayer regex BCBP standard avec espaces
-        let bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s+(\d{3,4})\s+(\d{3})([A-Z])(\d{3})([A-Z])(\d{4})/);
-        // STRATÉGIE 2: Si échec, essayer sans espaces (format collé)
-        // Pattern: M1 + Nom + espace + PNR(6) + DEP(3) + ARR(3) + CODE(2) + VOL(4)
-        if (!bcbpMatch) {
-            console.log('[PARSE BP] Format avec espaces non détecté, essai format collé...');
-            bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6})\s+([A-Z]{3})([A-Z]{3})([A-Z]{2})\s*(\d{3,4})/);
-        }
-        if (bcbpMatch) {
-            console.log('[PARSE BP] ✅ Format BCBP détecté');
-            fullName = bcbpMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
-            pnr = bcbpMatch[2];
-            departure = bcbpMatch[3];
-            arrival = bcbpMatch[4];
-            const companyCode = bcbpMatch[5];
-            const flightNum = bcbpMatch[6];
-            flightNumber = companyCode + flightNum;
-            // Siège (si présent dans le match)
-            if (bcbpMatch.length > 9) {
-                const seatSeq = bcbpMatch[9];
-                const compartment = bcbpMatch[10];
-                seatNumber = seatSeq + compartment;
+        // Codes aéroport connus pour la détection (RDC + régionaux + internationaux)
+        const knownAirports = [
+            // RDC
+            'FIH', 'FBM', 'GOM', 'KND', 'MJM', 'BDT', 'KGA', 'LIQ', 'KWZ', 'FKI', 'MBA', 'IRP', 'BAN', 'FMI',
+            // Afrique
+            'ADD', 'NBO', 'JNB', 'LAD', 'BZV', 'KGL', 'EBB', 'DAR', 'LUN', 'HRE', 'MPM', 'LOS', 'ACC', 'ABJ', 'DKR', 'CMN', 'CAI', 'ALG', 'TUN',
+            // Internationaux
+            'DXB', 'DOH', 'IST', 'CDG', 'LHR', 'AMS', 'FRA', 'BRU', 'JFK', 'ORD', 'PEK', 'HKG', 'SIN'
+        ];
+        // Codes compagnie connus (Afrique + internationaux)
+        const knownAirlines = [
+            'ET', '9U', 'KQ', 'SA', 'WB', 'TC', 'PW', 'HF', 'Q8', '8Q', // Afrique
+            'TK', 'EK', 'QR', 'AF', 'KL', 'LH', 'SN', 'BA', 'LX', 'OS', 'AA', 'UA', 'DL', 'CA', 'CX', 'SQ' // Internationaux
+        ];
+        // STRATÉGIE ROBUSTE: Trouver les codes aéroport dans les données
+        // Format typique: M1NOM/PRENOM[PNR][DEP][ARR][CODE][VOL]...
+        // Exemple: M1MASIKA KANEFU/JEANNEQDGSVI FIHFBMET 0064...
+        // Étape 1: Trouver le pattern [DEP(3)][ARR(3)][CODE(2)] dans les données
+        // Chercher un code aéroport connu suivi d'un autre code aéroport puis un code compagnie
+        let routeMatch = null;
+        let routeIndex = -1;
+        for (const dep of knownAirports) {
+            const depIndex = rawData.indexOf(dep);
+            if (depIndex > 10) { // Après le nom minimum
+                // Vérifier si suivi d'un autre code aéroport (3 lettres) puis code compagnie (2 lettres)
+                const afterDep = rawData.substring(depIndex + 3);
+                for (const arr of knownAirports) {
+                    if (afterDep.startsWith(arr)) {
+                        // Trouvé DEP + ARR, chercher le code compagnie
+                        const afterArr = afterDep.substring(3);
+                        for (const airline of knownAirlines) {
+                            if (afterArr.startsWith(airline)) {
+                                routeMatch = { dep, arr, airline };
+                                routeIndex = depIndex;
+                                break;
+                            }
+                        }
+                        if (routeMatch)
+                            break;
+                    }
+                }
+                if (routeMatch)
+                    break;
             }
-            // Essayer d'extraire le nombre de bagages
-            // Chercher après le numéro de vol
-            const afterFlight = rawData.substring(rawData.indexOf(flightNum) + flightNum.length);
-            const baggageMatch = afterFlight.match(/(\d{1,2})PC/i) ||
-                afterFlight.match(/\s+(\d)A\d{3,4}/) ||
-                afterFlight.match(/^\s*(\d{3})[A-Z](\d{3})[A-Z](\d{4})/); // Format BCBP standard
-            if (baggageMatch) {
-                const count = parseInt(baggageMatch[1], 10);
-                if (count > 0 && count <= 9) {
-                    baggageCount = count;
+        }
+        if (routeMatch && routeIndex > 0) {
+            console.log('[PARSE BP] ✅ Route trouvée:', routeMatch.dep, '->', routeMatch.arr, 'Vol:', routeMatch.airline);
+            departure = routeMatch.dep;
+            arrival = routeMatch.arr;
+            // Extraire le numéro de vol après le code compagnie
+            const afterAirline = rawData.substring(routeIndex + 8); // DEP(3) + ARR(3) + CODE(2) = 8
+            const flightNumMatch = afterAirline.match(/^\s*0*(\d{2,4})/);
+            if (flightNumMatch) {
+                flightNumber = routeMatch.airline + flightNumMatch[1];
+            }
+            // Extraire le PNR: 6 caractères juste avant le code aéroport de départ
+            // Le PNR peut être collé ou séparé par un espace
+            const beforeRoute = rawData.substring(0, routeIndex);
+            // Chercher les 6 derniers caractères alphanumériques avant la route
+            const pnrMatch = beforeRoute.match(/([A-Z0-9]{6})\s*$/);
+            if (pnrMatch) {
+                pnr = pnrMatch[1];
+                console.log('[PARSE BP] PNR extrait:', pnr);
+                // Le nom est entre M1 et le PNR
+                const pnrIndex = beforeRoute.lastIndexOf(pnr);
+                if (pnrIndex > 2) {
+                    const namePart = rawData.substring(2, pnrIndex);
+                    fullName = namePart.trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+                    console.log('[PARSE BP] Nom extrait:', fullName);
                 }
             }
-            console.log('[PARSE BP] Données extraites BCBP:');
-            console.log('  - Nom:', fullName);
-            console.log('  - PNR:', pnr);
-            console.log('  - Route:', `${departure}-${arrival}`);
-            console.log('  - Vol:', flightNumber);
-            console.log('  - Siège:', seatNumber || 'N/A');
-            console.log('  - Bagages:', baggageCount);
+            // Extraire le siège (format: 3 chiffres + 1 lettre après le jour julien)
+            const seatMatch = rawData.match(/\d{3}[A-Z](\d{3})([A-Z])/);
+            if (seatMatch) {
+                seatNumber = seatMatch[1] + seatMatch[2];
+            }
         }
         else {
-            console.log('[PARSE BP] ⚠️  Format BCBP structuré non détecté, extraction intelligente...');
-            // EXTRACTION INTELLIGENTE (sans regex BCBP complète)
-            // Étape 1: Extraire le nom et PNR
-            const nameAndPnrMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6})/);
-            if (nameAndPnrMatch) {
-                fullName = nameAndPnrMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
-                pnr = nameAndPnrMatch[2];
-                console.log('[PARSE BP] Nom et PNR extraits:', fullName, '/', pnr);
+            // FALLBACK: Essayer le format BCBP standard avec espaces
+            console.log('[PARSE BP] Route non trouvée avec codes connus, essai regex standard...');
+            const bcbpMatch = rawData.match(/^M1([A-Z\/\s]+?)\s+([A-Z0-9]{6,7})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s*0?(\d{2,4})/);
+            if (bcbpMatch) {
+                fullName = bcbpMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+                pnr = bcbpMatch[2];
+                departure = bcbpMatch[3];
+                arrival = bcbpMatch[4];
+                flightNumber = bcbpMatch[5] + bcbpMatch[6];
+                console.log('[PARSE BP] Format BCBP standard détecté');
             }
-            // Étape 2: Trouver les codes aéroport (3 lettres consécutives)
-            // Chercher après le PNR
-            const afterPnr = pnr ? rawData.substring(rawData.indexOf(pnr) + 6) : rawData;
-            // Pattern pour trouver DEP(3) + ARR(3) + CODE(2)
-            // Ex: FIHMDKET → FIH (départ) + MDK (arrivée) + ET (code compagnie)
-            const routeAndCodeMatch = afterPnr.match(/\s*([A-Z]{3})([A-Z]{3})([A-Z]{2})/);
-            if (routeAndCodeMatch) {
-                departure = routeAndCodeMatch[1];
-                arrival = routeAndCodeMatch[2];
-                const companyCode = routeAndCodeMatch[3];
-                // Chercher le numéro de vol après le code compagnie
-                const afterCode = afterPnr.substring(afterPnr.indexOf(companyCode) + 2);
-                const flightNumMatch = afterCode.match(/\s*(\d{3,4})/);
-                if (flightNumMatch) {
-                    flightNumber = companyCode + flightNumMatch[1];
+            else {
+                // DERNIER FALLBACK: Extraction basique
+                console.log('[PARSE BP] ⚠️ Extraction basique...');
+                // Chercher le premier groupe de 6 caractères alphanumériques après le nom
+                const basicMatch = rawData.match(/^M1([A-Z\/\s]+?)([A-Z0-9]{6})\s/);
+                if (basicMatch) {
+                    fullName = basicMatch[1].trim().replace(/\//g, ' ').replace(/\s+/g, ' ');
+                    pnr = basicMatch[2];
                 }
-                console.log('[PARSE BP] Route et vol extraits:', `${departure}-${arrival}`, '/', flightNumber);
+                // Chercher un code compagnie suivi de chiffres pour le vol
+                for (const airline of knownAirlines) {
+                    const flightMatch = rawData.match(new RegExp(airline + '\\s*0?(\\d{2,4})'));
+                    if (flightMatch) {
+                        flightNumber = airline + flightMatch[1];
+                        break;
+                    }
+                }
             }
-            console.log('[PARSE BP] Extraction intelligente:');
-            console.log('  - Nom:', fullName);
-            console.log('  - PNR:', pnr);
-            console.log('  - Route:', departure && arrival ? `${departure}-${arrival}` : 'non trouvé');
-            console.log('  - Vol:', flightNumber || 'non trouvé');
         }
         if (!pnr) {
             console.log('[PARSE BP] ❌ PNR non trouvé, scan ignoré');
             return null;
         }
+        // Validation finale du nom: ne doit pas contenir de codes aéroport ou compagnie
+        for (const apt of knownAirports) {
+            if (fullName.includes(apt)) {
+                // Couper le nom avant le code aéroport
+                fullName = fullName.substring(0, fullName.indexOf(apt)).trim();
+            }
+        }
+        for (const airline of knownAirlines) {
+            if (fullName.endsWith(airline)) {
+                fullName = fullName.substring(0, fullName.length - 2).trim();
+            }
+        }
         const result = {
             pnr,
-            fullName,
+            fullName: fullName || 'UNKNOWN',
             flightNumber: flightNumber || 'UNKNOWN',
             departure: departure || 'UNK',
             arrival: arrival || 'UNK',
@@ -671,7 +709,7 @@ function parseSimpleBoardingPass(rawData) {
             baggageCount,
             rawData
         };
-        console.log('[PARSE BP] ✅ Résultat final:', JSON.stringify(result, null, 2));
+        console.log('[PARSE BP] ✅ Résultat:', result.fullName, '/', result.pnr, '/', result.flightNumber);
         return result;
     }
     catch (error) {
