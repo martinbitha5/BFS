@@ -103,15 +103,22 @@ router.get('/baggages', async (req: Request, res: Response, next: NextFunction) 
 
       if (nationalBags) {
         const filtered = airport 
-          ? nationalBags.filter((b: any) => 
-              b.passengers?.departure === airport || b.passengers?.arrival === airport
-            )
+          ? nationalBags.filter((b: any) => {
+              // passengers peut être un tableau ou un objet
+              const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+              return pax?.departure === airport || pax?.arrival === airport;
+            })
           : nationalBags;
 
-        rushBaggages.push(...filtered.map((b: any) => ({
-          ...b,
-          baggageType: 'national'
-        })));
+        rushBaggages.push(...filtered.map((b: any) => {
+          // Normaliser passengers pour toujours être un objet
+          const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+          return {
+            ...b,
+            passengers: pax,
+            baggageType: 'national'
+          };
+        }));
       }
     }
 
@@ -282,9 +289,11 @@ router.get('/statistics/:airport', async (req: Request, res: Response, next: Nex
 
     if (nationalError) throw nationalError;
 
-    const nationalCount = nationalBags?.filter((b: any) => 
-      b.passengers?.departure === airport || b.passengers?.arrival === airport
-    ).length || 0;
+    const nationalCount = nationalBags?.filter((b: any) => {
+      // passengers peut être un tableau ou un objet
+      const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+      return pax?.departure === airport || pax?.arrival === airport;
+    }).length || 0;
 
     // Compter les bagages internationaux RUSH
     const { data: internationalBags, error: internationalError } = await supabase
@@ -303,10 +312,10 @@ router.get('/statistics/:airport', async (req: Request, res: Response, next: Nex
     const todayISO = today.toISOString();
 
     const todayCount = [
-      ...(nationalBags?.filter((b: any) => 
-        (b.passengers?.departure === airport || b.passengers?.arrival === airport) &&
-        b.updated_at >= todayISO
-      ) || []),
+      ...(nationalBags?.filter((b: any) => {
+        const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+        return (pax?.departure === airport || pax?.arrival === airport) && b.updated_at >= todayISO;
+      }) || []),
       ...(internationalBags?.filter((b: any) => b.updated_at >= todayISO) || [])
     ].length;
 
