@@ -3,12 +3,14 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import About from './pages/About';
+import Baggages from './pages/Baggages';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
 import Export from './pages/Export';
 import FlightManagement from './pages/FlightManagement';
 import Legal from './pages/Legal';
 import Login from './pages/Login';
+import Passengers from './pages/Passengers';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 
@@ -70,6 +72,30 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <FlightManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Passagers */}
+          <Route
+            path="/passengers"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Passengers />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Bagages */}
+          <Route
+            path="/baggages"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Baggages />
                 </Layout>
               </ProtectedRoute>
             }
