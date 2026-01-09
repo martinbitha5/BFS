@@ -1,5 +1,6 @@
 import { CheckCircle, Download, FileText, Package, RefreshCw, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -139,11 +140,7 @@ export default function BRSInternational() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    );
+    return <LoadingPlane text="Chargement des rapports BIRS..." size="md" />;
   }
 
   return (

@@ -2,6 +2,7 @@ import { Calendar, CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react
 import { useEffect, useState } from 'react';
 import api from '../config/api';
 import Layout from '../components/Layout';
+import LoadingPlane from '../components/LoadingPlane';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -31,7 +32,7 @@ export default function History() {
 
     try {
       const response = await api.get(`/api/v1/birs/history?airline_code=${airline?.code}`);
-      setReports(response.data.data || []);
+      setReports((response.data as { data: BIRSReport[] }).data || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur lors du chargement de l\'historique');
     } finally {
@@ -108,9 +109,7 @@ export default function History() {
         )}
 
         {loading && !error ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-          </div>
+          <LoadingPlane text="Chargement de l'historique..." size="md" />
         ) : reports.length === 0 ? (
           <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />

@@ -1,9 +1,10 @@
 import axios from 'axios';
-import { AlertCircle, CheckCircle, Clock, Loader, MapPin, Package, Plane, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, MapPin, Package, Plane, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import FooterComponent from '../components/FooterComponent';
 import Header from '../components/Header';
+import LoadingBaggage from '../components/LoadingBaggage';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -60,7 +61,7 @@ export default function TrackResult() {
       const searchParam = pnr ? `pnr=${pnr}` : `tag=${tag}`;
       const response = await axios.get(`${API_URL}/api/v1/public/track?${searchParam}`);
       
-      const apiData = response.data.data;
+      const apiData = (response.data as { data: any }).data;
       
       // Compatibilité: si l'API retourne l'ancien format (sans baggages array)
       // on le convertit au nouveau format
@@ -230,9 +231,8 @@ export default function TrackResult() {
       <main className="flex-1 relative z-10">
         <div className="max-w-7xl mx-auto px-4 py-12">
           {loading ? (
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-12 text-center">
-              <Loader className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-              <p className="text-white/80">{t('track.loading')}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-8">
+              <LoadingBaggage text={t('track.loading')} size="lg" />
             </div>
           ) : error ? (
             <div className="bg-red-900/20 backdrop-blur-sm rounded-lg shadow-sm border border-red-400/30 p-8">

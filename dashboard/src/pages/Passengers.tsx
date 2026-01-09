@@ -1,5 +1,6 @@
 import { Briefcase, CheckCircle, RefreshCw, Search, User, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -97,11 +98,7 @@ export default function Passengers() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-white/50" />
-      </div>
-    );
+    return <LoadingPlane text="Chargement des passagers..." size="md" />;
   }
 
   return (

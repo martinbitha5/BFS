@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
   // Récupérer le token depuis le localStorage
   const token = localStorage.getItem('airline_token');
   
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 

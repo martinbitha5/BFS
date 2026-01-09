@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingPlane from './LoadingPlane';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -10,8 +11,8 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <LoadingPlane text="Authentification en cours..." size="lg" />
       </div>
     );
   }

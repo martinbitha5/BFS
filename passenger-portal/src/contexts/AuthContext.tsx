@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      const { airline: airlineData, token } = response.data;
+      const { airline: airlineData, token } = response.data as { airline: Airline; token: string };
       setAirline(airlineData);
       localStorage.setItem('airline', JSON.stringify(airlineData));
       localStorage.setItem('airline_token', token);
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      const { airline: airlineData, token } = response.data;
+      const { airline: airlineData, token } = response.data as { airline: Airline; token: string };
       setAirline(airlineData);
       localStorage.setItem('airline', JSON.stringify(airlineData));
       localStorage.setItem('airline_token', token);

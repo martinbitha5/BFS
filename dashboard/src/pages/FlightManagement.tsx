@@ -1,5 +1,6 @@
 import { Edit, Plane, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -230,9 +231,8 @@ export default function FlightManagement() {
       {/* Liste des vols */}
       <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
-            <RefreshCw className="w-8 h-8 animate-spin text-primary-400 mx-auto" />
-            <p className="text-white/60 mt-2">Chargement...</p>
+          <div className="p-8">
+            <LoadingPlane text="Chargement des vols..." size="md" />
           </div>
         ) : flights.length === 0 ? (
           <div className="p-8 text-center">

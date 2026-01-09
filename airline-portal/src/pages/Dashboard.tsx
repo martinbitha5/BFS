@@ -81,7 +81,7 @@ export default function Dashboard() {
 
       const response = await api.post('/api/v1/birs/upload', payload);
 
-      setMessage(`✅ Fichier uploadé avec succès ! ${response.data.processedCount || 0} bagages traités.`);
+      setMessage(`✅ Fichier uploadé avec succès ! ${(response.data as { processedCount?: number }).processedCount || 0} bagages traités.`);
       setMessageType('success');
       setFile(null);
       setFlightNumber('');

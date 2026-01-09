@@ -195,8 +195,9 @@ export default function CheckinScreen({ navigation }: Props) {
             companyCode: parsedData.companyCode,
             ticketNumber: parsedData.ticketNumber,
             seatNumber: parsedData.seatNumber,
-            baggageCount: parsedData.baggageInfo?.count || 1,
-            baggageBaseNumber: parsedData.baggageInfo?.baseNumber,
+            // ✅ FIX: Ne mettre baggage_count > 0 que si baggageInfo existe vraiment
+            baggageCount: parsedData.baggageInfo?.count ?? 0,
+            baggageBaseNumber: parsedData.baggageInfo?.baseNumber || null,
             rawData: data,
             format: parsedData.format,
             checkedInAt: new Date().toISOString(),
