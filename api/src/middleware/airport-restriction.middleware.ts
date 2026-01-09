@@ -83,8 +83,8 @@ export const requireAirportCode = async (
           userAirportCode = userData.airport_code?.toUpperCase();
           
           // L'utilisateur a accès total si son airport_code est 'ALL' 
-          // OU si son rôle est 'support' (support technique a accès global)
-          hasFullAccess = userAirportCode === 'ALL' || userData.role === 'support';
+          // OU si son rôle est 'support' ou 'baggage_dispute' (accès global)
+          hasFullAccess = userAirportCode === 'ALL' || userData.role === 'support' || userData.role === 'baggage_dispute';
           
           // Vérifier que l'aéroport demandé correspond à l'aéroport de l'utilisateur
           // OU que l'utilisateur a accès à tous les aéroports
@@ -111,8 +111,8 @@ export const requireAirportCode = async (
           userAirportCode = user.airport_code?.toUpperCase();
           
           // L'utilisateur a accès total si son airport_code est 'ALL' 
-          // OU si son rôle est 'support'
-          hasFullAccess = userAirportCode === 'ALL' || user.role === 'support';
+          // OU si son rôle est 'support' ou 'baggage_dispute'
+          hasFullAccess = userAirportCode === 'ALL' || user.role === 'support' || user.role === 'baggage_dispute';
           
           if (!hasFullAccess && userAirportCode !== airportCode) {
             return res.status(403).json({

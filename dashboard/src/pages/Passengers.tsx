@@ -1,8 +1,17 @@
-import { Briefcase, CheckCircle, RefreshCw, Search, User, Users } from 'lucide-react';
+import { Briefcase, CheckCircle, Luggage, Plane, RefreshCw, Search, User, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+
+interface Baggage {
+  id: string;
+  tag_number: string;
+  status: string;
+  weight: number | null;
+  checked_at: string | null;
+  arrived_at: string | null;
+}
 
 interface Passenger {
   id: string;
@@ -15,7 +24,7 @@ interface Passenger {
   baggageCount: number;
   checkedInAt: string | null;
   airportCode: string;
-  baggages: any[];
+  baggages: Baggage[];
   boarding_status: {
     boarded: boolean;
     boarded_at: string | null;
@@ -30,6 +39,9 @@ export default function Passengers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [flightFilter, setFlightFilter] = useState<string>('all');
   const [boardingFilter, setBoardingFilter] = useState<string>('all');
+  
+  // Modal state
+  const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
 
   const fetchPassengers = useCallback(async () => {
     if (!user?.airport_code) return;
@@ -95,6 +107,38 @@ export default function Passengers() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const formatFullDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('fr-FR', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getBaggageStatusColor = (status: string) => {
+    switch (status) {
+      case 'arrived': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'in_transit': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+      case 'checked': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+      case 'lost': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    }
+  };
+
+  const getBaggageStatusLabel = (status: string) => {
+    switch (status) {
+      case 'arrived': return 'Arrivé';
+      case 'in_transit': return 'En transit';
+      case 'checked': return 'Enregistré';
+      case 'lost': return 'Perdu';
+      default: return status;
+    }
   };
 
   if (loading) {
@@ -238,7 +282,14 @@ export default function Passengers() {
                   
                   return (
                     <tr key={pax.id} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="p-4 text-white font-medium">{pax.fullName}</td>
+                      <td className="p-4">
+                        <button
+                          onClick={() => setSelectedPassenger(pax)}
+                          className="text-white font-medium hover:text-blue-400 transition-colors text-left"
+                        >
+                          {pax.fullName}
+                        </button>
+                      </td>
                       <td className="p-4 text-white/80 font-mono text-sm">{pax.pnr}</td>
                       <td className="p-4 text-white/80">{pax.flightNumber || '-'}</td>
                       <td className="p-4 text-white/60 text-sm">
@@ -284,6 +335,158 @@ export default function Passengers() {
       <div className="text-center text-white/40 text-sm">
         Affichage de {filteredPassengers.length} passager(s) sur {passengers.length}
       </div>
+
+      {/* Modal Détails Passager */}
+      {selectedPassenger && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header Modal */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <User className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{selectedPassenger.fullName}</h3>
+                  <p className="text-sm text-white/50">PNR: {selectedPassenger.pnr}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedPassenger(null)} 
+                className="text-white/60 hover:text-white p-1"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content Modal */}
+            <div className="p-6 space-y-6">
+              {/* Informations Vol */}
+              <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                <h4 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
+                  <Plane className="w-4 h-4" />
+                  Informations Vol
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-white/40">Numéro de vol</p>
+                    <p className="text-white font-medium">{selectedPassenger.flightNumber || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">Route</p>
+                    <p className="text-white font-medium">
+                      {selectedPassenger.departure} → {selectedPassenger.arrival}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">Siège</p>
+                    <p className="text-white font-medium">{selectedPassenger.seatNumber || 'Non assigné'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">Aéroport</p>
+                    <p className="text-white font-medium">{selectedPassenger.airportCode}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statut Embarquement */}
+              <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                <h4 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Statut Embarquement
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-white/40">Check-in</p>
+                    <p className="text-white">{formatFullDate(selectedPassenger.checkedInAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">Embarquement</p>
+                    {selectedPassenger.boarding_status?.some(bs => bs.boarded) ? (
+                      <div>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 mb-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Embarqué
+                        </span>
+                        <p className="text-white/60 text-sm">
+                          {formatFullDate(selectedPassenger.boarding_status?.find(bs => bs.boarded)?.boarded_at || null)}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-300">
+                        En attente
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bagages */}
+              <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+                <h4 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
+                  <Luggage className="w-4 h-4" />
+                  Bagages ({selectedPassenger.baggages?.length || 0}/{selectedPassenger.baggageCount || 0})
+                </h4>
+                
+                {selectedPassenger.baggages && selectedPassenger.baggages.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedPassenger.baggages.map((bag, index) => (
+                      <div 
+                        key={bag.id || index} 
+                        className="bg-black/20 rounded-lg p-3 border border-white/5"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-white font-medium">
+                            {bag.tag_number || `Bagage ${index + 1}`}
+                          </span>
+                          <span className={`px-2 py-0.5 text-xs rounded border ${getBaggageStatusColor(bag.status)}`}>
+                            {getBaggageStatusLabel(bag.status)}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <p className="text-xs text-white/40">Poids</p>
+                            <p className="text-white/70">{bag.weight ? `${bag.weight} kg` : '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-white/40">Enregistré</p>
+                            <p className="text-white/70">{formatDate(bag.checked_at)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-white/40">Arrivé</p>
+                            <p className="text-white/70">{formatDate(bag.arrived_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : selectedPassenger.baggageCount > 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-orange-300">
+                      {selectedPassenger.baggageCount} bagage(s) déclaré(s) mais non encore lié(s)
+                    </p>
+                    <p className="text-white/40 text-sm mt-1">
+                      Les bagages seront liés après le scan des étiquettes
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-white/40 text-center py-4">Aucun bagage enregistré</p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="px-6 py-4 border-t border-white/10 bg-black/20">
+              <button
+                onClick={() => setSelectedPassenger(null)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import About from './pages/About';
-import Baggages from './pages/Baggages';
+import BaggageDispute from './pages/BaggageDispute';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
 import Export from './pages/Export';
@@ -12,7 +12,26 @@ import Legal from './pages/Legal';
 import Login from './pages/Login';
 import Passengers from './pages/Passengers';
 import Privacy from './pages/Privacy';
+import Support from './pages/Support';
 import Terms from './pages/Terms';
+
+// Composant pour rediriger selon le role
+function RoleBasedRedirect() {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+  
+  if (!user) return <Navigate to="/login" replace />;
+  
+  switch (user.role) {
+    case 'support':
+      return <Navigate to="/support" replace />;
+    case 'baggage_dispute':
+      return <Navigate to="/baggage-dispute" replace />;
+    default:
+      return <Navigate to="/dashboard" replace />;
+  }
+}
 
 function App() {
   return (
@@ -26,10 +45,34 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/about" element={<About />} />
           
-          {/* Redirection par défaut */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Redirection par défaut selon le rôle */}
+          <Route path="/" element={<RoleBasedRedirect />} />
           
-          {/* Dashboard - Affiche les données de l'app mobile */}
+          {/* Support - Panneau de gestion complet */}
+          <Route
+            path="/support"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Support />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Baggage Dispute - Gestion des litiges bagages */}
+          <Route
+            path="/baggage-dispute"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BaggageDispute />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Dashboard - Affiche les données de l'app mobile (Supervisor) */}
           <Route
             path="/dashboard"
             element={
@@ -41,7 +84,7 @@ function App() {
             }
           />
           
-          {/* BRS International */}
+          {/* BRS International (Supervisor) */}
           <Route
             path="/brs"
             element={
@@ -53,7 +96,7 @@ function App() {
             }
           />
           
-          {/* Export */}
+          {/* Export (Supervisor) */}
           <Route
             path="/export"
             element={
@@ -65,7 +108,7 @@ function App() {
             }
           />
           
-          {/* Gestion des Vols */}
+          {/* Gestion des Vols (Supervisor) */}
           <Route
             path="/flights"
             element={
@@ -77,25 +120,13 @@ function App() {
             }
           />
           
-          {/* Passagers */}
+          {/* Passagers (Supervisor) */}
           <Route
             path="/passengers"
             element={
               <ProtectedRoute>
                 <Layout>
                   <Passengers />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Bagages */}
-          <Route
-            path="/baggages"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Baggages />
                 </Layout>
               </ProtectedRoute>
             }

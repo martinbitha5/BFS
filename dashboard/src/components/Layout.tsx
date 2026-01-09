@@ -1,4 +1,4 @@
-import { Briefcase, Download, LayoutDashboard, LogOut, Menu, Package, Plane, Users, X } from 'lucide-react';
+import { Download, LayoutDashboard, LogOut, Luggage, Menu, Package, Plane, Shield, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,14 +20,33 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems: NavItem[] = [
-    { path: '/dashboard', label: "Dashboard", icon: LayoutDashboard },
-    { path: '/flights', label: 'Gestion Vols', icon: Plane },
-    { path: '/passengers', label: 'Passagers', icon: Users },
-    { path: '/baggages', label: 'Bagages', icon: Briefcase },
-    { path: '/brs', label: 'BRS International', icon: Package },
-    { path: '/export', label: 'Export', icon: Download },
-  ];
+  // Navigation selon le rôle
+  const getNavItems = (): NavItem[] => {
+    if (user?.role === 'support') {
+      // Support : accès au panneau support uniquement
+      return [
+        { path: '/support', label: 'Panneau Support', icon: Shield },
+      ];
+    }
+    
+    if (user?.role === 'baggage_dispute') {
+      // Litige Bagages : accès à sa page dédiée
+      return [
+        { path: '/baggage-dispute', label: 'Litiges Bagages', icon: Luggage },
+      ];
+    }
+    
+    // Supervisor : accès sans bagages (les bagages sont visibles via les passagers)
+    return [
+      { path: '/dashboard', label: "Dashboard", icon: LayoutDashboard },
+      { path: '/flights', label: 'Gestion Vols', icon: Plane },
+      { path: '/passengers', label: 'Passagers', icon: Users },
+      { path: '/brs', label: 'BRS International', icon: Package },
+      { path: '/export', label: 'Export', icon: Download },
+    ];
+  };
+
+  const navItems = getNavItems();
 
   const isActive = (path: string) => location.pathname === path;
 

@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, Package, Plane, RefreshCw, Users } from 'lucide-react';
+import { CheckCircle, Clock, Luggage, Package, Plane, RefreshCw, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -50,12 +50,26 @@ interface RecentBaggage {
   } | null;
 }
 
+interface ArrivedBaggage {
+  id: string;
+  tagNumber: string;
+  status: string;
+  flightNumber: string | null;
+  arrivedAt: string | null;
+  passengers: {
+    fullName: string;
+    pnr: string;
+    flightNumber: string;
+  } | null;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<AirportStats | null>(null);
   const [flights, setFlights] = useState<FlightStats[]>([]);
   const [recentPassengers, setRecentPassengers] = useState<RecentPassenger[]>([]);
   const [recentBaggages, setRecentBaggages] = useState<RecentBaggage[]>([]);
+  const [arrivedBaggages, setArrivedBaggages] = useState<ArrivedBaggage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -66,10 +80,11 @@ export default function Dashboard() {
     try {
       setError('');
 
-      const [statsRes, flightsRes, recentRes] = await Promise.all([
+      const [statsRes, flightsRes, recentRes, arrivedRes] = await Promise.all([
         api.get(`/api/v1/stats/airport/${user.airport_code}`),
         api.get(`/api/v1/stats/flights/${user.airport_code}`),
-        api.get(`/api/v1/stats/recent/${user.airport_code}?limit=5`)
+        api.get(`/api/v1/stats/recent/${user.airport_code}?limit=5`),
+        api.get(`/api/v1/baggage?status=arrived&airport=${user.airport_code}`)
       ]);
 
       setStats((statsRes.data as { data: AirportStats }).data);
@@ -78,6 +93,9 @@ export default function Dashboard() {
       const recentData = (recentRes.data as { data: { recentPassengers: RecentPassenger[]; recentBaggages: RecentBaggage[] } }).data;
       setRecentPassengers(recentData.recentPassengers || []);
       setRecentBaggages(recentData.recentBaggages || []);
+      
+      const arrivedData = (arrivedRes.data as { data: ArrivedBaggage[] }).data || [];
+      setArrivedBaggages(arrivedData.slice(0, 10)); // Limiter à 10 bagages arrivés
       
       setLastUpdate(new Date());
     } catch (err: unknown) {
@@ -352,6 +370,60 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Bagages arrivés */}
+      <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
+        <div className="px-6 py-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Luggage className="w-5 h-5 text-emerald-400" />
+            Bagages arrivés
+            {arrivedBaggages.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded-full">
+                {arrivedBaggages.length}
+              </span>
+            )}
+          </h2>
+        </div>
+        <div className="p-4">
+          {arrivedBaggages.length === 0 ? (
+            <p className="text-center text-white/50 py-8">Aucun bagage arrivé</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {arrivedBaggages.map((b) => (
+                <div key={b.id} className="flex items-center justify-between p-3 bg-black/20 border border-emerald-500/20 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/20 rounded-lg">
+                      <Luggage className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="font-mono font-medium text-white">{b.tagNumber}</p>
+                      <p className="text-xs text-white/50">
+                        {b.passengers?.fullName || 'Non assigné'}
+                      </p>
+                      {b.passengers?.pnr && (
+                        <p className="text-xs text-white/40">{b.passengers.pnr}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded">
+                      Arrivé
+                    </span>
+                    <p className="text-xs text-white/40 mt-1">
+                      {b.flightNumber || b.passengers?.flightNumber || '-'}
+                    </p>
+                    {b.arrivedAt && (
+                      <p className="text-xs text-white/30">
+                        {new Date(b.arrivedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
