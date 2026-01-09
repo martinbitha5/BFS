@@ -106,7 +106,8 @@ router.get('/baggages', async (req: Request, res: Response, next: NextFunction) 
           ? nationalBags.filter((b: any) => {
               // passengers peut être un tableau ou un objet
               const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-              return pax?.departure === airport || pax?.arrival === airport;
+              // Inclure si: passager a departure/arrival = airport OU bagage a airport_code = airport
+              return pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
             })
           : nationalBags;
 
@@ -292,7 +293,8 @@ router.get('/statistics/:airport', async (req: Request, res: Response, next: Nex
     const nationalCount = nationalBags?.filter((b: any) => {
       // passengers peut être un tableau ou un objet
       const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-      return pax?.departure === airport || pax?.arrival === airport;
+      // Inclure si: passager a departure/arrival = airport OU bagage a airport_code = airport
+      return pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
     }).length || 0;
 
     // Compter les bagages internationaux RUSH
@@ -314,7 +316,8 @@ router.get('/statistics/:airport', async (req: Request, res: Response, next: Nex
     const todayCount = [
       ...(nationalBags?.filter((b: any) => {
         const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-        return (pax?.departure === airport || pax?.arrival === airport) && b.updated_at >= todayISO;
+        const matchesAirport = pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
+        return matchesAirport && b.updated_at >= todayISO;
       }) || []),
       ...(internationalBags?.filter((b: any) => b.updated_at >= todayISO) || [])
     ].length;

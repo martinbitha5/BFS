@@ -91,7 +91,8 @@ router.get('/baggages', async (req, res, next) => {
                     ? nationalBags.filter((b) => {
                         // passengers peut être un tableau ou un objet
                         const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-                        return pax?.departure === airport || pax?.arrival === airport;
+                        // Inclure si: passager a departure/arrival = airport OU bagage a airport_code = airport
+                        return pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
                     })
                     : nationalBags;
                 rushBaggages.push(...filtered.map((b) => {
@@ -255,7 +256,8 @@ router.get('/statistics/:airport', async (req, res, next) => {
         const nationalCount = nationalBags?.filter((b) => {
             // passengers peut être un tableau ou un objet
             const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-            return pax?.departure === airport || pax?.arrival === airport;
+            // Inclure si: passager a departure/arrival = airport OU bagage a airport_code = airport
+            return pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
         }).length || 0;
         // Compter les bagages internationaux RUSH
         const { data: internationalBags, error: internationalError } = await database_1.supabase
@@ -273,7 +275,8 @@ router.get('/statistics/:airport', async (req, res, next) => {
         const todayCount = [
             ...(nationalBags?.filter((b) => {
                 const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
-                return (pax?.departure === airport || pax?.arrival === airport) && b.updated_at >= todayISO;
+                const matchesAirport = pax?.departure === airport || pax?.arrival === airport || b.airport_code === airport;
+                return matchesAirport && b.updated_at >= todayISO;
             }) || []),
             ...(internationalBags?.filter((b) => b.updated_at >= todayISO) || [])
         ].length;
