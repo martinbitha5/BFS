@@ -615,100 +615,10 @@ class ParserService {
    * Format mocké: Le PNR peut ne pas être présent dans les données brutes
    */
   private extractPnr(rawData: string): string {
-    // Cas spécial: Format mocké où le nom est directement collé au numéro de vol (M1KATEBA9U123...)
-    // Dans ce cas, il n'y a pas de PNR visible dans les données brutes
-    // On peut essayer de le trouver ailleurs ou retourner UNKNOWN
-    const flightMatch = rawData.match(/9U\d{3}/);
-    if (flightMatch) {
-      const flightIndex = rawData.indexOf(flightMatch[0]);
-      const beforeFlight = rawData.substring(0, flightIndex);
-      // Si le nom est directement collé au vol (M1KATEBA9U123), il n'y a pas de PNR visible
-      if (beforeFlight.match(/^M1[A-Z]+$/)) {
-        // Chercher un PNR ailleurs dans les données (après le vol, avant les codes aéroports)
-        const afterFlight = rawData.substring(flightIndex + flightMatch[0].length);
-        // Chercher un groupe de 6 caractères alphanumériques qui n'est pas un code aéroport
-        const pnrAfterMatch = afterFlight.match(/^([A-Z0-9]{6})/);
-        if (pnrAfterMatch) {
-          const pnrCandidate = pnrAfterMatch[1];
-          if (!KNOWN_AIRPORT_CODES.some(apt => pnrCandidate.includes(apt))) {
-            return pnrCandidate;
-          }
-        }
-      }
-    }
-    
-    // Le PNR est un groupe de 6 lettres majuscules qui suit directement le nom et est suivi d'un espace
-    // Format: ...OSCAREYFMKNE FIHFBMET (EYFMKNE est le PNR, suivi d'un espace)
-    
-    // Chercher directement "EYFMKNE " dans la chaîne
-    const pnrIndex = rawData.indexOf('EYFMKNE ');
-    if (pnrIndex > 2) {
-      // Vérifier que ce qui précède est bien le nom
-      const beforeMatch = rawData.substring(0, pnrIndex);
-      if (beforeMatch.match(/^M1[A-Z\s\/]+$/)) {
-        return 'EYFMKNE';
-      }
-    }
-    
-    // D'abord, trouver où se termine le nom
-    const name = this.extractNameAirCongo(rawData);
-    if (name === 'UNKNOWN') {
-      // Fallback : chercher directement
-      const fallbackMatch = rawData.match(/^M1[A-Z\s\/]+([A-Z]{6})\s/);
-      if (fallbackMatch) {
-        return fallbackMatch[1];
-      }
-      return 'UNKNOWN';
-    }
-    
-    // Trouver où se termine le nom dans les données brutes
-    // Le nom commence après M1 (index 2)
-    // Chercher M1 suivi du nom exact
-    const nameWithSlashes = rawData.substring(2).match(/^[A-Z\s\/]+/);
-    if (nameWithSlashes) {
-      const nameEndIndex = 2 + nameWithSlashes[0].length;
-      // Le PNR commence juste après le nom
-      const afterName = rawData.substring(nameEndIndex);
-      // Chercher le premier groupe de 6 lettres majuscules suivi d'un espace
-      // Mais ignorer les codes aéroports
-      const pnrMatch = afterName.match(/^([A-Z]{6})\s/);
-      if (pnrMatch) {
-        const pnrStr = pnrMatch[1];
-        // Ignorer si c'est un code aéroport
-        if (!pnrStr.includes('FIH') && !pnrStr.includes('FBM') && !pnrStr.includes('JNB') &&
-            !pnrStr.includes('LAD') && !pnrStr.includes('ADD') && !pnrStr.includes('BZV') &&
-            !pnrStr.includes('KGL') && !pnrStr.includes('EBB')) {
-          return pnrStr;
-        }
-      }
-    }
-    
-    // Chercher tous les groupes de 6 caractères alphanumériques qui pourraient être un PNR
-    const allMatches = Array.from(rawData.matchAll(/([A-Z0-9]{6})/g));
-    
-    for (const match of allMatches) {
-      const matchIndex = match.index || 0;
-      const matchStr = match[1];
-      
-      if (matchIndex < 10) continue;
-      
-      // Ignorer les codes aéroports
-      if (matchStr.includes('FIH') || matchStr.includes('FBM') || matchStr.includes('JNB') ||
-          matchStr.includes('LAD') || matchStr.includes('ADD') || matchStr.includes('BZV') ||
-          matchStr.includes('KGL') || matchStr.includes('EBB')) {
-        continue;
-      }
-      
-      const beforeMatch = rawData.substring(0, matchIndex);
-      if (beforeMatch.match(/^M1[A-Z\s\/]+$/)) {
-        const lastCharBefore = rawData[matchIndex - 1];
-        if (lastCharBefore && lastCharBefore.match(/[A-Z]/)) {
-          return matchStr;
-        }
-      }
-    }
-
-    return 'UNKNOWN';
+    // ✅ UTILISER LE SERVICE ROBUSTE d'extraction du PNR
+    // Ce service supporte tous les formats: Ethiopian, Air Congo, Kenya Airways, etc.
+    // Retourne 'UNKNOWN' si pas trouvé
+    return pnrExtractorService.extractPnr(rawData);
   }
 
   /**
