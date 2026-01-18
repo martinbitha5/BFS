@@ -33,9 +33,10 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Ne pas ajouter l'aéroport pour les routes d'authentification (login, register)
+  // Ne pas ajouter l'aéroport pour les routes d'authentification (login, register, me, logout)
   const isAuthRoute = config.url?.includes('/auth/login') || 
                       config.url?.includes('/auth/register') ||
+                      config.url?.includes('/auth/me') ||
                       config.url?.includes('/auth/logout');
 
   // Extraire l'aéroport de l'utilisateur si disponible et si ce n'est pas une route d'auth
