@@ -262,9 +262,6 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
       boarded_by: boarded_by || req.body.user_id,
       synced: true,
       created_at: new Date().toISOString(),
-      // Stocker le checksum et boarding_id dans les métadonnées si possible
-      scan_checksum: scan_checksum || '', // Identifiant du scan pour traçabilité
-      boarding_id: boarding_id || '', // ID pour matching
     };
 
     const { data: boarding, error: boardingError } = await supabase
