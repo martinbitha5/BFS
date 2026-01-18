@@ -225,8 +225,8 @@ export default function BoardingScreen({ navigation }: Props) {
     user: any
   ) => {
     try {
-      // Importer la fonction utilitaire
       const { createScanChecksum, createBoardingIdentifier } = await import('../utils/checksum.util');
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
       // 1. Créer un checksum du raw data
       const scanChecksum = createScanChecksum(rawData);
@@ -236,21 +236,60 @@ export default function BoardingScreen({ navigation }: Props) {
         passengerData.flightNumber
       );
 
-      // 2. Préparer les données à envoyer (minimal, seulement ce qui est nécessaire)
-      const boardingUpdate = {
-        passenger_id: passengerData.id,
-        boarded_at: new Date().toISOString(),
-        boarded_by: user.id,
-      };
-
-      // 3. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
+      // 2. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
       setImmediate(async () => {
         try {
-          // Récupérer la clé API depuis AsyncStorage (stockée lors du login)
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
           const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+          const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
 
-          const response = await fetch('https://api.brsats.com/api/v1/boarding/sync-hash', {
+          // ÉTAPE 1: Synchroniser le passager FIRST pour obtenir l'UUID du serveur
+          console.log('[Boarding] 1️⃣  Synchronising passenger...');
+          const passengerSyncResponse = await fetch(`${apiUrl}/api/v1/passengers/sync`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey || '',
+            },
+            body: JSON.stringify({
+              passengers: [{
+                pnr: passengerData.pnr,
+                full_name: passengerData.fullName,
+                flight_number: passengerData.flightNumber,
+                seat_number: passengerData.seatNumber || '',
+                departure: passengerData.departure,
+                arrival: passengerData.arrival,
+                airport_code: user.airportCode,
+                baggage_count: passengerData.baggageCount || 0,
+                checked_in: true,
+                checked_in_at: new Date().toISOString(),
+              }]
+            })
+          });
+
+          if (!passengerSyncResponse.ok) {
+            console.warn('⚠️  Passenger sync failed:', passengerSyncResponse.status);
+            return; // Bail out if passenger sync fails
+          }
+
+          const passengerSyncData = await passengerSyncResponse.json();
+          const serverPassenger = passengerSyncData.data?.[0];
+
+          if (!serverPassenger?.id) {
+            console.warn('⚠️  No passenger ID returned from sync');
+            return;
+          }
+
+          console.log('[Boarding] ✅ Passenger synced, ID:', serverPassenger.id);
+
+          // ÉTAPE 2: Maintenant faire l'embarquement avec l'UUID du serveur
+          console.log('[Boarding] 2️⃣  Syncing boarding status...');
+          const boardingUpdate = {
+            passenger_id: serverPassenger.id, // Utiliser l'UUID du serveur!
+            boarded_at: new Date().toISOString(),
+            boarded_by: user.id,
+          };
+
+          const response = await fetch(`${apiUrl}/api/v1/boarding/sync-hash`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -260,22 +299,18 @@ export default function BoardingScreen({ navigation }: Props) {
           });
 
           if (response.ok) {
-            console.log('✅ Embarquement synchronisé au serveur avec checksum');
-            // Le serveur a déjà mis à jour le statut - pas besoin d'updateStatus local
+            console.log('✅ Embarquement synchronisé au serveur');
           } else {
-            console.warn('⚠️ Erreur lors de la synchronisation:', response.status);
+            console.warn('⚠️  Erreur lors de la synchronisation:', response.status);
             const errorText = await response.text();
             console.warn('Détails:', errorText);
-            // L'app reste fonctionnelle même si le serveur répond pas
           }
         } catch (error) {
-          console.warn('⚠️ Erreur réseau lors de la sync:', error);
-          // Continue offline - l'embarquement est déjà enregistré localement
+          console.warn('⚠️  Erreur réseau lors de la sync:', error);
         }
       });
     } catch (error) {
       console.error('Erreur création du checksum:', error);
-      // Continue quand même - le checksum n'est pas critique
     }
   };
 
