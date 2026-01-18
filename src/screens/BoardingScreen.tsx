@@ -225,27 +225,15 @@ export default function BoardingScreen({ navigation }: Props) {
     user: any
   ) => {
     try {
-      const { createScanChecksum, createBoardingIdentifier } = await import('../utils/checksum.util');
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
-      // 1. Créer un checksum du raw data
-      const scanChecksum = createScanChecksum(rawData);
-      const boardingId = createBoardingIdentifier(
-        passengerData.pnr,
-        passengerData.fullName,
-        passengerData.flightNumber
-      );
-
-      // 2. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
       setImmediate(async () => {
         try {
           const apiKey = await AsyncStorage.getItem('@bfs:api_key');
           const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
 
-          let serverPassengerId: string | null = null;
-
-          // ÉTAPE 1: Vérifier si le passager existe DÉJÀ par PNR
-          console.log('[Boarding] 1️⃣  Checking if passenger exists...');
+          // ÉTAPE 1: Chercher le passager par PNR (doit déjà exister du check-in)
+          console.log('[Boarding] 1️⃣  Looking for passenger by PNR:', passengerData.pnr);
           const checkResponse = await fetch(
             `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(passengerData.pnr)}&airport_code=${user.airportCode}`,
             {
@@ -256,59 +244,22 @@ export default function BoardingScreen({ navigation }: Props) {
             }
           );
 
-          if (checkResponse.ok) {
-            const checkData = await checkResponse.json();
-            if (checkData.data && checkData.data.length > 0) {
-              // Passager existe déjà
-              serverPassengerId = checkData.data[0].id;
-              console.log('[Boarding] ✅ Passenger already exists, ID:', serverPassengerId);
-            }
+          if (!checkResponse.ok) {
+            console.warn('⚠️  Failed to search for passenger');
+            return;
           }
 
-          // ÉTAPE 2: Si passager n'existe pas, le synchroniser
-          if (!serverPassengerId) {
-            console.log('[Boarding] 2️⃣  Synchronising new passenger...');
-            const passengerSyncResponse = await fetch(`${apiUrl}/api/v1/passengers/sync`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey || '',
-              },
-              body: JSON.stringify({
-                passengers: [{
-                  pnr: passengerData.pnr,
-                  full_name: passengerData.fullName,
-                  flight_number: passengerData.flightNumber,
-                  seat_number: passengerData.seatNumber || '',
-                  departure: passengerData.departure,
-                  arrival: passengerData.arrival,
-                  airport_code: user.airportCode,
-                  baggage_count: passengerData.baggageCount || 0,
-                  checked_in: true,
-                  checked_in_at: new Date().toISOString(),
-                }]
-              })
-            });
-
-            if (!passengerSyncResponse.ok) {
-              console.warn('⚠️  Passenger sync failed:', passengerSyncResponse.status);
-              return;
-            }
-
-            const passengerSyncData = await passengerSyncResponse.json();
-            const newPassenger = passengerSyncData.data?.[0];
-
-            if (!newPassenger?.id) {
-              console.warn('⚠️  No passenger ID returned from sync');
-              return;
-            }
-
-            serverPassengerId = newPassenger.id;
-            console.log('[Boarding] ✅ Passenger created, ID:', serverPassengerId);
+          const checkData = await checkResponse.json();
+          if (!checkData.data || checkData.data.length === 0) {
+            console.warn('⚠️  Passenger not found - must be checked in first!');
+            return;
           }
 
-          // ÉTAPE 3: Synchroniser le statut d'embarquement
-          console.log('[Boarding] 3️⃣  Syncing boarding status...');
+          const serverPassengerId = checkData.data[0].id;
+          console.log('[Boarding] ✅ Passenger found, ID:', serverPassengerId);
+
+          // ÉTAPE 2: Synchroniser JUSTE le statut d'embarquement
+          console.log('[Boarding] 2️⃣  Syncing boarding status...');
           const boardingUpdate = {
             passenger_id: serverPassengerId,
             boarded_at: new Date().toISOString(),
@@ -336,7 +287,7 @@ export default function BoardingScreen({ navigation }: Props) {
         }
       });
     } catch (error) {
-      console.error('Erreur création du checksum:', error);
+      console.error('Erreur sync boarding:', error);
     }
   };
 
