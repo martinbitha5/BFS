@@ -259,8 +259,12 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     let boardingData: any = {
       passenger_id,
       boarded_at: boarded_at || new Date().toISOString(),
-      boarded_by: boarded_by || req.body.user_id,
     };
+    
+    // Ajouter boarded_by seulement s'il existe
+    if (boarded_by) {
+      boardingData.boarded_by = boarded_by;
+    }
 
     const { data: boarding, error: boardingError } = await supabase
       .from('boarding_status')
@@ -283,13 +287,18 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
         .limit(1);
 
       if (rawScans && rawScans.length > 0) {
+        const updateData: any = {
+          status_boarding: true,
+          boarding_at: boarded_at || new Date().toISOString(),
+        };
+        
+        if (boarded_by) {
+          updateData.boarding_by = boarded_by;
+        }
+        
         await supabase
           .from('raw_scans')
-          .update({
-            status_boarding: true,
-            boarding_at: boarded_at || new Date().toISOString(),
-            boarding_by: boarded_by || req.body.user_id,
-          })
+          .update(updateData)
           .eq('id', rawScans[0].id);
       }
     } catch (updateError) {
