@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 
@@ -216,6 +216,113 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       success: true,
       count: data?.length || 0,
       data
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/boarding/sync-hash
+ * Synchroniser l'embarquement avec le hash du boarding pass
+ * Au lieu d'envoyer le rawData (gros fichier), on envoie le hash SHA256
+ * 
+ * Body:
+ * {
+ *   scan_hash: "sha256_hash",
+ *   passenger_id: "passenger_uuid",
+ *   status: "boarded",
+ *   boarded_at: "ISO_DATE",
+ *   boarded_by: "user_id",
+ *   timestamp: "ISO_DATE",
+ *   airport_code: "FIH",
+ *   pnr: "YCECFQ",
+ *   full_name: "RAZIOU MOUSTAPHA",
+ *   flight_number: "KQ0555"
+ * }
+ */
+router.post('/sync-hash', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { scan_hash, passenger_id, boarded_at, boarded_by, airport_code, pnr, full_name, flight_number } = req.body;
+
+    // Validation basique
+    if (!scan_hash || !passenger_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'scan_hash et passenger_id requis'
+      });
+    }
+
+    // 1. Chercher le raw_scan par le hash
+    const { data: rawScan, error: scanError } = await supabase
+      .from('raw_scans')
+      .select('*')
+      .eq('scan_hash', scan_hash)
+      .eq('airport_code', airport_code)
+      .single();
+
+    if (scanError && scanError.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (c'est acceptable si le scan n'existe pas encore)
+      throw scanError;
+    }
+
+    // 2. Mettre à jour ou créer le boarding_status
+    let boardingData: any = {
+      passenger_id,
+      boarded: true,
+      boarded_at: boarded_at || new Date().toISOString(),
+      boarded_by: boarded_by || req.body.user_id,
+      synced: true,
+      created_at: new Date().toISOString(),
+      scan_hash, // Stocker le hash pour traçabilité
+    };
+
+    const { data: boarding, error: boardingError } = await supabase
+      .from('boarding_status')
+      .upsert(boardingData, {
+        onConflict: 'passenger_id',
+        ignoreDuplicates: false
+      })
+      .select()
+      .single();
+
+    if (boardingError) throw boardingError;
+
+    // 3. Mettre à jour le raw_scan avec le hash s'il existe
+    if (rawScan) {
+      await supabase
+        .from('raw_scans')
+        .update({
+          status_boarding: true,
+          boarding_at: boarded_at || new Date().toISOString(),
+          boarding_by: boarded_by || req.body.user_id,
+          synced: true,
+        })
+        .eq('id', rawScan.id);
+    }
+
+    // 4. Logger l'action d'audit
+    try {
+      await supabase
+        .from('audit_logs')
+        .insert({
+          action: 'BOARDING_SYNC_HASH',
+          entity_type: 'boarding_status',
+          entity_id: boarding.id,
+          description: `Embarquement synchronisé (hash) - PNR: ${pnr}, Vol: ${flight_number}, Nom: ${full_name}`,
+          performed_by: boarded_by || req.body.user_id,
+          airport_code,
+          timestamp: new Date().toISOString(),
+        });
+    } catch (auditError) {
+      console.warn('Audit log failed:', auditError);
+      // Continue même si l'audit échoue
+    }
+
+    res.json({
+      success: true,
+      message: 'Embarquement synchronisé avec succès (hash)',
+      data: boarding
     });
   } catch (error) {
     next(error);

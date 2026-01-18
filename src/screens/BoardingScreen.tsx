@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Crypto from 'expo-crypto';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -183,6 +184,9 @@ export default function BoardingScreen({ navigation }: Props) {
       setToastType('success');
       setShowToast(true);
       
+      // 🚀 SYNCHRONISER AVEC LE SERVEUR (asynchrone, ne pas bloquer)
+      await syncBoardingToServer(data, displayPassenger, boardingStatusData, user);
+      
       // Masquer le scanner et afficher le résultat en plein écran
       setProcessing(false);
       setShowScanner(false);
@@ -209,6 +213,75 @@ export default function BoardingScreen({ navigation }: Props) {
     setShowScanner(true);
     setLastPassenger(null);
     setBoardingStatus(null);
+  };
+
+  /**
+   * Synchronise l'embarquement avec le serveur en utilisant le hash du boarding pass
+   * Au lieu d'envoyer le rawData (gros fichier), on envoie un hash SHA256
+   */
+  const syncBoardingToServer = async (
+    rawData: string,
+    passengerData: Passenger,
+    boardingStatusData: BoardingStatus,
+    user: any
+  ) => {
+    try {
+      // 1. Créer le hash SHA256 du raw data
+      const scanHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawData
+      );
+
+      // 2. Préparer les données à envoyer (sans rawData, juste le hash)
+      const boardingUpdate = {
+        scan_hash: scanHash,
+        passenger_id: passengerData.id,
+        scan_type: 'boarding_pass',
+        status: 'boarded',
+        boarded_at: boardingStatusData.boardedAt,
+        boarded_by: user.id,
+        timestamp: new Date().toISOString(),
+        airport_code: user.airportCode,
+        // Infos du passager pour vérification
+        pnr: passengerData.pnr,
+        full_name: passengerData.fullName,
+        flight_number: passengerData.flightNumber,
+      };
+
+      // 3. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
+      setImmediate(async () => {
+        try {
+          const response = await fetch('https://api.brsats.com/api/v1/boarding/sync-hash', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token || ''}`,
+            },
+            body: JSON.stringify(boardingUpdate),
+          });
+
+          if (response.ok) {
+            console.log('✅ Embarquement synchronisé au serveur avec hash');
+            // Marquer comme synced
+            const { rawScanService } = await import('../services');
+            await rawScanService.updateStatus(
+              boardingStatusData.id,
+              'boarding',
+              user.id
+            );
+          } else {
+            console.warn('⚠️ Erreur lors de la synchronisation:', response.status);
+            // L'app reste fonctionnelle même si le serveur répond pas
+          }
+        } catch (error) {
+          console.warn('⚠️ Erreur réseau lors de la sync:', error);
+          // Continue offline - l'embarquement est déjà enregistré localement
+        }
+      });
+    } catch (error) {
+      console.error('Erreur création du hash:', error);
+      // Continue quand même - le hash n'est pas critique
+    }
   };
 
   if (!permission) {

@@ -7,5 +7,6 @@ export interface BoardingStatus {
   gate?: string;
   synced: boolean;
   createdAt: string;
+  scanHash?: string; // SHA256 hash du boarding pass (pour sync sans rawData)
 }
 
