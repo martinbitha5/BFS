@@ -236,21 +236,11 @@ export default function BoardingScreen({ navigation }: Props) {
         passengerData.flightNumber
       );
 
-      // 2. Préparer les données à envoyer (sans rawData, juste le checksum)
+      // 2. Préparer les données à envoyer (minimal, seulement ce qui est nécessaire)
       const boardingUpdate = {
-        scan_checksum: scanChecksum,
-        boarding_id: boardingId,
         passenger_id: passengerData.id,
-        scan_type: 'boarding_pass',
-        status: 'boarded',
-        boarded_at: boardingStatusData.boardedAt,
+        boarded_at: new Date().toISOString(),
         boarded_by: user.id,
-        timestamp: new Date().toISOString(),
-        airport_code: user.airportCode,
-        // Infos du passager pour vérification
-        pnr: passengerData.pnr,
-        full_name: passengerData.fullName,
-        flight_number: passengerData.flightNumber,
       };
 
       // 3. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
