@@ -66,7 +66,24 @@ router.get('/', requireAirportCode, async (req: Request, res: Response, next: Ne
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const boardingData = req.body;
+    // Ne permettre que les champs valides
+    const { passenger_id, boarded_at, boarded_by } = req.body;
+
+    if (!passenger_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'passenger_id requis'
+      });
+    }
+
+    const boardingData: any = {
+      passenger_id,
+      boarded_at: boarded_at || new Date().toISOString(),
+    };
+
+    if (boarded_by) {
+      boardingData.boarded_by = boarded_by;
+    }
 
     const { data, error } = await supabase
       .from('boarding_status')
@@ -167,15 +184,18 @@ router.post('/passenger/:passengerId', requireAirportCode, async (req: Request, 
     }
 
     // Créer ou mettre à jour le statut d'embarquement
+    const boardingData: any = {
+      passenger_id: passengerId,
+      boarded_at: new Date().toISOString(),
+    };
+    
+    if (boardedBy) {
+      boardingData.boarded_by = boardedBy;
+    }
+    
     const { data, error } = await supabase
       .from('boarding_status')
-      .upsert({
-        passenger_id: passengerId,
-        boarded: true,
-        boarded_at: new Date().toISOString(),
-        boarded_by: boardedBy,
-        gate: gate
-      }, { onConflict: 'passenger_id' })
+      .upsert(boardingData, { onConflict: 'passenger_id' })
       .select()
       .single();
 
@@ -205,9 +225,23 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
+    // Nettoyer les données - seulement les champs valides
+    const cleanedBoardings = boardings.map((b: any) => ({
+      passenger_id: b.passenger_id,
+      boarded_at: b.boarded_at || new Date().toISOString(),
+      ...(b.boarded_by && { boarded_by: b.boarded_by }),
+    })).filter((b: any) => b.passenger_id); // Filtrer les sans passenger_id
+
+    if (cleanedBoardings.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid boardings to sync'
+      });
+    }
+
     const { data, error } = await supabase
       .from('boarding_status')
-      .upsert(boardings, { onConflict: 'id' })
+      .upsert(cleanedBoardings, { onConflict: 'passenger_id' })
       .select();
 
     if (error) throw error;
