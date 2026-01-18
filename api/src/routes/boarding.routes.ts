@@ -298,22 +298,23 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     }
 
     // 4. Logger l'action d'audit
-    try {
-      await supabase
-        .from('audit_logs')
-        .insert({
-          action: 'BOARDING_SYNC_CHECKSUM',
-          entity_type: 'boarding_status',
-          entity_id: boarding.id,
-          description: `Embarquement synchronisé - PNR: ${pnr}, Vol: ${flight_number}, Nom: ${full_name}`,
-          performed_by: boarded_by || req.body.user_id,
-          airport_code,
-          timestamp: new Date().toISOString(),
-        });
-    } catch (auditError) {
-      console.warn('Audit log failed:', auditError);
-      // Continue même si l'audit échoue
-    }
+    // Audit désactivé temporairement - problème de schema
+    // try {
+    //   await supabase
+    //     .from('audit_logs')
+    //     .insert({
+    //       action: 'BOARDING_SYNC_CHECKSUM',
+    //       entity_type: 'boarding_status',
+    //       entity_id: boarding.id,
+    //       description: `Embarquement synchronisé - PNR: ${pnr}, Vol: ${flight_number}, Nom: ${full_name}`,
+    //       performed_by: boarded_by || req.body.user_id,
+    //       airport_code,
+    //       timestamp: new Date().toISOString(),
+    //     });
+    // } catch (auditError) {
+    //   console.warn('Audit log failed:', auditError);
+    //   // Continue même si l'audit échoue
+    // }
 
     res.json({
       success: true,
