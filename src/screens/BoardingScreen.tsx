@@ -256,11 +256,15 @@ export default function BoardingScreen({ navigation }: Props) {
       // 3. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
       setImmediate(async () => {
         try {
+          // Récupérer le token d'accès depuis la session
+          const session = await authServiceInstance.getSession();
+          const accessToken = session?.accessToken || '';
+
           const response = await fetch('https://api.brsats.com/api/v1/boarding/sync-hash', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user.token || ''}`,
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify(boardingUpdate),
           });
@@ -276,6 +280,8 @@ export default function BoardingScreen({ navigation }: Props) {
             );
           } else {
             console.warn('⚠️ Erreur lors de la synchronisation:', response.status);
+            const errorText = await response.text();
+            console.warn('Détails:', errorText);
             // L'app reste fonctionnelle même si le serveur répond pas
           }
         } catch (error) {

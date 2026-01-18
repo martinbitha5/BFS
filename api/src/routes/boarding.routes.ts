@@ -242,15 +242,15 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
  *   flight_number: "KQ0555"
  * }
  */
-router.post('/sync-hash', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { scan_checksum, boarding_id, passenger_id, boarded_at, boarded_by, airport_code, pnr, full_name, flight_number } = req.body;
 
     // Validation basique
-    if (!scan_checksum || !passenger_id) {
+    if (!scan_checksum || !passenger_id || !airport_code) {
       return res.status(400).json({
         success: false,
-        error: 'scan_checksum et passenger_id requis'
+        error: 'scan_checksum, passenger_id et airport_code requis'
       });
     }
 
