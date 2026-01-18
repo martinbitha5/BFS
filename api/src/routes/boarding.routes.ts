@@ -278,27 +278,33 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
  */
 router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { scan_checksum, boarding_id, passenger_id, boarded_at, boarded_by, airport_code, pnr, full_name, flight_number } = req.body;
+    const { passenger_id, boarded_at, boarded_by } = req.body;
+
+    console.log('[Boarding] sync-hash received:', { passenger_id, boarded_at, boarded_by });
 
     // Validation basique
-    if (!passenger_id || !airport_code) {
+    if (!passenger_id) {
       return res.status(400).json({
         success: false,
-        error: 'passenger_id et airport_code requis'
+        error: 'passenger_id requis'
       });
     }
 
-    // 2. Mettre à jour ou créer le boarding_status
-    // Utiliser seulement les colonnes qui existent vraiment
-    let boardingData: any = {
+    // Construire les données MINIMALES
+    const boardingData: any = {
       passenger_id,
-      boarded_at: boarded_at || new Date().toISOString(),
     };
-    
-    // Ajouter boarded_by seulement s'il existe
+
+    // Ajouter optionnellement les autres champs SEULEMENT s'ils existent
+    if (boarded_at) {
+      boardingData.boarded_at = boarded_at;
+    }
+
     if (boarded_by) {
       boardingData.boarded_by = boarded_by;
     }
+
+    console.log('[Boarding] upserting with data:', boardingData);
 
     const { data: boarding, error: boardingError } = await supabase
       .from('boarding_status')
@@ -309,29 +315,12 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
       .select()
       .single();
 
-    if (boardingError) throw boardingError;
+    if (boardingError) {
+      console.error('[Boarding] Supabase error:', boardingError);
+      throw boardingError;
+    }
 
-    // 3. Pas de mise à jour du raw_scan - ceux-ci ont des IDs locaux non-UUID
-    // L'embarquement est enregistré dans boarding_status ce qui est suffisant
-
-    // 4. Logger l'action d'audit
-    // Audit désactivé temporairement - problème de schema
-    // try {
-    //   await supabase
-    //     .from('audit_logs')
-    //     .insert({
-    //       action: 'BOARDING_SYNC_CHECKSUM',
-    //       entity_type: 'boarding_status',
-    //       entity_id: boarding.id,
-    //       description: `Embarquement synchronisé - PNR: ${pnr}, Vol: ${flight_number}, Nom: ${full_name}`,
-    //       performed_by: boarded_by || req.body.user_id,
-    //       airport_code,
-    //       timestamp: new Date().toISOString(),
-    //     });
-    // } catch (auditError) {
-    //   console.warn('Audit log failed:', auditError);
-    //   // Continue même si l'audit échoue
-    // }
+    console.log('[Boarding] Success:', boarding);
 
     res.json({
       success: true,
@@ -339,6 +328,7 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
       data: boarding
     });
   } catch (error) {
+    console.error('[Boarding] Error:', error);
     next(error);
   }
 });
