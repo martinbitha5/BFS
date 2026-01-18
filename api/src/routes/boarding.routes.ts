@@ -255,13 +255,11 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     }
 
     // 2. Mettre à jour ou créer le boarding_status
+    // Utiliser seulement les colonnes qui existent vraiment
     let boardingData: any = {
       passenger_id,
-      boarded: true,
       boarded_at: boarded_at || new Date().toISOString(),
       boarded_by: boarded_by || req.body.user_id,
-      synced: true,
-      created_at: new Date().toISOString(),
     };
 
     const { data: boarding, error: boardingError } = await supabase
@@ -291,7 +289,6 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
             status_boarding: true,
             boarding_at: boarded_at || new Date().toISOString(),
             boarding_by: boarded_by || req.body.user_id,
-            synced: true,
           })
           .eq('id', rawScans[0].id);
       }
