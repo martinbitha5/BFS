@@ -2492,9 +2492,30 @@ class ParserService {
   /**
    * Extrait le numéro de siège
    * Format réel: Dans "311Y013A0100", le siège est "013A" (13A après nettoyage)
-   * Format: [classe][classe_lettre][siège] comme "311Y013A" ou "331Y068A0052"
+   * Format Kenya Airways: "335M031G0009" où 335M est classe, 031G est le siège
+   * Format: [classe][classe_lettre][siège] comme "311Y013A" ou "331Y068A0052" ou "335M031G"
    */
   private extractSeatNumber(rawData: string): string | undefined {
+    // IMPORTANTE: Chercher TOUS les matches de 3 chiffres + lettre pour éviter les faux positifs
+    // Format Kenya Airways: "335M031G" où le PREMIER est la classe, le SECOND est le siège
+    const allMatches = Array.from(rawData.matchAll(/(\d{3}[A-Z])/g));
+    
+    // Si on a au moins 2 matches, prendre le DEUXIÈME (le siège, pas la classe)
+    // Format Kenya Airways: 335M (classe) + 031G (siège) + ...
+    if (allMatches.length >= 2) {
+      // Vérifier si le premier match est un code de classe (3xx[YCM])
+      const firstMatch = allMatches[0][1];
+      if (firstMatch.match(/^[3][0-9]{2}[YCM]$/)) {
+        // C'est un code de classe, le deuxième match est le siège
+        const seat = allMatches[1][1];
+        const cleaned = seat.replace(/^0+(\d+[A-Z])/, '$1');
+        if (cleaned.match(/^\d{1,3}[A-Z]$/)) {
+          return cleaned;
+        }
+        return seat;
+      }
+    }
+    
     // Chercher un pattern comme "013A" ou "068A" (3 chiffres + 1 lettre)
     // Ce pattern apparaît souvent après "Y" ou "C" (classe)
     // Format: ...Y013A... ou ...C014C... ou ...Y068A...
@@ -2510,11 +2531,11 @@ class ParserService {
     }
     
     // Fallback : chercher directement un pattern 3 chiffres + lettre
-    const directMatch = rawData.match(/(\d{3}[A-Z])(?=\d|$|\s)/);
-    if (directMatch) {
-      const seat = directMatch[1];
-      // Vérifier que ce n'est pas un code de classe (311Y, 310Y, 331Y, etc.)
-      if (!seat.match(/^3[0-9]{2}[YC]$/)) {
+    // Mais LE PREMIER si pas de classe détectée
+    if (allMatches.length >= 1) {
+      const seat = allMatches[0][1];
+      // Vérifier que ce n'est pas un code de classe (311Y, 310Y, 331Y, 335M, etc.)
+      if (!seat.match(/^3[0-9]{2}[YCM]$/)) {
         const cleaned = seat.replace(/^0+(\d+[A-Z])/, '$1');
         if (cleaned.match(/^\d{1,3}[A-Z]$/)) {
           return cleaned;
