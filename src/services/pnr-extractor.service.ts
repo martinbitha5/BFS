@@ -56,6 +56,16 @@ class PnrExtractorService {
       this.extractAirCongoDirect(cleanedData, airportCodes, candidates);
     }
     
+    // STRATÉGIE 3B: KENYA AIRWAYS (KQ + patterns spécifiques)
+    if (candidates.length === 0) {
+      this.extractKenyaAirwaysDirect(cleanedData, airportCodes, candidates);
+    }
+    
+    // STRATÉGIE 3C: AUTRES COMPAGNIES (Turkish TK, RwandAir WB, South African SA, Swissair SR, etc.)
+    if (candidates.length === 0) {
+      this.extractOtherAirlinesDirect(cleanedData, airportCodes, candidates);
+    }
+    
     // STRATÉGIE 4: PATTERNS GÉNÉRIQUES IATA (fallback)
     if (candidates.length === 0) {
       this.extractGenericPatterns(cleanedData, airportCodes, candidates);
@@ -288,6 +298,146 @@ class PnrExtractorService {
   }
 
   /**
+   * Stratégie 3B: Kenya Airways (KQ) + autres compagnies (patterns spécifiques)
+   * Kenya Airways utilise code KQ et a des patterns similaires à Air Congo
+   * Format typique: M1[NOM] [PNR] [DEP][ARR][CODE] [VOL]...
+   */
+  private extractKenyaAirwaysDirect(
+    rawData: string,
+    airportCodes: string[],
+    candidates: PnrCandidate[]
+  ): void {
+    // Kenya Airways utilise probablement le même format que Air Congo
+    // Format 1: PNR avant KQ suivi de numéro de vol
+    const kqRegex = /([A-Z0-9]{6})KQ\s*\d{3,4}/g;
+    const kqMatches = Array.from(rawData.matchAll(kqRegex));
+    for (const match of kqMatches) {
+      const pnr = match[1];
+      if (airportCodes.includes(pnr)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 75,
+        pattern: 'Kenya Airways KQ Direct',
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+    
+    // Format 2: Après M1/M2, avant codes aéroports (comme Air Congo)
+    // M1[NOM] [PNR 6 ALPHANUMÉRIQUES] [DEP][ARR]...
+    // Kenya Airways PNR peut contenir des chiffres: E7T5GVL, EYCECFQ, etc.
+    const kenyaPnrRegex = /M[12]([A-Z\s\/]+)([A-Z0-9]{6})\s+([A-Z]{3})/g;
+    const kenyaPnrMatches = Array.from(rawData.matchAll(kenyaPnrRegex));
+    for (const match of kenyaPnrMatches) {
+      const pnr = match[2];
+      if (airportCodes.includes(pnr)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 85,
+        pattern: 'Kenya Airways M1/M2',
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+    
+    // Format 3: M1/M2 avec codes aéroports et KQ explicite
+    const kenyaFullRegex = /M[12]([A-Z\s\/]+)([A-Z0-9]{6})\s+([A-Z]{3})([A-Z]{3})KQ\s*\d/g;
+    const kenyaFullMatches = Array.from(rawData.matchAll(kenyaFullRegex));
+    for (const match of kenyaFullMatches) {
+      const pnr = match[2];
+      if (airportCodes.includes(pnr)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 80,
+        pattern: 'Kenya Airways Full Format',
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+    
+    // Format 4: Alternative avec codes aéroports avant compagnie
+    const altRegex = /([A-Z]{3})([A-Z]{3})KQ\s*\d{3,4}\s+([A-Z0-9]{6})/g;
+    const altMatches = Array.from(rawData.matchAll(altRegex));
+    for (const match of altMatches) {
+      const pnr = match[3];
+      if (airportCodes.includes(pnr)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 70,
+        pattern: 'Kenya Airways Alternative',
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+  }
+
+  /**
+   * Stratégie 3C: Autres compagnies (Turkish TK, RwandAir WB, South African SA, Swissair SR, etc.)
+   * Support générique pour TOUTES les compagnies 2-lettre avec patterns standards
+   * Format typique: M1[NOM] [PNR] [DEP][ARR][CODE] [VOL]...
+   */
+  private extractOtherAirlinesDirect(
+    rawData: string,
+    airportCodes: string[],
+    candidates: PnrCandidate[]
+  ): void {
+    // Pattern 1: Format générique M1/M2 - PNR entre nom et codes aéroports
+    // Supporte tous les codes compagnie 2-lettre (TK, WB, SA, SR, TC, PW, HF, etc.)
+    // Format: M1[NOM] [PNR] [DEP][ARR][CODE] [VOL]
+    const airlineRegex = /M[12]([A-Z\s\/]+)([A-Z0-9]{6})\s+([A-Z]{3})([A-Z]{3})([A-Z0-9]{2})\s*\d{3,4}/g;
+    const matches = Array.from(rawData.matchAll(airlineRegex));
+    for (const match of matches) {
+      const pnr = match[2];
+      const depCode = match[3];
+      const arrCode = match[4];
+      const airlineCode = match[5];
+      
+      // Valider qu'il ne s'agit pas d'un code aéroport
+      if (airportCodes.includes(pnr) || airlineCode === depCode || airlineCode === arrCode) continue;
+      
+      // Valider que c'est un code compagnie connu (2 lettres ou 2 alphanumériques)
+      if (!/^[A-Z0-9]{2}$/.test(airlineCode)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 75,
+        pattern: `Generic Airline ${airlineCode}`,
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+    
+    // Pattern 2: PNR avant compagnie suivi de numéro de vol
+    // Format générique: [PNR 6][CODE 2 lettres][VOL 3-4 chiffres]
+    const genericCodeRegex = /([A-Z0-9]{6})([A-Z0-9]{2})\s*\d{3,4}/g;
+    const codeMatches = Array.from(rawData.matchAll(genericCodeRegex));
+    for (const match of codeMatches) {
+      const pnr = match[1];
+      const code = match[2];
+      
+      if (airportCodes.includes(pnr)) continue;
+      
+      // Vérifier que c'est un vrai code compagnie (2 lettres)
+      if (!/^[A-Z]{2}$/.test(code)) continue;
+      
+      // Exclure les codes aéroports connus
+      if (KNOWN_AIRPORT_CODES.some(apt => apt === code)) continue;
+      
+      candidates.push({
+        pnr,
+        confidence: 65,
+        pattern: `Generic Airline Code ${code}`,
+        position: match.index || 0,
+        context: { before: '', after: '' },
+      });
+    }
+  }
+
+  /**
    * Stratégie 4: Patterns génériques IATA (fallback universel)
    */
   private extractGenericPatterns(
@@ -341,6 +491,8 @@ class PnrExtractorService {
       );
       if (context.match(/^[A-Z]{20,}/)) continue;
       
+      const before = rawData.substring(Math.max(0, (match.index || 0) - 5), match.index || 0);
+      const after = rawData.substring((match.index || 0) + 6, Math.min(rawData.length, (match.index || 0) + 11));
       candidates.push({
         pnr,
         confidence: 30,
