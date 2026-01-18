@@ -146,19 +146,21 @@ class RawScanService {
                 scan_count: scanData.scanCount,
             };
             
-            await databaseService.addToSyncQueue({
-                tableName: 'raw_scans',
-                recordId,
-                operation,
-                data: JSON.stringify(apiData),
-                retryCount: 0,
-                userId,
-            });
+            // ⚠️ DÉSACTIVÉ: Raw scans ne sont pas synchronisés
+            // Les raw scans restent locaux uniquement
+            // await databaseService.addToSyncQueue({
+            //     tableName: 'raw_scans',
+            //     recordId,
+            //     operation,
+            //     data: JSON.stringify(apiData),
+            //     retryCount: 0,
+            //     userId,
+            // });
             
-            console.log(`[RawScan] Ajouté à la sync queue: ${operation} - ${recordId}`);
+            console.log(`[RawScan] ✅ Enregistré localement (pas de sync): ${operation} - ${recordId}`);
         } catch (error) {
-            console.error('[RawScan] Erreur lors de l\'ajout à la sync queue:', error);
-            // Ne pas bloquer l'opération principale si la sync échoue
+            console.error('[RawScan] Erreur lors de l\'enregistrement local:', error);
+            // Ne pas bloquer l'opération principale si l'enregistrement échoue
         }
     }
 
