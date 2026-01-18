@@ -290,6 +290,22 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
       });
     }
 
+    // IMPORTANT: Vérifier que le passager existe AVANT de créer le boarding_status
+    // Sinon la foreign key constraint échoue
+    const { data: passenger, error: passengerError } = await supabase
+      .from('passengers')
+      .select('id')
+      .eq('id', passenger_id)
+      .single();
+
+    if (passengerError || !passenger) {
+      console.warn('[Boarding] Passenger not found:', passenger_id);
+      return res.status(404).json({
+        success: false,
+        error: 'Passager non trouvé - sync les passagers d\'abord'
+      });
+    }
+
     // Construire les données MINIMALES
     const boardingData: any = {
       passenger_id,
