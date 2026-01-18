@@ -239,15 +239,13 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
   try {
     const { airport } = req.params;
     const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
-    // Récupérer les vols programmés aujourd'hui et demain (pour éviter les disparitions à minuit)
+    // Récupérer les vols programmés SEULEMENT POUR AUJOURD'HUI (pas demain)
     let flightQuery = supabase
       .from('flight_schedule')
       .select('*')
-      .gte('scheduled_date', today)
-      .lte('scheduled_date', tomorrow)
+      .eq('scheduled_date', today)
       .in('status', ['scheduled', 'boarding', 'departed'])
       .order('scheduled_date', { ascending: true })
       .order('scheduled_time', { ascending: true });
