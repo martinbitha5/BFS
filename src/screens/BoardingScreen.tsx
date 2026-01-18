@@ -271,13 +271,7 @@ export default function BoardingScreen({ navigation }: Props) {
 
           if (response.ok) {
             console.log('✅ Embarquement synchronisé au serveur avec checksum');
-            // Marquer comme synced
-            const { rawScanService } = await import('../services');
-            await rawScanService.updateStatus(
-              boardingStatusData.id,
-              'boarding',
-              user.id
-            );
+            // Le serveur a déjà mis à jour le statut - pas besoin d'updateStatus local
           } else {
             console.warn('⚠️ Erreur lors de la synchronisation:', response.status);
             const errorText = await response.text();
