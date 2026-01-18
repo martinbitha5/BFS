@@ -256,15 +256,15 @@ export default function BoardingScreen({ navigation }: Props) {
       // 3. Envoyer au serveur (asynchrone, ne pas bloquer l'UI)
       setImmediate(async () => {
         try {
-          // Récupérer le token d'accès depuis la session
-          const session = await authServiceInstance.getCurrentSession();
-          const accessToken = session?.accessToken || '';
+          // Récupérer la clé API depuis AsyncStorage (stockée lors du login)
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const apiKey = await AsyncStorage.getItem('@bfs:api_key');
 
           const response = await fetch('https://api.brsats.com/api/v1/boarding/sync-hash', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
+              'x-api-key': apiKey || '',
             },
             body: JSON.stringify(boardingUpdate),
           });
