@@ -277,34 +277,8 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
 
     if (boardingError) throw boardingError;
 
-    // 3. Mettre à jour le raw_scan s'il existe (chercher par passager + date)
-    try {
-      const { data: rawScans } = await supabase
-        .from('raw_scans')
-        .select('id')
-        .eq('airport_code', airport_code)
-        .order('last_scanned_at', { ascending: false })
-        .limit(1);
-
-      if (rawScans && rawScans.length > 0) {
-        const updateData: any = {
-          status_boarding: true,
-          boarding_at: boarded_at || new Date().toISOString(),
-        };
-        
-        if (boarded_by) {
-          updateData.boarding_by = boarded_by;
-        }
-        
-        await supabase
-          .from('raw_scans')
-          .update(updateData)
-          .eq('id', rawScans[0].id);
-      }
-    } catch (updateError) {
-      console.warn('Raw scan update failed:', updateError);
-      // Continue même si la mise à jour du raw_scan échoue
-    }
+    // 3. Pas de mise à jour du raw_scan - ceux-ci ont des IDs locaux non-UUID
+    // L'embarquement est enregistré dans boarding_status ce qui est suffisant
 
     // 4. Logger l'action d'audit
     // Audit désactivé temporairement - problème de schema
