@@ -15,7 +15,14 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
   try {
     const { flight, status, airport } = req.query;
     const hasFullAccess = req.hasFullAccess;
-    const requestedAirport = (airport as string)?.toUpperCase();
+    
+    // Normaliser le paramètre airport (peut être string, array, ou undefined)
+    let requestedAirport: string | undefined;
+    if (typeof airport === 'string') {
+      requestedAirport = airport.toUpperCase();
+    } else if (Array.isArray(airport)) {
+      requestedAirport = (airport[0] as string)?.toUpperCase();
+    }
     
     // Si l'utilisateur a accès complet et demande ALL, on ne filtre pas par aéroport
     const filterByAirport = !(hasFullAccess && requestedAirport === 'ALL');
