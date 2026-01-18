@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Crypto from 'expo-crypto';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -216,8 +215,8 @@ export default function BoardingScreen({ navigation }: Props) {
   };
 
   /**
-   * Synchronise l'embarquement avec le serveur en utilisant le hash du boarding pass
-   * Au lieu d'envoyer le rawData (gros fichier), on envoie un hash SHA256
+   * Synchronise l'embarquement avec le serveur en utilisant un checksum du boarding pass
+   * Au lieu d'envoyer le rawData (gros fichier), on envoie un checksum simple
    */
   const syncBoardingToServer = async (
     rawData: string,
@@ -226,15 +225,21 @@ export default function BoardingScreen({ navigation }: Props) {
     user: any
   ) => {
     try {
-      // 1. Créer le hash SHA256 du raw data
-      const scanHash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        rawData
+      // Importer la fonction utilitaire
+      const { createScanChecksum, createBoardingIdentifier } = await import('../utils/checksum.util');
+
+      // 1. Créer un checksum du raw data
+      const scanChecksum = createScanChecksum(rawData);
+      const boardingId = createBoardingIdentifier(
+        passengerData.pnr,
+        passengerData.fullName,
+        passengerData.flightNumber
       );
 
-      // 2. Préparer les données à envoyer (sans rawData, juste le hash)
+      // 2. Préparer les données à envoyer (sans rawData, juste le checksum)
       const boardingUpdate = {
-        scan_hash: scanHash,
+        scan_checksum: scanChecksum,
+        boarding_id: boardingId,
         passenger_id: passengerData.id,
         scan_type: 'boarding_pass',
         status: 'boarded',
@@ -261,7 +266,7 @@ export default function BoardingScreen({ navigation }: Props) {
           });
 
           if (response.ok) {
-            console.log('✅ Embarquement synchronisé au serveur avec hash');
+            console.log('✅ Embarquement synchronisé au serveur avec checksum');
             // Marquer comme synced
             const { rawScanService } = await import('../services');
             await rawScanService.updateStatus(
@@ -279,8 +284,8 @@ export default function BoardingScreen({ navigation }: Props) {
         }
       });
     } catch (error) {
-      console.error('Erreur création du hash:', error);
-      // Continue quand même - le hash n'est pas critique
+      console.error('Erreur création du checksum:', error);
+      // Continue quand même - le checksum n'est pas critique
     }
   };
 
