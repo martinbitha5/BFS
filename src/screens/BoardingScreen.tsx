@@ -257,7 +257,7 @@ export default function BoardingScreen({ navigation }: Props) {
       setImmediate(async () => {
         try {
           // Récupérer le token d'accès depuis la session
-          const session = await authServiceInstance.getSession();
+          const session = await authServiceInstance.getCurrentSession();
           const accessToken = session?.accessToken || '';
 
           const response = await fetch('https://api.brsats.com/api/v1/boarding/sync-hash', {
