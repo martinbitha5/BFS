@@ -4,10 +4,10 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, BoardingConfirmationCard, Button, Card, Toast } from '../components';
+import { Badge, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, boardingService, flightService, parserService } from '../services';
+import { authServiceInstance, flightService, parserService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { BoardingConfirmation } from '../types/boarding-new.types';
 import { BoardingStatus } from '../types/boarding.types';
@@ -179,23 +179,6 @@ export default function BoardingScreen({ navigation }: Props) {
       setLastPassenger(displayPassenger);
       setBoardingStatus(boardingStatusData);
       
-      // MODIFICATION 2: Appeler boardingService pour enregistrer la confirmation
-      try {
-        const confirmation = await boardingService.confirmBoarding(
-          data,
-          flightNumber,
-          parsedData?.seatNumber,
-          undefined // gate
-        );
-        setBoardingConfirmation(confirmation);
-        
-        // Charger l'historique récent
-        const history = await boardingService.getRecentBoardings(5);
-        setRecentBoardings(history);
-      } catch (confirmError) {
-        console.error('[BOARDING] Erreur confirmation boarding service:', confirmError);
-      }
-      
       // Jouer le son de succès
       await playSuccessSound();
       
@@ -350,26 +333,6 @@ export default function BoardingScreen({ navigation }: Props) {
           style={styles.successContainer}
           contentContainerStyle={styles.successContentContainer}
           showsVerticalScrollIndicator={true}>
-          
-          {/* MODIFICATION 3: Afficher la BoardingConfirmationCard si disponible */}
-          {boardingConfirmation && (
-            <BoardingConfirmationCard 
-              confirmation={boardingConfirmation}
-              onRetrySync={async () => {
-                try {
-                  const confirmation = await boardingService.getRecentBoardings(1);
-                  if (confirmation.length > 0) {
-                    setBoardingConfirmation(confirmation[0]);
-                  }
-                } catch (error) {
-                  console.error('[BOARDING] Erreur retry sync:', error);
-                  setToastMessage('❌ Erreur lors du retry');
-                  setToastType('error');
-                  setShowToast(true);
-                }
-              }}
-            />
-          )}
           
           <Card style={styles.successCard}>
             <View style={styles.successHeader}>
