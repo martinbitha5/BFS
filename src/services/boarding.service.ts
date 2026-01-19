@@ -27,9 +27,9 @@ class BoardingService {
 
     try {
       // 1️⃣ PARSER les données pour extraire le PNR
-      const parsed = parserService.parseBoardingPass(rawData);
+      const parsed = parserService.parse(rawData);
       const pnr = parsed?.pnr || 'UNKNOWN';
-      const passengerName = parsed?.name || 'Passager scanné';
+      const passengerName = parsed?.fullName || 'Passager scanné';
 
       console.log('[BOARDING] 📖 Parsed:', { pnr, passengerName, flightNumber });
 
