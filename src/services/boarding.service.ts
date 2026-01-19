@@ -40,11 +40,11 @@ class BoardingService {
       const confirmation: BoardingConfirmation = {
         id: confirmationId,
         scanId: confirmationId,
-        passengerId: pnr, // Envoyer le PNR, le serveur cherchera le passager par PNR
-        passagerName,
-        flightNumber,
-        seatNumber,
-        gate,
+        passengerId: pnr,
+        passagerName: passengerName,
+        flightNumber: flightNumber,
+        seatNumber: seatNumber,
+        gate: gate,
         boardedAt: now,
         boardedBy: user.id,
         scannedAt: now,
