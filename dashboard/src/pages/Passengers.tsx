@@ -106,7 +106,7 @@ export default function Passengers() {
     
     const matchesFlight = flightFilter === 'all' || pax.flightNumber === flightFilter;
     
-    const isBoarded = pax.boarding_status?.some(bs => bs.boarded);
+    const isBoarded = Array.isArray(pax.boarding_status) && pax.boarding_status.some(bs => bs?.boarded);
     const matchesBoarding = 
       boardingFilter === 'all' ||
       (boardingFilter === 'boarded' && isBoarded) ||
@@ -117,7 +117,7 @@ export default function Passengers() {
 
   const stats = {
     total: passengers.length,
-    boarded: passengers.filter(p => p.boarding_status?.some(bs => bs.boarded)).length,
+    boarded: passengers.filter(p => Array.isArray(p.boarding_status) && p.boarding_status.some(bs => bs?.boarded)).length,
     withBaggage: passengers.filter(p => p.baggageCount > 0).length,
     baggagesLinked: passengers.reduce((acc, p) => acc + (p.baggages?.length || 0), 0),
   };
@@ -436,14 +436,14 @@ export default function Passengers() {
                   </div>
                   <div>
                     <p className="text-xs text-white/40">Embarquement</p>
-                    {selectedPassenger.boarding_status?.some(bs => bs.boarded) ? (
+                    {Array.isArray(selectedPassenger.boarding_status) && selectedPassenger.boarding_status.some(bs => bs?.boarded) ? (
                       <div>
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 mb-1">
                           <CheckCircle className="w-3 h-3" />
                           Embarqué
                         </span>
                         <p className="text-white/60 text-sm">
-                          {formatFullDate(selectedPassenger.boarding_status?.find(bs => bs.boarded)?.boarded_at || null)}
+                          {formatFullDate(Array.isArray(selectedPassenger.boarding_status) && selectedPassenger.boarding_status.find(bs => bs?.boarded)?.boarded_at || null)}
                         </p>
                       </div>
                     ) : (
