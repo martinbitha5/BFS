@@ -230,7 +230,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * POST /api/v1/passengers/sync
  * Synchronisation batch de passagers
- * IMPORTANT: Fait un UPSERT sur (pnr, airport_code) pour éviter les doublons
+ * Gère les doublons en cherchant d'abord par (pnr, airport_code) avant d'insérer
  */
 router.post('/sync', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -243,19 +243,51 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    const { data, error } = await supabase
-      .from('passengers')
-      .upsert(passengers, { 
-        onConflict: 'pnr,airport_code'
-      })
-      .select();
+    const results: any[] = [];
 
-    if (error) throw error;
+    // Traiter chaque passager individuellement
+    for (const passenger of passengers) {
+      try {
+        // Chercher d'abord si le passager existe
+        const { data: existing, error: searchError } = await supabase
+          .from('passengers')
+          .select('id')
+          .eq('pnr', passenger.pnr)
+          .eq('airport_code', passenger.airport_code)
+          .single();
+
+        if (existing && !searchError) {
+          // Passager existe, le mettre à jour
+          const { data: updated, error: updateError } = await supabase
+            .from('passengers')
+            .update(passenger)
+            .eq('id', existing.id)
+            .select()
+            .single();
+
+          if (updateError) throw updateError;
+          results.push(updated);
+        } else {
+          // Passager n'existe pas, l'insérer
+          const { data: inserted, error: insertError } = await supabase
+            .from('passengers')
+            .insert([passenger])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          results.push(inserted);
+        }
+      } catch (passengerError) {
+        console.error(`[Passengers/Sync] Erreur pour ${passenger.pnr}:`, passengerError);
+        // Continuer avec le passager suivant, mais logger l'erreur
+      }
+    }
 
     res.json({
       success: true,
-      count: data?.length || 0,
-      data
+      count: results.length,
+      data: results
     });
   } catch (error) {
     next(error);
