@@ -14,6 +14,7 @@ export const databaseServiceInstance = databaseService;
 // Autres services - exports directs pour éviter les dépendances circulaires
 export { auditService } from './audit.service';
 export { birsService } from './birs.service';
+export { boardingService } from './boarding.service';
 export { exportService } from './export.service';
 export { parserService } from './parser.service';
 export { rawScanService } from './raw-scan.service';

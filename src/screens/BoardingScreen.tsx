@@ -4,11 +4,12 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Button, Card, Toast } from '../components';
+import { Badge, BoardingConfirmationCard, Button, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, flightService, parserService } from '../services';
+import { authServiceInstance, boardingService, flightService, parserService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { BoardingConfirmation } from '../types/boarding-new.types';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger, PassengerData } from '../types/passenger.types';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
@@ -29,6 +30,10 @@ export default function BoardingScreen({ navigation }: Props) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [torchEnabled, setTorchEnabled] = useState(false);
+  
+  // MODIFICATION 1: États pour le boarding confirmation
+  const [boardingConfirmation, setBoardingConfirmation] = useState<BoardingConfirmation | null>(null);
+  const [recentBoardings, setRecentBoardings] = useState<BoardingConfirmation[]>([]);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned || processing) return;
@@ -173,6 +178,23 @@ export default function BoardingScreen({ navigation }: Props) {
       // Stocker pour affichage
       setLastPassenger(displayPassenger);
       setBoardingStatus(boardingStatusData);
+      
+      // MODIFICATION 2: Appeler boardingService pour enregistrer la confirmation
+      try {
+        const confirmation = await boardingService.confirmBoarding(
+          data,
+          flightNumber,
+          parsedData?.seatNumber,
+          undefined // gate
+        );
+        setBoardingConfirmation(confirmation);
+        
+        // Charger l'historique récent
+        const history = await boardingService.getRecentBoardings(5);
+        setRecentBoardings(history);
+      } catch (confirmError) {
+        console.error('[BOARDING] Erreur confirmation boarding service:', confirmError);
+      }
       
       // Jouer le son de succès
       await playSuccessSound();
@@ -328,6 +350,27 @@ export default function BoardingScreen({ navigation }: Props) {
           style={styles.successContainer}
           contentContainerStyle={styles.successContentContainer}
           showsVerticalScrollIndicator={true}>
+          
+          {/* MODIFICATION 3: Afficher la BoardingConfirmationCard si disponible */}
+          {boardingConfirmation && (
+            <BoardingConfirmationCard 
+              confirmation={boardingConfirmation}
+              onRetrySync={async () => {
+                try {
+                  const confirmation = await boardingService.getRecentBoardings(1);
+                  if (confirmation.length > 0) {
+                    setBoardingConfirmation(confirmation[0]);
+                  }
+                } catch (error) {
+                  console.error('[BOARDING] Erreur retry sync:', error);
+                  setToastMessage('❌ Erreur lors du retry');
+                  setToastType('error');
+                  setShowToast(true);
+                }
+              }}
+            />
+          )}
+          
           <Card style={styles.successCard}>
             <View style={styles.successHeader}>
               <Ionicons name="checkmark-circle" size={48} color={colors.success.main} />

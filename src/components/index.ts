@@ -1,5 +1,6 @@
 export { default as Badge } from './Badge';
 export { default as BaggageCard } from './BaggageCard';
+export { default as BoardingConfirmationCard } from './BoardingConfirmationCard';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as FlightHeader } from './FlightHeader';
