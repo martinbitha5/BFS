@@ -59,7 +59,8 @@ CREATE TABLE passengers (
   checked_in_at TIMESTAMP WITH TIME ZONE,
   checked_in_by UUID REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(pnr, airport_code)
 );
 
 -- Index pour recherches fréquentes

@@ -230,6 +230,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * POST /api/v1/passengers/sync
  * Synchronisation batch de passagers
+ * IMPORTANT: Fait un UPSERT sur (pnr, airport_code) pour éviter les doublons
  */
 router.post('/sync', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -244,7 +245,9 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
 
     const { data, error } = await supabase
       .from('passengers')
-      .upsert(passengers, { onConflict: 'id' })
+      .upsert(passengers, { 
+        onConflict: 'pnr,airport_code'
+      })
       .select();
 
     if (error) throw error;
