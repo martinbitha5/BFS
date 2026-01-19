@@ -202,9 +202,31 @@ export default function CheckinScreen({ navigation }: Props) {
             format: parsedData.format,
             checkedInAt: new Date().toISOString(),
             checkedInBy: user.id,
-            airportCode: user.airportCode, // ✅ IMPORTANT: Code aéroport de l'utilisateur
+            airportCode: user.airportCode,
             synced: false,
           });
+          
+          // 🚀 AUSSI créer le passager au serveur (pour que le boarding puisse le chercher)
+          try {
+            const { apiService } = await import('../services');
+            await apiService.post('/api/v1/passengers', {
+              pnr: parsedData.pnr,
+              full_name: parsedData.fullName,
+              flight_number: parsedData.flightNumber,
+              seat_number: parsedData.seatNumber || null,
+              class: 'ECONOMY',
+              departure: parsedData.departure,
+              arrival: parsedData.arrival,
+              airport_code: user.airportCode,
+              baggage_count: parsedData.baggageInfo?.count ?? 0,
+              checked_in_at: new Date().toISOString(),
+              checked_in_by: user.id,
+            });
+            console.log('[CHECKIN] ✅ Passager créé au serveur:', parsedData.pnr);
+          } catch (serverError) {
+            console.warn('[CHECKIN] ⚠️ Erreur création passager serveur:', serverError);
+            // On continue quand même, au moins c'est en cache local
+          }
           
         } else {
           // Mettre à jour le passager existant avec les données du boarding pass
