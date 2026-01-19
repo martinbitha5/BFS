@@ -7,14 +7,16 @@ import { BoardingConfirmation, BoardingError, BoardingErrorType } from '../types
 import { logAudit } from '../utils/audit.util';
 import { apiService } from './api.service';
 import { authService } from './auth.service';
+import { rawScanService } from './raw-scan.service';
 
 class BoardingService {
   private localCache: BoardingConfirmation[] = [];
 
   /**
    * Confirmer l'embarquement d'un passager
-   * 1. Stocke localement immédiatement
-   * 2. Synchronise avec le serveur en arrière-plan
+   * 1. Cherche le scan existant pour obtenir les bonnes infos
+   * 2. Crée confirmation locale
+   * 3. Synchronise avec le serveur en arrière-plan
    */
   async confirmBoarding(
     rawData: string,
@@ -28,20 +30,23 @@ class BoardingService {
     }
 
     try {
+      // Chercher le scan existant pour obtenir l'ID correct
+      const existingScan = await rawScanService.findByRawData(rawData);
+      
       const confirmationId = this.generateUUID();
       const now = new Date().toISOString();
 
       // ✅ CRÉER LA CONFIRMATION LOCALE D'ABORD (retour immédiat)
       const confirmation: BoardingConfirmation = {
         id: confirmationId,
-        scanId: '',
-        passengerId: user.id,
+        scanId: existingScan?.id || '',
+        passengerId: existingScan?.id || user.id, // Utiliser l'ID du scan (passager) sinon user.id
         passagerName: 'Passager scanné',
         flightNumber,
         seatNumber,
         gate,
         boardedAt: now,
-        boardedBy: user.id,
+        boardedBy: user.id, // Celui qui confirme l'embarquement
         scannedAt: now,
         syncStatus: 'pending', // En attente de sync
         syncError: undefined,
@@ -69,7 +74,7 @@ class BoardingService {
       }
 
       // 🚀 SYNCHRONISER AVEC LE SERVEUR EN ARRIÈRE-PLAN (non-bloquant)
-      this.syncBoardingToServer(confirmation, user).catch(error => {
+      this.syncBoardingToServer(confirmation, user, existingScan).catch(error => {
         console.error('[BOARDING] Erreur sync serveur:', error);
       });
 
@@ -83,20 +88,23 @@ class BoardingService {
 
   /**
    * Synchroniser l'embarquement avec le serveur
-   * Appelle POST /api/v1/boarding/passenger/:passengerId
+   * Appelle POST /api/v1/boarding avec le passenger_id du scan
    */
   private async syncBoardingToServer(
     confirmation: BoardingConfirmation,
-    user: any
+    user: any,
+    existingScan?: any
   ): Promise<void> {
     try {
-      // Chercher le scan dans raw_scans pour obtenir le passager
-      const { rawScanService } = await import('./index');
-      
       console.log('[BOARDING] 🚀 Début sync serveur pour:', confirmation.id);
 
-      // Appeler la route /api/v1/boarding/passenger/:passengerId
-      // Mais d'abord, chercher le passager par PNR ou raw_scan
+      // Vérifier qu'on a un passenger_id valide
+      if (!confirmation.passengerId || confirmation.passengerId === user.id) {
+        console.warn('[BOARDING] ⚠️ Pas de passager valide trouvé, skip sync');
+        return;
+      }
+
+      // Appeler la route POST /api/v1/boarding
       const response = await apiService.post('/api/v1/boarding', {
         passenger_id: confirmation.passengerId,
         boarded_at: confirmation.boardedAt,

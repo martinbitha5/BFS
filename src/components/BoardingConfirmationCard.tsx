@@ -110,7 +110,7 @@ export default function BoardingConfirmationCard({
             <DetailRow
               label="Siège"
               value={confirmation.seatNumber}
-              icon="seat"
+              icon="chair"
               colors={colors}
             />
           </>
