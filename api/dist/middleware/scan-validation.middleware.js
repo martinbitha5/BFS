@@ -22,26 +22,22 @@ async function validateFlightForScan(flightNumber, airportCode, scanDate = new D
             return `${year}-${month}-${day}`;
         };
         const todayStr = getLocalDateString(scanDate);
-        const tomorrow = new Date(scanDate);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = getLocalDateString(tomorrow);
         // Vérifier si le vol existe dans flight_schedule pour cet aéroport
-        // Chercher les vols d'aujourd'hui et demain pour être flexible
+        // Accepter SEULEMENT les vols d'AUJOURD'HUI (pas demain, pas hier)
         const { data: scheduledFlight, error } = await database_1.supabase
             .from('flight_schedule')
             .select('*')
             .eq('flight_number', normalizedFlight)
             .eq('airport_code', airportCode)
+            .eq('scheduled_date', todayStr)
             .in('status', ['scheduled', 'boarding', 'departed'])
-            .gte('scheduled_date', todayStr)
-            .lte('scheduled_date', tomorrowStr)
             .order('scheduled_date', { ascending: true })
             .limit(1)
             .single();
         if (error || !scheduledFlight) {
             return {
                 valid: false,
-                reason: `Vol ${normalizedFlight} non programmé à l'aéroport ${airportCode} pour cette date`
+                reason: `Vol ${normalizedFlight} n'est pas programmé pour aujourd'hui à l'aéroport ${airportCode}`
             };
         }
         return {

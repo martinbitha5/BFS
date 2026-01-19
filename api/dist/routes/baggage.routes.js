@@ -14,62 +14,72 @@ const router = (0, express_1.Router)();
 router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { flight, status, airport } = req.query;
-        const airportCode = (airport || req.userAirportCode);
-        // Auto-sync si la table est vide mais que des raw_scans existent
+        const hasFullAccess = req.hasFullAccess;
+        // Normaliser le paramètre airport (peut être string, array, ou undefined)
+        let requestedAirport;
+        if (typeof airport === 'string') {
+            requestedAirport = airport.toUpperCase();
+        }
+        else if (Array.isArray(airport)) {
+            requestedAirport = airport[0]?.toUpperCase();
+        }
+        // Si l'utilisateur a accès complet et demande ALL, on ne filtre pas par aéroport
+        const filterByAirport = !(hasFullAccess && requestedAirport === 'ALL');
+        const airportCode = filterByAirport ? (req.userAirportCode || requestedAirport) : undefined;
+        // Auto-sync si un aéroport spécifique est demandé
         if (airportCode) {
             await (0, auto_sync_service_1.autoSyncIfNeeded)(airportCode);
         }
-        // Approche 1: Récupérer les bagages via les passagers de cet aéroport
-        // C'est plus fiable car on part des passagers qui ont departure/arrival = airport
+        // Récupérer les bagages via les passagers
         const baggagesFromPassengers = [];
-        if (airportCode) {
-            // Récupérer les passagers de cet aéroport avec leurs bagages
-            const { data: passengersWithBaggages, error: paxError } = await database_1.supabase
-                .from('passengers')
-                .select('*, baggages(*)')
-                .or(`departure.eq.${airportCode},arrival.eq.${airportCode},airport_code.eq.${airportCode}`);
-            if (!paxError && passengersWithBaggages) {
-                for (const pax of passengersWithBaggages) {
-                    const paxBaggages = Array.isArray(pax.baggages) ? pax.baggages : (pax.baggages ? [pax.baggages] : []);
-                    for (const bag of paxBaggages) {
-                        // Appliquer les filtres supplémentaires
-                        if (status && bag.status !== status)
-                            continue;
-                        if (flight && bag.flight_number !== flight)
-                            continue;
-                        baggagesFromPassengers.push({
-                            id: bag.id,
-                            tagNumber: bag.tag_number,
-                            passengerId: bag.passenger_id,
-                            weight: bag.weight,
-                            status: bag.status,
-                            flightNumber: bag.flight_number || pax.flight_number,
-                            airportCode: bag.airport_code,
-                            currentLocation: bag.current_location,
-                            checkedAt: bag.checked_at,
-                            arrivedAt: bag.arrived_at,
-                            deliveredAt: bag.delivered_at,
-                            lastScannedAt: bag.last_scanned_at,
-                            lastScannedBy: bag.last_scanned_by,
-                            passengers: {
-                                id: pax.id,
-                                fullName: pax.full_name,
-                                pnr: pax.pnr,
-                                flightNumber: pax.flight_number,
-                                departure: pax.departure,
-                                arrival: pax.arrival
-                            }
-                        });
-                    }
+        // Construire la requête passagers avec bagages
+        let paxQuery = database_1.supabase
+            .from('passengers')
+            .select('*, baggages(*)');
+        // Si on filtre par aéroport, ajouter le filtre
+        if (filterByAirport && airportCode) {
+            paxQuery = paxQuery.or(`departure.eq.${airportCode},arrival.eq.${airportCode},airport_code.eq.${airportCode}`);
+        }
+        const { data: passengersWithBaggages, error: paxError } = await paxQuery;
+        if (!paxError && passengersWithBaggages) {
+            for (const pax of passengersWithBaggages) {
+                const paxBaggages = Array.isArray(pax.baggages) ? pax.baggages : (pax.baggages ? [pax.baggages] : []);
+                for (const bag of paxBaggages) {
+                    // Appliquer les filtres supplémentaires
+                    if (status && bag.status !== status)
+                        continue;
+                    if (flight && bag.flight_number !== flight)
+                        continue;
+                    baggagesFromPassengers.push({
+                        id: bag.id,
+                        tag_number: bag.tag_number,
+                        passenger_id: bag.passenger_id,
+                        weight: bag.weight,
+                        status: bag.status,
+                        flight_number: bag.flight_number || pax.flight_number,
+                        airport_code: bag.airport_code || pax.airport_code,
+                        current_location: bag.current_location,
+                        checked_at: bag.checked_at,
+                        arrived_at: bag.arrived_at,
+                        delivered_at: bag.delivered_at,
+                        created_at: bag.created_at,
+                        passengers: {
+                            full_name: pax.full_name,
+                            pnr: pax.pnr,
+                            flight_number: pax.flight_number,
+                            departure: pax.departure,
+                            arrival: pax.arrival
+                        }
+                    });
                 }
             }
         }
-        // Approche 2: Récupérer aussi les bagages orphelins (sans passager) de cet aéroport
+        // Récupérer aussi les bagages orphelins (sans passager)
         let orphanQuery = database_1.supabase
             .from('baggages')
             .select('*')
             .is('passenger_id', null);
-        if (airportCode) {
+        if (filterByAirport && airportCode) {
             orphanQuery = orphanQuery.eq('airport_code', airportCode);
         }
         if (status) {
@@ -83,23 +93,22 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
             for (const bag of orphanBaggages) {
                 baggagesFromPassengers.push({
                     id: bag.id,
-                    tagNumber: bag.tag_number,
-                    passengerId: null,
+                    tag_number: bag.tag_number,
+                    passenger_id: null,
                     weight: bag.weight,
                     status: bag.status,
-                    flightNumber: bag.flight_number,
-                    airportCode: bag.airport_code,
-                    currentLocation: bag.current_location,
-                    checkedAt: bag.checked_at,
-                    arrivedAt: bag.arrived_at,
-                    deliveredAt: bag.delivered_at,
-                    lastScannedAt: bag.last_scanned_at,
-                    lastScannedBy: bag.last_scanned_by,
+                    flight_number: bag.flight_number,
+                    airport_code: bag.airport_code,
+                    current_location: bag.current_location,
+                    checked_at: bag.checked_at,
+                    arrived_at: bag.arrived_at,
+                    delivered_at: bag.delivered_at,
+                    created_at: bag.created_at,
                     passengers: null
                 });
             }
         }
-        // Dédupliquer par ID (au cas où)
+        // Dédupliquer par ID
         const uniqueBaggages = Array.from(new Map(baggagesFromPassengers.map(b => [b.id, b])).values());
         res.json({
             success: true,

@@ -1,22 +1,19 @@
-/**
- * Service de Gestion du Boarding (Embarquement)
- * Synchronise les embarquements avec le serveur en temps réel
- */
-
 import { BoardingConfirmation, BoardingError, BoardingErrorType } from '../types/boarding-new.types';
 import { logAudit } from '../utils/audit.util';
 import { apiService } from './api.service';
 import { authService } from './auth.service';
-import { rawScanService } from './raw-scan.service';
+import { parserService } from './parser.service';
+import { supabase } from '../config/database';
 
 class BoardingService {
   private localCache: BoardingConfirmation[] = [];
 
   /**
    * Confirmer l'embarquement d'un passager
-   * 1. Cherche le scan existant pour obtenir les bonnes infos
-   * 2. Crée confirmation locale
-   * 3. Synchronise avec le serveur en arrière-plan
+   * 1. Parse les données pour extraire le PNR
+   * 2. Cherche le passager dans la DB par PNR
+   * 3. Crée confirmation locale
+   * 4. Synchronise avec le serveur
    */
   async confirmBoarding(
     rawData: string,
@@ -30,30 +27,55 @@ class BoardingService {
     }
 
     try {
-      // Chercher le scan existant pour obtenir l'ID correct
-      const existingScan = await rawScanService.findByRawData(rawData);
-      
+      // 1️⃣ PARSER les données pour extraire le PNR
+      const parsed = parserService.parseBoardingPass(rawData);
+      const pnr = parsed?.pnr || 'UNKNOWN';
+      const passengerName = parsed?.name || 'Passager scanné';
+
+      console.log('[BOARDING] 📖 Parsed:', { pnr, passengerName, flightNumber });
+
+      // 2️⃣ CHERCHER le passager par PNR dans la DB
+      const airportCode = user.airportCode || 'GMA'; // Aéroport de l'utilisateur
+      let passengerId = null;
+
+      if (pnr !== 'UNKNOWN') {
+        try {
+          const { data: passenger } = await supabase
+            .from('passengers')
+            .select('id')
+            .eq('pnr', pnr)
+            .eq('airport_code', airportCode)
+            .single();
+
+          if (passenger) {
+            passengerId = passenger.id;
+            console.log('[BOARDING] ✅ Passager trouvé:', passengerId);
+          }
+        } catch (dbError) {
+          console.warn('[BOARDING] ⚠️ Passager non trouvé dans la DB:', pnr);
+        }
+      }
+
+      // 3️⃣ CRÉER LA CONFIRMATION LOCALE
       const confirmationId = this.generateUUID();
       const now = new Date().toISOString();
 
-      // ✅ CRÉER LA CONFIRMATION LOCALE D'ABORD (retour immédiat)
       const confirmation: BoardingConfirmation = {
         id: confirmationId,
-        scanId: existingScan?.id || '',
-        passengerId: existingScan?.id || user.id, // Utiliser l'ID du scan (passager) sinon user.id
-        passagerName: 'Passager scanné',
+        scanId: confirmationId,
+        passengerId: passengerId || 'UNKNOWN', // ID du passager trouvé ou UNKNOWN
+        passagerName,
         flightNumber,
         seatNumber,
         gate,
         boardedAt: now,
-        boardedBy: user.id, // Celui qui confirme l'embarquement
+        boardedBy: user.id,
         scannedAt: now,
-        syncStatus: 'pending', // En attente de sync
+        syncStatus: 'pending',
         syncError: undefined,
         syncedAt: undefined,
       };
 
-      // Stocker localement
       this.localCache.unshift(confirmation);
       if (this.localCache.length > 100) {
         this.localCache = this.localCache.slice(0, 100);
@@ -66,19 +88,18 @@ class BoardingService {
         await logAudit(
           'BOARD_PASSENGER',
           'boarding',
-          `Embarquement confirmé - Vol: ${flightNumber} - Siège: ${seatNumber || 'N/A'}`,
+          `Embarquement confirmé - Vol: ${flightNumber} - Siège: ${seatNumber || 'N/A'} - PNR: ${pnr}`,
           confirmationId
         );
       } catch (auditError) {
         console.warn('[BOARDING] Erreur audit:', auditError);
       }
 
-      // 🚀 SYNCHRONISER AVEC LE SERVEUR EN ARRIÈRE-PLAN (non-bloquant)
-      this.syncBoardingToServer(confirmation, user, existingScan).catch(error => {
-        console.error('[BOARDING] Erreur sync serveur:', error);
+      // 4️⃣ SYNCHRONISER AVEC LE SERVEUR EN ARRIÈRE-PLAN
+      this.syncBoardingToServer(confirmation).catch(error => {
+        console.error('[BOARDING] Erreur sync serveur (non-bloquant):', error);
       });
 
-      // Retourner immédiatement avec la confirmation locale
       return confirmation;
     } catch (error) {
       console.error('[BOARDING] Erreur confirmBoarding:', error);
@@ -88,57 +109,33 @@ class BoardingService {
 
   /**
    * Synchroniser l'embarquement avec le serveur
-   * Appelle POST /api/v1/boarding avec le passenger_id du scan
+   * Appelle POST /api/v1/boarding (comme RushScreen fait avec declare)
+   * SIMPLIFIÉ: On laisse le serveur gérer les erreurs, c'est son job
    */
-  private async syncBoardingToServer(
-    confirmation: BoardingConfirmation,
-    user: any,
-    existingScan?: any
-  ): Promise<void> {
+  async syncBoardingToServer(
+    confirmation: BoardingConfirmation
+  ): Promise<any> {
     try {
-      console.log('[BOARDING] 🚀 Début sync serveur pour:', confirmation.id);
+      console.log('[BOARDING] 🚀 Sync serveur pour:', {
+        passengerId: confirmation.passengerId,
+        flightNumber: confirmation.flightNumber,
+        seatNumber: confirmation.seatNumber
+      });
 
-      // Vérifier qu'on a un passenger_id valide
-      if (!confirmation.passengerId || confirmation.passengerId === user.id) {
-        console.warn('[BOARDING] ⚠️ Pas de passager valide trouvé, skip sync');
-        return;
-      }
-
-      // Appeler la route POST /api/v1/boarding
+      // Appel synchrone comme RushScreen (await + erreur remontée)
       const response = await apiService.post('/api/v1/boarding', {
         passenger_id: confirmation.passengerId,
         boarded_at: confirmation.boardedAt,
         boarded_by: confirmation.boardedBy,
+        flight_number: confirmation.flightNumber,
+        seat_number: confirmation.seatNumber,
       });
 
-      if (response.success) {
-        console.log('[BOARDING] ✅ Embarquement synchronisé au serveur!');
-        
-        // Mettre à jour le statut local
-        const index = this.localCache.findIndex(c => c.id === confirmation.id);
-        if (index >= 0) {
-          this.localCache[index].syncStatus = 'synced';
-          this.localCache[index].syncedAt = new Date().toISOString();
-        }
-      } else {
-        console.warn('[BOARDING] ⚠️ Erreur sync:', response.error);
-        
-        // Mettre à jour le statut local avec l'erreur
-        const index = this.localCache.findIndex(c => c.id === confirmation.id);
-        if (index >= 0) {
-          this.localCache[index].syncStatus = 'failed';
-          this.localCache[index].syncError = response.error;
-        }
-      }
+      console.log('[BOARDING] ✅ Response du serveur:', response);
+      return response;
     } catch (error) {
-      console.error('[BOARDING] Erreur syncBoardingToServer:', error);
-      
-      // Mettre à jour le statut local avec l'erreur
-      const index = this.localCache.findIndex(c => c.id === confirmation.id);
-      if (index >= 0) {
-        this.localCache[index].syncStatus = 'failed';
-        this.localCache[index].syncError = String(error);
-      }
+      console.error('[BOARDING] ❌ Erreur sync serveur:', error);
+      throw error; // Remonter l'erreur comme RushScreen le fait
     }
   }
 

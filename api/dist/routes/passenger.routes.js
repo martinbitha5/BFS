@@ -45,7 +45,7 @@ const router = (0, express_1.Router)();
  */
 router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const { flight } = req.query;
+        const { flight, pnr } = req.query;
         const airportCode = req.userAirportCode; // Peut être undefined si accès total
         // Auto-sync si la table est vide mais que des raw_scans existent
         if (airportCode) {
@@ -60,6 +60,9 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
         }
         if (flight) {
             query = query.eq('flight_number', flight);
+        }
+        if (pnr) {
+            query = query.eq('pnr', pnr.toString().toUpperCase());
         }
         const { data, error } = await query;
         if (error)

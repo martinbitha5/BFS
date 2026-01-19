@@ -65,6 +65,9 @@ class ParserService {
         if (format === 'AIR_CONGO') {
             result = this.parseAirCongo(rawData);
         }
+        else if (format === 'KENYA_AIRWAYS') {
+            result = this.parseKenyaAirways(rawData);
+        }
         else if (format === 'ETHIOPIAN') {
             result = this.parseEthiopian(rawData);
         }
@@ -100,10 +103,10 @@ class ParserService {
             return 'AIR_CONGO';
         }
         // Détection Kenya Airways - chercher "KQ" suivi de chiffres (numéro de vol)
-        // Format: ...FIHNBOKQ 0555... ou ...KQ555... ou ...NBOKQ...
-        if (rawData.match(/KQ\s*\d{3,4}/) || rawData.match(/[A-Z]{3}KQ\s/) || rawData.includes('KQ ')) {
-            console.log('[PARSER] ✓ Format GENERIC détecté: Kenya Airways (KQ)');
-            return 'GENERIC';
+        // Format: ...FIHNBOKQ 0555... ou ...KQ0555... ou ...KQ555... ou inclut 'KQ'
+        if (rawData.match(/KQ\s*\d{3,4}/) || rawData.match(/[A-Z]{3}KQ\s*\d/) || rawData.includes('KQ')) {
+            console.log('[PARSER] ✓ Format KENYA_AIRWAYS détecté: Kenya Airways (KQ)');
+            return 'KENYA_AIRWAYS';
         }
         // Détection Ethiopian Airlines - ULTRA ROBUSTE
         // Ethiopian Airlines utilise le code ET et a des patterns spécifiques
@@ -233,6 +236,53 @@ class ParserService {
             baggageInfo,
             rawData,
             format: 'AIR_CONGO',
+        };
+    }
+    /**
+     * Parse un boarding pass Kenya Airways (KQ)
+     * Patterns similaires à Air Congo mais avec code compagnie KQ
+     * Supporte le format IATA BCBP standard + variantes
+     */
+    parseKenyaAirways(rawData) {
+        // Appliquer la même stratégie que Air Congo
+        // 1. PNR : Extraction robuste via pnrExtractorService
+        const pnr = this.extractPnr(rawData);
+        // 2. Nom : Format M1/M2, ignorer le préfixe
+        const fullName = this.extractNameAirCongo(rawData); // Même logique que Air Congo
+        const nameParts = this.splitName(fullName);
+        const firstName = nameParts.firstName;
+        const lastName = nameParts.lastName;
+        // 3. Numéro de ticket
+        const ticketNumber = this.extractTicketNumber(rawData);
+        // 4. Numéro de vol
+        const flightNumber = this.extractFlightNumber(rawData);
+        // 5. Route (départ → arrivée)
+        const route = this.extractRoute(rawData);
+        const departure = route.departure;
+        const arrival = route.arrival;
+        // 6. Heure du vol
+        const flightTime = this.extractFlightTime(rawData);
+        // 7. Siège
+        const seatNumber = this.extractSeatNumber(rawData);
+        // 8. Bagages : Chercher le même format que Air Congo ou patterns génériques
+        const baggageInfo = this.extractBaggageInfoAirCongo(rawData) || this.extractBaggageInfoGeneric(rawData);
+        return {
+            pnr,
+            fullName,
+            firstName,
+            lastName,
+            flightNumber,
+            flightTime,
+            route: `${departure}-${arrival}`,
+            departure,
+            arrival,
+            seatNumber,
+            ticketNumber,
+            companyCode: 'KQ',
+            airline: 'Kenya Airways',
+            baggageInfo,
+            rawData,
+            format: 'KENYA_AIRWAYS',
         };
     }
     /**
@@ -488,91 +538,10 @@ class ParserService {
      * Format mocké: Le PNR peut ne pas être présent dans les données brutes
      */
     extractPnr(rawData) {
-        // Cas spécial: Format mocké où le nom est directement collé au numéro de vol (M1KATEBA9U123...)
-        // Dans ce cas, il n'y a pas de PNR visible dans les données brutes
-        // On peut essayer de le trouver ailleurs ou retourner UNKNOWN
-        const flightMatch = rawData.match(/9U\d{3}/);
-        if (flightMatch) {
-            const flightIndex = rawData.indexOf(flightMatch[0]);
-            const beforeFlight = rawData.substring(0, flightIndex);
-            // Si le nom est directement collé au vol (M1KATEBA9U123), il n'y a pas de PNR visible
-            if (beforeFlight.match(/^M1[A-Z]+$/)) {
-                // Chercher un PNR ailleurs dans les données (après le vol, avant les codes aéroports)
-                const afterFlight = rawData.substring(flightIndex + flightMatch[0].length);
-                // Chercher un groupe de 6 caractères alphanumériques qui n'est pas un code aéroport
-                const pnrAfterMatch = afterFlight.match(/^([A-Z0-9]{6})/);
-                if (pnrAfterMatch) {
-                    const pnrCandidate = pnrAfterMatch[1];
-                    if (!airport_codes_1.KNOWN_AIRPORT_CODES.some(apt => pnrCandidate.includes(apt))) {
-                        return pnrCandidate;
-                    }
-                }
-            }
-        }
-        // Le PNR est un groupe de 6 lettres majuscules qui suit directement le nom et est suivi d'un espace
-        // Format: ...OSCAREYFMKNE FIHFBMET (EYFMKNE est le PNR, suivi d'un espace)
-        // Chercher directement "EYFMKNE " dans la chaîne
-        const pnrIndex = rawData.indexOf('EYFMKNE ');
-        if (pnrIndex > 2) {
-            // Vérifier que ce qui précède est bien le nom
-            const beforeMatch = rawData.substring(0, pnrIndex);
-            if (beforeMatch.match(/^M1[A-Z\s\/]+$/)) {
-                return 'EYFMKNE';
-            }
-        }
-        // D'abord, trouver où se termine le nom
-        const name = this.extractNameAirCongo(rawData);
-        if (name === 'UNKNOWN') {
-            // Fallback : chercher directement
-            const fallbackMatch = rawData.match(/^M1[A-Z\s\/]+([A-Z]{6})\s/);
-            if (fallbackMatch) {
-                return fallbackMatch[1];
-            }
-            return 'UNKNOWN';
-        }
-        // Trouver où se termine le nom dans les données brutes
-        // Le nom commence après M1 (index 2)
-        // Chercher M1 suivi du nom exact
-        const nameWithSlashes = rawData.substring(2).match(/^[A-Z\s\/]+/);
-        if (nameWithSlashes) {
-            const nameEndIndex = 2 + nameWithSlashes[0].length;
-            // Le PNR commence juste après le nom
-            const afterName = rawData.substring(nameEndIndex);
-            // Chercher le premier groupe de 6 lettres majuscules suivi d'un espace
-            // Mais ignorer les codes aéroports
-            const pnrMatch = afterName.match(/^([A-Z]{6})\s/);
-            if (pnrMatch) {
-                const pnrStr = pnrMatch[1];
-                // Ignorer si c'est un code aéroport
-                if (!pnrStr.includes('FIH') && !pnrStr.includes('FBM') && !pnrStr.includes('JNB') &&
-                    !pnrStr.includes('LAD') && !pnrStr.includes('ADD') && !pnrStr.includes('BZV') &&
-                    !pnrStr.includes('KGL') && !pnrStr.includes('EBB')) {
-                    return pnrStr;
-                }
-            }
-        }
-        // Chercher tous les groupes de 6 caractères alphanumériques qui pourraient être un PNR
-        const allMatches = Array.from(rawData.matchAll(/([A-Z0-9]{6})/g));
-        for (const match of allMatches) {
-            const matchIndex = match.index || 0;
-            const matchStr = match[1];
-            if (matchIndex < 10)
-                continue;
-            // Ignorer les codes aéroports
-            if (matchStr.includes('FIH') || matchStr.includes('FBM') || matchStr.includes('JNB') ||
-                matchStr.includes('LAD') || matchStr.includes('ADD') || matchStr.includes('BZV') ||
-                matchStr.includes('KGL') || matchStr.includes('EBB')) {
-                continue;
-            }
-            const beforeMatch = rawData.substring(0, matchIndex);
-            if (beforeMatch.match(/^M1[A-Z\s\/]+$/)) {
-                const lastCharBefore = rawData[matchIndex - 1];
-                if (lastCharBefore && lastCharBefore.match(/[A-Z]/)) {
-                    return matchStr;
-                }
-            }
-        }
-        return 'UNKNOWN';
+        // ✅ UTILISER LE SERVICE ROBUSTE d'extraction du PNR
+        // Ce service supporte tous les formats: Ethiopian, Air Congo, Kenya Airways, etc.
+        // Retourne 'UNKNOWN' si pas trouvé
+        return pnr_extractor_service_1.pnrExtractorService.extractPnr(rawData);
     }
     /**
      * Extrait le nom pour Air Congo (ignore le préfixe M1)
@@ -2100,8 +2069,14 @@ class ParserService {
      * Pour Ethiopian, chercher "ET" suivi de chiffres
      */
     extractFlightNumber(rawData) {
+        // Chercher un pattern comme "KQ555" ou "KQ 555" (code compagnie + espace optionnel + numéro)
+        // Pour Kenya Airways et autres compagnies
+        const kqMatch = rawData.match(/KQ\s*([0-9]{3,4})/);
+        if (kqMatch) {
+            return `KQ${kqMatch[1]}`;
+        }
         // Chercher un pattern comme "9U123" ou "ET701" (code compagnie + numéro)
-        const flightMatch = rawData.match(/(9U|ET|EK|AF|SN)\d{3,4}/);
+        const flightMatch = rawData.match(/(9U|ET|EK|AF|SN|TK|WB|SA|SR)\d{3,4}/);
         if (flightMatch) {
             return flightMatch[0];
         }
@@ -2257,9 +2232,28 @@ class ParserService {
     /**
      * Extrait le numéro de siège
      * Format réel: Dans "311Y013A0100", le siège est "013A" (13A après nettoyage)
-     * Format: [classe][classe_lettre][siège] comme "311Y013A" ou "331Y068A0052"
+     * Format Kenya Airways: "335M031G0009" où 335M est classe, 031G est le siège
+     * Format: [classe][classe_lettre][siège] comme "311Y013A" ou "331Y068A0052" ou "335M031G"
      */
     extractSeatNumber(rawData) {
+        // IMPORTANTE: Chercher TOUS les matches de 3 chiffres + lettre pour éviter les faux positifs
+        // Format Kenya Airways: "335M031G" où le PREMIER est la classe, le SECOND est le siège
+        const allMatches = Array.from(rawData.matchAll(/(\d{3}[A-Z])/g));
+        // Si on a au moins 2 matches, prendre le DEUXIÈME (le siège, pas la classe)
+        // Format Kenya Airways: 335M (classe) + 031G (siège) + ...
+        if (allMatches.length >= 2) {
+            // Vérifier si le premier match est un code de classe (3xx[YCM])
+            const firstMatch = allMatches[0][1];
+            if (firstMatch.match(/^[3][0-9]{2}[YCM]$/)) {
+                // C'est un code de classe, le deuxième match est le siège
+                const seat = allMatches[1][1];
+                const cleaned = seat.replace(/^0+(\d+[A-Z])/, '$1');
+                if (cleaned.match(/^\d{1,3}[A-Z]$/)) {
+                    return cleaned;
+                }
+                return seat;
+            }
+        }
         // Chercher un pattern comme "013A" ou "068A" (3 chiffres + 1 lettre)
         // Ce pattern apparaît souvent après "Y" ou "C" (classe)
         // Format: ...Y013A... ou ...C014C... ou ...Y068A...
@@ -2274,11 +2268,11 @@ class ParserService {
             return seat;
         }
         // Fallback : chercher directement un pattern 3 chiffres + lettre
-        const directMatch = rawData.match(/(\d{3}[A-Z])(?=\d|$|\s)/);
-        if (directMatch) {
-            const seat = directMatch[1];
-            // Vérifier que ce n'est pas un code de classe (311Y, 310Y, 331Y, etc.)
-            if (!seat.match(/^3[0-9]{2}[YC]$/)) {
+        // Mais LE PREMIER si pas de classe détectée
+        if (allMatches.length >= 1) {
+            const seat = allMatches[0][1];
+            // Vérifier que ce n'est pas un code de classe (311Y, 310Y, 331Y, 335M, etc.)
+            if (!seat.match(/^3[0-9]{2}[YCM]$/)) {
                 const cleaned = seat.replace(/^0+(\d+[A-Z])/, '$1');
                 if (cleaned.match(/^\d{1,3}[A-Z]$/)) {
                     return cleaned;
@@ -2438,6 +2432,61 @@ class ParserService {
                     count,
                     baseNumber,
                     expectedTags,
+                };
+            }
+        }
+        return undefined;
+    }
+    /**
+     * Extrait les informations sur les bagages pour formats génériques (Kenya Airways, etc.)
+     * Cherche les patterns courants de bagages dans les données brutes
+     */
+    extractBaggageInfoGeneric(rawData) {
+        // Pattern 1: Chercher "XPC" où X est le nombre de bagages (ex: "1PC", "2PC", "3PC")
+        const pcMatch = rawData.match(/(\d{1,2})PC/i);
+        if (pcMatch) {
+            const count = parseInt(pcMatch[1], 10);
+            if (count > 0 && count <= 20) {
+                // Essayer de trouver une base numérique dans les données
+                const base10Match = rawData.match(/(\d{10})/);
+                const baseNumber = base10Match ? base10Match[1] : undefined;
+                if (baseNumber) {
+                    const expectedTags = [];
+                    const baseNum = parseInt(baseNumber, 10);
+                    for (let i = 0; i < count; i++) {
+                        expectedTags.push((baseNum + i).toString());
+                    }
+                    return {
+                        count,
+                        baseNumber,
+                        expectedTags,
+                    };
+                }
+                else {
+                    // Sans base, retourner juste le count
+                    return { count };
+                }
+            }
+        }
+        // Pattern 2: Chercher un pattern [chiffres]A[chiffres] où le premier nombre = bagages
+        // Exemple: "2A706" = 2 bagages avec référence 706
+        const altMatch = rawData.match(/\s+(\d)A\d{3,4}\d+/);
+        if (altMatch) {
+            const count = parseInt(altMatch[1], 10);
+            if (count > 0 && count <= 9) {
+                return { count };
+            }
+        }
+        // Pattern 3: Format [10 chiffres] sans autres contextes
+        const base10Match = rawData.match(/(\d{10})(?!\d)/);
+        if (base10Match) {
+            // Chercher après un pattern de numéro de vol (CODE + numéros)
+            const beforeBase = rawData.substring(0, rawData.indexOf(base10Match[1]));
+            if (beforeBase.match(/[A-Z]{2}\s+\d{3,4}/)) {
+                return {
+                    count: 1,
+                    baseNumber: base10Match[1],
+                    expectedTags: [base10Match[1]],
                 };
             }
         }

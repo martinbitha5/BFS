@@ -20,8 +20,23 @@ router.get('/track', async (req, res, next) => {
         }
         const allBaggages = [];
         let passengerInfo = null;
-        const searchPnr = pnr ? pnr.toUpperCase() : null;
-        console.log('[TRACK] Recherche avec PNR:', searchPnr, 'ou TAG:', tag);
+        // Normaliser les paramètres de query (peuvent être string, array, ou undefined)
+        let normalizedPnr = null;
+        let normalizedTag = null;
+        if (typeof pnr === 'string') {
+            normalizedPnr = pnr.toUpperCase();
+        }
+        else if (Array.isArray(pnr)) {
+            normalizedPnr = pnr[0]?.toUpperCase() || null;
+        }
+        if (typeof tag === 'string') {
+            normalizedTag = tag.toUpperCase();
+        }
+        else if (Array.isArray(tag)) {
+            normalizedTag = tag[0]?.toUpperCase() || null;
+        }
+        const searchPnr = normalizedPnr;
+        console.log('[TRACK] Recherche avec PNR:', searchPnr, 'ou TAG:', normalizedTag);
         // 1. Rechercher dans les bagages nationaux
         if (searchPnr) {
             // D'abord trouver le passager par PNR
@@ -90,7 +105,7 @@ router.get('/track', async (req, res, next) => {
                 }
             }
         }
-        else if (tag) {
+        else if (normalizedTag) {
             // Rechercher par tag RFID - retourne un seul bagage
             const { data: nationalBaggage, error: nationalError } = await database_1.supabase
                 .from('baggages')
@@ -109,7 +124,7 @@ router.get('/track', async (req, res, next) => {
             arrival
           )
         `)
-                .ilike('tag_number', tag.toUpperCase())
+                .ilike('tag_number', normalizedTag)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single();
@@ -162,12 +177,12 @@ router.get('/track', async (req, res, next) => {
                 }
             }
         }
-        else if (tag && allBaggages.length === 0) {
+        else if (normalizedTag && allBaggages.length === 0) {
             // Si recherche par tag et rien trouvé dans national
             const { data: internationalBaggage, error: intlError } = await database_1.supabase
                 .from('international_baggages')
                 .select('*')
-                .ilike('tag_number', tag.toUpperCase())
+                .ilike('tag_number', normalizedTag)
                 .limit(1)
                 .single();
             if (internationalBaggage && !intlError) {
@@ -251,7 +266,7 @@ router.get('/track', async (req, res, next) => {
                 }
             }
         }
-        else if (tag && allBaggages.length === 0) {
+        else if (normalizedTag && allBaggages.length === 0) {
             const { data: birsItem, error: birsError } = await database_1.supabase
                 .from('birs_report_items')
                 .select(`
@@ -271,7 +286,7 @@ router.get('/track', async (req, res, next) => {
             uploaded_at
           )
         `)
-                .ilike('bag_id', tag.toUpperCase())
+                .ilike('bag_id', normalizedTag)
                 .limit(1)
                 .single();
             if (birsItem && !birsError) {

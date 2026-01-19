@@ -69,7 +69,7 @@ router.post('/', async (req, res, next) => {
         if (!email || !password || !full_name || !role || !airport_code) {
             return res.status(400).json({ error: 'Tous les champs sont requis' });
         }
-        const validRoles = ['checkin', 'baggage', 'boarding', 'arrival', 'supervisor', 'baggage_dispute', 'support'];
+        const validRoles = ['supervisor', 'baggage_dispute', 'support'];
         if (!validRoles.includes(role)) {
             return res.status(400).json({ error: 'Rôle invalide' });
         }

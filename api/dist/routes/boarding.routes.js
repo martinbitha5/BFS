@@ -92,7 +92,21 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
  */
 router.post('/', async (req, res, next) => {
     try {
-        const boardingData = req.body;
+        // Ne permettre que les champs valides
+        const { passenger_id, boarded_at, boarded_by } = req.body;
+        if (!passenger_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'passenger_id requis'
+            });
+        }
+        const boardingData = {
+            passenger_id,
+            boarded_at: boarded_at || new Date().toISOString(),
+        };
+        if (boarded_by) {
+            boardingData.boarded_by = boarded_by;
+        }
         const { data, error } = await database_1.supabase
             .from('boarding_status')
             .insert(boardingData)
@@ -182,15 +196,16 @@ router.post('/passenger/:passengerId', airport_restriction_middleware_1.requireA
             }
         }
         // Créer ou mettre à jour le statut d'embarquement
+        const boardingData = {
+            passenger_id: passengerId,
+            boarded_at: new Date().toISOString(),
+        };
+        if (boardedBy) {
+            boardingData.boarded_by = boardedBy;
+        }
         const { data, error } = await database_1.supabase
             .from('boarding_status')
-            .upsert({
-            passenger_id: passengerId,
-            boarded: true,
-            boarded_at: new Date().toISOString(),
-            boarded_by: boardedBy,
-            gate: gate
-        }, { onConflict: 'passenger_id' })
+            .upsert(boardingData, { onConflict: 'passenger_id' })
             .select()
             .single();
         if (error)
@@ -217,9 +232,21 @@ router.post('/sync', async (req, res, next) => {
                 error: 'boardings must be an array'
             });
         }
+        // Nettoyer les données - seulement les champs valides
+        const cleanedBoardings = boardings.map((b) => ({
+            passenger_id: b.passenger_id,
+            boarded_at: b.boarded_at || new Date().toISOString(),
+            ...(b.boarded_by && { boarded_by: b.boarded_by }),
+        })).filter((b) => b.passenger_id); // Filtrer les sans passenger_id
+        if (cleanedBoardings.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No valid boardings to sync'
+            });
+        }
         const { data, error } = await database_1.supabase
             .from('boarding_status')
-            .upsert(boardings, { onConflict: 'id' })
+            .upsert(cleanedBoardings, { onConflict: 'passenger_id' })
             .select();
         if (error)
             throw error;
@@ -230,6 +257,87 @@ router.post('/sync', async (req, res, next) => {
         });
     }
     catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/v1/boarding/sync-hash
+ * Synchroniser l'embarquement avec le checksum du boarding pass
+ * Au lieu d'envoyer le rawData (gros fichier), on envoie un checksum simple
+ *
+ * Body:
+ * {
+ *   scan_checksum: "450_1705600123_42f7e8c9",
+ *   boarding_id: "YCECFQ_RAZIOU_KQ0555",
+ *   passenger_id: "passenger_uuid",
+ *   status: "boarded",
+ *   boarded_at: "ISO_DATE",
+ *   boarded_by: "user_id",
+ *   timestamp: "ISO_DATE",
+ *   airport_code: "FIH",
+ *   pnr: "YCECFQ",
+ *   full_name: "RAZIOU MOUSTAPHA",
+ *   flight_number: "KQ0555"
+ * }
+ */
+router.post('/sync-hash', async (req, res, next) => {
+    try {
+        const { passenger_id, boarded_at, boarded_by } = req.body;
+        console.log('[Boarding] sync-hash received:', { passenger_id, boarded_at, boarded_by });
+        // Validation basique
+        if (!passenger_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'passenger_id requis'
+            });
+        }
+        // IMPORTANT: Vérifier que le passager existe AVANT de créer le boarding_status
+        // Sinon la foreign key constraint échoue
+        const { data: passenger, error: passengerError } = await database_1.supabase
+            .from('passengers')
+            .select('id')
+            .eq('id', passenger_id)
+            .single();
+        if (passengerError || !passenger) {
+            console.warn('[Boarding] Passenger not found:', passenger_id);
+            return res.status(404).json({
+                success: false,
+                error: 'Passager non trouvé - sync les passagers d\'abord'
+            });
+        }
+        // Construire les données MINIMALES
+        const boardingData = {
+            passenger_id,
+        };
+        // Ajouter optionnellement les autres champs SEULEMENT s'ils existent
+        if (boarded_at) {
+            boardingData.boarded_at = boarded_at;
+        }
+        if (boarded_by) {
+            boardingData.boarded_by = boarded_by;
+        }
+        console.log('[Boarding] upserting with data:', boardingData);
+        const { data: boarding, error: boardingError } = await database_1.supabase
+            .from('boarding_status')
+            .upsert(boardingData, {
+            onConflict: 'passenger_id',
+            ignoreDuplicates: false
+        })
+            .select()
+            .single();
+        if (boardingError) {
+            console.error('[Boarding] Supabase error:', boardingError);
+            throw boardingError;
+        }
+        console.log('[Boarding] Success:', boarding);
+        res.json({
+            success: true,
+            message: 'Embarquement synchronisé avec succès',
+            data: boarding
+        });
+    }
+    catch (error) {
+        console.error('[Boarding] Error:', error);
         next(error);
     }
 });
