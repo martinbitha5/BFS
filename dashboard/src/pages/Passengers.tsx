@@ -44,24 +44,47 @@ export default function Passengers() {
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
 
   const fetchPassengers = useCallback(async () => {
-    if (!user?.airport_code) return;
+    if (!user?.airport_code) {
+      setError('Code aéroport non disponible');
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
       setError(null);
 
       const token = localStorage.getItem('bfs_token');
-      const headers = { Authorization: `Bearer ${token}` };
+      if (!token) {
+        setError('Token d\'authentification manquant');
+        setLoading(false);
+        return;
+      }
 
-      const response = await api.get(`/api/v1/passengers?airport=${user.airport_code}`, { headers });
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
-      if (data.success) {
+      if (!data.success) {
+        setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
+        setPassengers([]);
+      } else if (data.data && Array.isArray(data.data)) {
         setPassengers(data.data);
+      } else {
+        setError('Format de réponse invalide - expected array');
+        setPassengers([]);
       }
     } catch (err: any) {
       console.error('Erreur chargement passagers:', err);
-      setError(err.response?.data?.error || 'Erreur lors du chargement des passagers');
+      const errorMessage = err.response?.data?.error || 
+                          err.message || 
+                          'Erreur lors du chargement des passagers';
+      setError(errorMessage);
+      setPassengers([]);
     } finally {
       setLoading(false);
     }
@@ -277,53 +300,64 @@ export default function Passengers() {
                 </tr>
               ) : (
                 filteredPassengers.map((pax) => {
-                  const isBoarded = pax.boarding_status?.some(bs => bs.boarded);
-                  const boardedAt = pax.boarding_status?.find(bs => bs.boarded)?.boarded_at;
-                  
-                  return (
-                    <tr key={pax.id} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="p-4">
-                        <button
-                          onClick={() => setSelectedPassenger(pax)}
-                          className="text-white font-medium hover:text-blue-400 transition-colors text-left"
-                        >
-                          {pax.fullName}
-                        </button>
-                      </td>
-                      <td className="p-4 text-white/80 font-mono text-sm">{pax.pnr}</td>
-                      <td className="p-4 text-white/80">{pax.flightNumber || '-'}</td>
-                      <td className="p-4 text-white/60 text-sm">
-                        {pax.departure && pax.arrival ? `${pax.departure} → ${pax.arrival}` : '-'}
-                      </td>
-                      <td className="p-4 text-white/80">{pax.seatNumber || '-'}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          pax.baggages?.length > 0 
-                            ? 'bg-green-500/20 text-green-300' 
-                            : pax.baggageCount > 0 
-                              ? 'bg-orange-500/20 text-orange-300'
-                              : 'bg-gray-500/20 text-gray-300'
-                        }`}>
-                          {pax.baggages?.length || 0}/{pax.baggageCount || 0}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        {isBoarded ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300">
-                            <CheckCircle className="w-3 h-3" />
-                            Embarqué
+                  try {
+                    const isBoarded = Array.isArray(pax.boarding_status) && pax.boarding_status.some(bs => bs?.boarded);
+                    const boardedAt = Array.isArray(pax.boarding_status) && pax.boarding_status.find(bs => bs?.boarded)?.boarded_at;
+                    
+                    return (
+                      <tr key={pax.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="p-4">
+                          <button
+                            onClick={() => setSelectedPassenger(pax)}
+                            className="text-white font-medium hover:text-blue-400 transition-colors text-left"
+                          >
+                            {pax.fullName || 'N/A'}
+                          </button>
+                        </td>
+                        <td className="p-4 text-white/80 font-mono text-sm">{pax.pnr || '-'}</td>
+                        <td className="p-4 text-white/80">{pax.flightNumber || '-'}</td>
+                        <td className="p-4 text-white/60 text-sm">
+                          {pax.departure && pax.arrival ? `${pax.departure} → ${pax.arrival}` : '-'}
+                        </td>
+                        <td className="p-4 text-white/80">{pax.seatNumber || '-'}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            Array.isArray(pax.baggages) && pax.baggages.length > 0
+                              ? 'bg-green-500/20 text-green-300' 
+                              : (pax.baggageCount || 0) > 0 
+                                ? 'bg-orange-500/20 text-orange-300'
+                                : 'bg-gray-500/20 text-gray-300'
+                          }`}>
+                            {(Array.isArray(pax.baggages) ? pax.baggages.length : 0) || 0}/{pax.baggageCount || 0}
                           </span>
-                        ) : (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-300">
-                            En attente
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 text-white/60 text-sm">
-                        {isBoarded ? formatDate(boardedAt || null) : formatDate(pax.checkedInAt)}
-                      </td>
-                    </tr>
-                  );
+                        </td>
+                        <td className="p-4">
+                          {isBoarded ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300">
+                              <CheckCircle className="w-3 h-3" />
+                              Embarqué
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-300">
+                              En attente
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-white/60 text-sm">
+                          {isBoarded ? formatDate(boardedAt || null) : formatDate(pax.checkedInAt)}
+                        </td>
+                      </tr>
+                    );
+                  } catch (rowError) {
+                    console.error('Erreur rendu ligne passager:', pax, rowError);
+                    return (
+                      <tr key={pax.id || 'error'} className="border-b border-white/5">
+                        <td colSpan={8} className="p-4 text-red-400 text-sm">
+                          Erreur d'affichage pour le passager {pax.pnr || pax.id}
+                        </td>
+                      </tr>
+                    );
+                  }
                 })
               )}
             </tbody>

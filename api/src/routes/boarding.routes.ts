@@ -344,6 +344,7 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     // Construire les données MINIMALES
     const boardingData: any = {
       passenger_id,
+      boarded: true, // ⭐ IMPORTANT: Marquer comme embarqué!
     };
 
     // Ajouter optionnellement les autres champs SEULEMENT s'ils existent

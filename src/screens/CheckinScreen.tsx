@@ -206,25 +206,45 @@ export default function CheckinScreen({ navigation }: Props) {
             synced: false,
           });
           
-          // 🚀 AUSSI créer le passager au serveur (pour que le boarding puisse le chercher)
+          // 🚀 AUSSI créer le passager au serveur via SYNC (pour que le boarding puisse le chercher)
           try {
-            const { apiService } = await import('../services');
-            await apiService.post('/api/v1/passengers', {
-              pnr: parsedData.pnr,
-              full_name: parsedData.fullName,
-              flight_number: parsedData.flightNumber,
-              seat_number: parsedData.seatNumber || null,
-              class: 'ECONOMY',
-              departure: parsedData.departure,
-              arrival: parsedData.arrival,
-              airport_code: user.airportCode,
-              baggage_count: parsedData.baggageInfo?.count ?? 0,
-              checked_in_at: new Date().toISOString(),
-              checked_in_by: user.id,
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+            const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
+            
+            const syncResponse = await fetch(`${apiUrl}/api/v1/passengers/sync`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey || '',
+                'x-airport-code': user.airportCode || '',
+              },
+              body: JSON.stringify({
+                passengers: [{
+                  pnr: parsedData.pnr,
+                  full_name: parsedData.fullName,
+                  flight_number: parsedData.flightNumber,
+                  seat_number: parsedData.seatNumber || null,
+                  class: null,
+                  departure: parsedData.departure,
+                  arrival: parsedData.arrival,
+                  airport_code: user.airportCode,
+                  baggage_count: parsedData.baggageInfo?.count ?? 0,
+                  baggage_base_number: parsedData.baggageInfo?.baseNumber || null,
+                  checked_in: true,
+                  checked_in_at: new Date().toISOString(),
+                }]
+              })
             });
-            console.log('[CHECKIN] ✅ Passager créé au serveur:', parsedData.pnr);
+            
+            if (syncResponse.ok) {
+              console.log('[CHECKIN] ✅ Passager synchronisé au serveur:', parsedData.pnr);
+            } else {
+              const errorText = await syncResponse.text();
+              console.warn('[CHECKIN] ⚠️ Erreur sync passager serveur:', syncResponse.status, errorText);
+            }
           } catch (serverError) {
-            console.warn('[CHECKIN] ⚠️ Erreur création passager serveur:', serverError);
+            console.warn('[CHECKIN] ⚠️ Erreur sync passager serveur:', serverError);
             // On continue quand même, au moins c'est en cache local
           }
           

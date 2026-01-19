@@ -44,7 +44,7 @@ LIMIT 10;
 SELECT COUNT(*) as total_raw_scans FROM raw_scans;
 
 -- 9️⃣ Voir les derniers raw_scans avec status_boarding=true
-SELECT id, pnr, first_name, last_name, status_boarding, boarding_at, created_at
+SELECT id, status_boarding, created_at
 FROM raw_scans
 WHERE status_boarding = true
 ORDER BY created_at DESC
