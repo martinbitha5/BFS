@@ -240,23 +240,27 @@ export default function BoardingScreen({ navigation }: Props) {
           // ÉTAPE 1: Chercher le passager par PNR (doit déjà exister du check-in)
           console.log('[Boarding] 1️⃣  Looking for passenger by PNR:', passengerData.pnr);
           const checkResponse = await fetch(
-            `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(passengerData.pnr)}&airport_code=${user.airportCode}`,
+            `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(passengerData.pnr)}&airport=${encodeURIComponent(user.airportCode)}`,
             {
               method: 'GET',
               headers: {
                 'x-api-key': apiKey || '',
+                'x-airport-code': user.airportCode || '',
               }
             }
           );
 
           if (!checkResponse.ok) {
-            console.warn('⚠️  Failed to search for passenger');
+            const errorText = await checkResponse.text();
+            console.warn('⚠️  Failed to search for passenger -', checkResponse.status, ':', errorText);
             return;
           }
 
           const checkData = await checkResponse.json();
+          console.log('[Boarding] API Response:', JSON.stringify(checkData));
+          
           if (!checkData.data || checkData.data.length === 0) {
-            console.warn('⚠️  Passenger not found - must be checked in first!');
+            console.warn('⚠️  Passenger not found - must be checked in first!', 'Response:', checkData);
             return;
           }
 
