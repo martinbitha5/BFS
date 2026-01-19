@@ -51,8 +51,10 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
       baggageCount: passenger.baggage_count || 0,
       checkedInAt: passenger.checked_in_at,
       airportCode: passenger.airport_code,
-      baggages: passenger.baggages || [],
-      boarding_status: passenger.boarding_status || []
+      baggages: Array.isArray(passenger.baggages) ? passenger.baggages : [],
+      // ⭐ IMPORTANT: Toujours retourner boarding_status comme un array
+      // Même s'il y a une seule relation (UNIQUE constraint), on le met dans un array
+      boarding_status: passenger.boarding_status ? [passenger.boarding_status] : []
     }));
 
     res.json({
@@ -106,9 +108,26 @@ router.get('/:id', requireAirportCode, async (req: Request & { userAirportCode?:
       });
     }
 
+    // Transformer les données pour cohérence avec l'endpoint GET /
+    const transformedPassenger = {
+      id: data.id,
+      fullName: data.full_name,
+      pnr: data.pnr,
+      flightNumber: data.flight_number,
+      departure: data.departure,
+      arrival: data.arrival,
+      seatNumber: data.seat_number,
+      baggageCount: data.baggage_count || 0,
+      checkedInAt: data.checked_in_at,
+      airportCode: data.airport_code,
+      baggages: Array.isArray(data.baggages) ? data.baggages : [],
+      // ⭐ IMPORTANT: Toujours retourner boarding_status comme un array
+      boarding_status: data.boarding_status ? [data.boarding_status] : []
+    };
+
     res.json({
       success: true,
-      data
+      data: transformedPassenger
     });
   } catch (error) {
     next(error);
