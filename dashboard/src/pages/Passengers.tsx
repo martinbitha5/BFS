@@ -92,7 +92,7 @@ export default function Passengers() {
 
   useEffect(() => {
     fetchPassengers();
-  }, [fetchPassengers]);
+  }, [user?.airport_code]);
 
   // Get unique flights for filter
   const uniqueFlights = [...new Set(passengers.map(p => p.flightNumber).filter(Boolean))];
@@ -164,8 +164,30 @@ export default function Passengers() {
     }
   };
 
-  if (loading) {
+  if (loading && !error) {
     return <LoadingPlane text="Chargement des passagers..." size="md" />;
+  }
+
+  if (error && passengers.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Passagers - {user?.airport_code}</h1>
+          <button
+            onClick={fetchPassengers}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Réessayer
+          </button>
+        </div>
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6 text-red-300">
+          <p className="font-medium mb-2">Erreur de chargement des passagers</p>
+          <p className="text-sm mb-4">{error}</p>
+          <p className="text-xs text-red-400">Vérifiez votre connexion ou réessayez dans quelques instants.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
