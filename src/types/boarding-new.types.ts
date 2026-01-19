@@ -30,7 +30,7 @@ export interface BoardingConfirmation {
   
   // Informations du passager
   passengerId: string;           // UUID du passager
-  passagerName: string;          // Nom complet
+  passengerName: string;         // Nom complet
   pnr?: string;                  // PNR (si extrait)
   
   // Informations du vol

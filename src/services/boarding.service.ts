@@ -41,7 +41,7 @@ class BoardingService {
         id: confirmationId,
         scanId: confirmationId,
         passengerId: pnr,
-        passagerName: passengerName,
+        passengerName: passengerName,
         flightNumber: flightNumber,
         seatNumber: seatNumber,
         gate: gate,

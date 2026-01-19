@@ -90,7 +90,7 @@ export default function BoardingConfirmationCard({
       <View style={[styles.detailsContainer, { borderColor: colors.border.light }]}>
         <DetailRow
           label="Passager"
-          value={confirmation.passagerName}
+          value={confirmation.passengerName}
           icon="person"
           colors={colors}
         />
