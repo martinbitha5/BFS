@@ -103,6 +103,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const boardingData: any = {
       passenger_id,
       boarded_at: boarded_at || new Date().toISOString(),
+      boarded: true,  // Marquer comme embarqué
     };
 
     if (boarded_by) {
@@ -117,9 +118,11 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       boardingData.seat_number = seat_number;
     }
 
+    // ✅ UPSERT (INSERT OR UPDATE)
+    // Si le passager existe déjà, on met à jour. Sinon on insère.
     const { data, error } = await supabase
       .from('boarding_status')
-      .insert(boardingData)
+      .upsert(boardingData, { onConflict: 'passenger_id' })
       .select()
       .single();
 
