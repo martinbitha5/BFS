@@ -3,7 +3,6 @@ import { logAudit } from '../utils/audit.util';
 import { apiService } from './api.service';
 import { authService } from './auth.service';
 import { parserService } from './parser.service';
-import { supabase } from '../config/database';
 
 class BoardingService {
   private localCache: BoardingConfirmation[] = [];
@@ -34,36 +33,14 @@ class BoardingService {
 
       console.log('[BOARDING] 📖 Parsed:', { pnr, passengerName, flightNumber });
 
-      // 2️⃣ CHERCHER le passager par PNR dans la DB
-      const airportCode = user.airportCode || 'GMA'; // Aéroport de l'utilisateur
-      let passengerId = null;
-
-      if (pnr !== 'UNKNOWN') {
-        try {
-          const { data: passenger } = await supabase
-            .from('passengers')
-            .select('id')
-            .eq('pnr', pnr)
-            .eq('airport_code', airportCode)
-            .single();
-
-          if (passenger) {
-            passengerId = passenger.id;
-            console.log('[BOARDING] ✅ Passager trouvé:', passengerId);
-          }
-        } catch (dbError) {
-          console.warn('[BOARDING] ⚠️ Passager non trouvé dans la DB:', pnr);
-        }
-      }
-
-      // 3️⃣ CRÉER LA CONFIRMATION LOCALE
+      // 2️⃣ CRÉER LA CONFIRMATION LOCALE
       const confirmationId = this.generateUUID();
       const now = new Date().toISOString();
 
       const confirmation: BoardingConfirmation = {
         id: confirmationId,
         scanId: confirmationId,
-        passengerId: passengerId || 'UNKNOWN', // ID du passager trouvé ou UNKNOWN
+        passengerId: pnr, // Envoyer le PNR, le serveur cherchera le passager par PNR
         passagerName,
         flightNumber,
         seatNumber,
@@ -95,7 +72,7 @@ class BoardingService {
         console.warn('[BOARDING] Erreur audit:', auditError);
       }
 
-      // 4️⃣ SYNCHRONISER AVEC LE SERVEUR EN ARRIÈRE-PLAN
+      // 3️⃣ SYNCHRONISER AVEC LE SERVEUR EN ARRIÈRE-PLAN
       this.syncBoardingToServer(confirmation).catch(error => {
         console.error('[BOARDING] Erreur sync serveur (non-bloquant):', error);
       });

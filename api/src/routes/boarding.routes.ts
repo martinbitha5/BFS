@@ -63,17 +63,41 @@ router.get('/', requireAirportCode, async (req: Request, res: Response, next: Ne
 /**
  * POST /api/v1/boarding
  * Créer un statut d'embarquement
+ * Accepte soit un passenger_id UUID, soit un PNR (6 car alphanumériques)
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Ne permettre que les champs valides
-    const { passenger_id, boarded_at, boarded_by } = req.body;
+    let { passenger_id, boarded_at, boarded_by, flight_number, seat_number } = req.body;
 
     if (!passenger_id) {
       return res.status(400).json({
         success: false,
         error: 'passenger_id requis'
       });
+    }
+
+    // Vérifier si c'est un PNR (6 caractères alphanumériques) ou un UUID
+    const isPnr = /^[A-Z0-9]{6,7}$/.test(passenger_id);
+
+    if (isPnr) {
+      // C'est un PNR, chercher le passager par PNR
+      console.log('[BOARDING API] 🔍 Cherche passager par PNR:', passenger_id);
+      
+      const { data: passenger, error: passengerError } = await supabase
+        .from('passengers')
+        .select('id')
+        .eq('pnr', passenger_id)
+        .single();
+
+      if (passengerError || !passenger) {
+        return res.status(404).json({
+          success: false,
+          error: `Passager non trouvé avec PNR: ${passenger_id}`
+        });
+      }
+
+      passenger_id = passenger.id; // Utiliser le vrai ID
+      console.log('[BOARDING API] ✅ Passager trouvé:', passenger_id);
     }
 
     const boardingData: any = {
@@ -83,6 +107,14 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (boarded_by) {
       boardingData.boarded_by = boarded_by;
+    }
+
+    if (flight_number) {
+      boardingData.flight_number = flight_number;
+    }
+
+    if (seat_number) {
+      boardingData.seat_number = seat_number;
     }
 
     const { data, error } = await supabase
