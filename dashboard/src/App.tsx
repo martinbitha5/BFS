@@ -6,6 +6,7 @@ import About from './pages/About';
 import BaggageDispute from './pages/BaggageDispute';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
+import DataDeletionRequest from './pages/DataDeletionRequest';
 import Export from './pages/Export';
 import FlightManagement from './pages/FlightManagement';
 import Legal from './pages/Legal';
@@ -44,6 +45,7 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/about" element={<About />} />
+          <Route path="/deletion-request" element={<DataDeletionRequest />} />
           
           {/* Redirection par défaut selon le rôle */}
           <Route path="/" element={<RoleBasedRedirect />} />

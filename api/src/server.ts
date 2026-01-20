@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { apiKeyAuth } from './middleware/auth.middleware';
 import { errorHandler } from './middleware/error.middleware';
+import accountDeletionRoutes from './routes/account-deletion.routes';
 import airlineApprovalRoutes from './routes/airline-approval.routes';
 import airlinesRoutes from './routes/airlines.routes';
 import airportsRoutes from './routes/airports.routes';
@@ -88,6 +89,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/confirm', confirmRoutes); // Confirmation email - endpoint public
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', accountDeletionRoutes); // Account deletion requests - endpoint public
 app.use('/api/v1/user-approval', apiKeyAuth, userApprovalRoutes); // Approbation utilisateurs - nécessite auth
 app.use('/api/v1/airline-approval', apiKeyAuth, airlineApprovalRoutes); // Approbation airlines - nécessite auth
 app.use('/api/v1/baggage-authorization', apiKeyAuth, baggageAuthorizationRoutes); // Autorisation bagages supplémentaires - nécessite auth support

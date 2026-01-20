@@ -10,6 +10,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const error_middleware_1 = require("./middleware/error.middleware");
+const account_deletion_routes_1 = __importDefault(require("./routes/account-deletion.routes"));
 const airline_approval_routes_1 = __importDefault(require("./routes/airline-approval.routes"));
 const airlines_routes_1 = __importDefault(require("./routes/airlines.routes"));
 const airports_routes_1 = __importDefault(require("./routes/airports.routes"));
@@ -83,6 +84,7 @@ app.get('/health', (req, res) => {
 });
 app.use('/api/v1/confirm', confirm_routes_1.default); // Confirmation email - endpoint public
 app.use('/api/v1/auth', auth_routes_1.default);
+app.use('/api/v1/auth', account_deletion_routes_1.default); // Account deletion requests - endpoint public
 app.use('/api/v1/user-approval', auth_middleware_1.apiKeyAuth, user_approval_routes_1.default); // Approbation utilisateurs - nécessite auth
 app.use('/api/v1/airline-approval', auth_middleware_1.apiKeyAuth, airline_approval_routes_1.default); // Approbation airlines - nécessite auth
 app.use('/api/v1/baggage-authorization', auth_middleware_1.apiKeyAuth, baggage_authorization_routes_1.default); // Autorisation bagages supplémentaires - nécessite auth support
