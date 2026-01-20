@@ -336,6 +336,7 @@ router.post('/sync-hash', async (req, res, next) => {
         // Construire les données MINIMALES
         const boardingData = {
             passenger_id,
+            boarded: true, // ⭐ IMPORTANT: Marquer comme embarqué!
         };
         // Ajouter optionnellement les autres champs SEULEMENT s'ils existent
         if (boarded_at) {

@@ -173,19 +173,51 @@ class BirsParserService {
     }
     /**
      * Parse les lignes de texte pour extraire les bagages
-     * Gère le format multi-lignes des manifestes (Tag sur une ligne, Nom sur la suivante, etc.)
+     * Gère deux formats:
+     * 1. Multi-lignes: Tag seul, puis nom sur ligne suivante
+     * 2. Single-line: "235345230EZANDOMPANGI0 LOADED Received"
      */
     parseTextLines(content) {
         const items = [];
         const lines = content.split(/\r?\n/);
         let parsed = 0;
         let i = 0;
+        const processed = new Set(); // Track processed lines
         while (i < lines.length) {
+            if (processed.has(i)) {
+                i++;
+                continue;
+            }
             const line = lines[i].trim();
-            // Chercher un Tag (9-13 chiffres au début de la ligne)
-            const tagMatch = line.match(/^(\d{9,13})\s*$/);
-            if (tagMatch) {
-                const bagId = tagMatch[1];
+            // Ignorer les lignes vides et très courtes
+            if (!line || line.length < 11) {
+                i++;
+                continue;
+            }
+            // Essayer d'abord le format single-line (TAG + NAME ensemble)
+            // Format: 9 digits + letters (name) + digit (weight) + status words
+            let match = line.match(/^(\d{9})([A-Z]+?)(\d+)\s+(LOADED|RECEIVED|UNLOADED|ACCEPTED|REJECTED)(.*)$/i);
+            if (match && match[2].length >= 2) {
+                const bagId = match[1];
+                const passengerName = match[2].trim().replace(/\s+/g, ' ');
+                const weight = parseInt(match[3]);
+                const status1 = match[4];
+                items.push({
+                    bagId: bagId,
+                    passengerName: passengerName,
+                    weight: weight || undefined,
+                    loaded: status1?.toUpperCase().includes('LOADED'),
+                    received: status1?.toUpperCase().includes('RECEIVED')
+                });
+                parsed++;
+                processed.add(i);
+                i++;
+                continue;
+            }
+            // Format multi-lignes: chercher un Tag seul sur une ligne
+            match = line.match(/^(\d{9,13})\s*$/);
+            if (match) {
+                const bagId = match[1];
                 let passengerName = '';
                 let weight = 0;
                 let loaded = false;
@@ -229,69 +261,91 @@ class BirsParserService {
                     });
                     parsed++;
                 }
+                // Mark all processed lines
+                for (let k = i; k < j; k++) {
+                    processed.add(k);
+                }
                 i = j; // Sauter au prochain tag potentiel
             }
             else {
                 i++;
             }
         }
-        console.log(`[BIRS Parser] Multi-line format - Total lines: ${lines.length}, Parsed bags: ${parsed}`);
+        console.log(`[BIRS Parser] Parse complete - Total lines: ${lines.length}, Parsed bags: ${parsed}`);
         return items;
     }
     /**
      * Parse une ligne de texte
-     * Format flexible: "ET1234567890 DUPONT/JEAN [ABC123] [12A] [Y] [23KG]"
+     * Formats supportés:
+     * - "ET1234567890 DUPONT/JEAN [ABC123] [12A] [Y] [23KG]" (avec espaces)
+     * - "235345230EZANDOMPANGI0 LOADED Received" (sans espaces entre TAG et NAME - Turkish Airlines PDF format)
      */
     parseTextLine(line) {
         const trimmed = line.trim();
         // Skip lignes vides ou en-têtes
-        // Ligne minimum: Bag ID (10 chars) + espace + nom (2 chars) = 13 chars
-        if (!trimmed || trimmed.length < 13 || this.isHeaderLine(trimmed)) {
+        // Ligne minimum: Bag ID (9 chars) + nom (2 chars) = 11 chars
+        if (!trimmed || trimmed.length < 11 || this.isHeaderLine(trimmed)) {
             return null;
         }
-        // Pattern flexible: Tag(10-13 chars) + Nom (reste de la ligne)
-        // Le Bag ID doit être au début et être 10-13 caractères alphanumériques
-        const bagIdPattern = /^([A-Z0-9]{10,13})\s+(.+)$/i;
-        const bagIdMatch = trimmed.match(bagIdPattern);
-        if (!bagIdMatch) {
-            return null;
-        }
-        const bagId = bagIdMatch[1].trim();
-        const restOfLine = bagIdMatch[2].trim();
-        // Extraire le nom (tout jusqu'au premier code PNR potentiel ou fin)
-        // Nom peut contenir: lettres, /, espaces
-        const namePattern = /^([A-Z\/\s\-']+?)(?:\s+([A-Z0-9]{5,7}))?(?:\s+(\d{1,3}[A-Z]))?(?:\s+([A-Z]))?(?:\s+(\d+\.?\d*)\s*KG)?/i;
-        const nameMatch = restOfLine.match(namePattern);
-        if (nameMatch) {
-            const passengerName = nameMatch[1].trim().replace(/\s+/g, ' ');
-            // Ne garder que les noms qui ont au moins 2 caractères
-            if (passengerName.length < 2) {
-                return null;
+        let bagId;
+        let passengerName;
+        let restOfLine;
+        // Format 1: Avec espace après TAG - "ET1234567890 DUPONT/JEAN..."
+        let match = trimmed.match(/^([A-Z0-9]{9,13})\s+(.+)$/i);
+        if (match) {
+            bagId = match[1].trim();
+            restOfLine = match[2].trim();
+            // Extraire le nom (tout jusqu'au premier code PNR potentiel ou fin)
+            // Nom peut contenir: lettres, /, espaces
+            const namePattern = /^([A-Z\/\s\-']+?)(?:\s+([A-Z0-9]{5,7}))?(?:\s+(\d{1,3}[A-Z]))?(?:\s+([A-Z]))?(?:\s+(\d+\.?\d*)\s*KG)?/i;
+            const nameMatch = restOfLine.match(namePattern);
+            if (nameMatch) {
+                const extractedName = nameMatch[1].trim().replace(/\s+/g, ' ');
+                // Ne garder que les noms qui ont au moins 2 caractères
+                if (extractedName.length < 2) {
+                    return null;
+                }
+                return {
+                    bagId: bagId,
+                    passengerName: extractedName,
+                    pnr: nameMatch[2]?.trim(),
+                    seatNumber: nameMatch[3]?.trim(),
+                    class: nameMatch[4]?.trim(),
+                    weight: this.parseWeight(nameMatch[5])
+                };
             }
+            // Fallback: Bag ID + tout le reste comme nom
+            if (restOfLine.length >= 2) {
+                const simpleName = restOfLine.split(/\s+/);
+                let fallbackName = simpleName[0];
+                // Essayer d'ajouter le deuxième mot si ça ressemble à un nom
+                if (simpleName.length > 1 && /^[A-Z\/\-']+$/i.test(simpleName[1])) {
+                    fallbackName += ' ' + simpleName[1];
+                }
+                if (fallbackName.length >= 2) {
+                    return {
+                        bagId: bagId,
+                        passengerName: fallbackName.trim().replace(/\s+/g, ' ')
+                    };
+                }
+            }
+            return null;
+        }
+        // Format 2: Sans espace - "235345230EZANDOMPANGI0 LOADED Received"
+        // Pattern: 9 digits + letters (name) + digit (weight) + status words
+        match = trimmed.match(/^(\d{9})([A-Z]+?)(\d+)\s+(LOADED|RECEIVED|UNLOADED|ACCEPTED|REJECTED)(.*)$/i);
+        if (match && match[2].length >= 2) {
+            bagId = match[1];
+            passengerName = match[2].trim().replace(/\s+/g, ' ');
+            const weight = match[3];
+            const status1 = match[4];
             return {
                 bagId: bagId,
                 passengerName: passengerName,
-                pnr: nameMatch[2]?.trim(),
-                seatNumber: nameMatch[3]?.trim(),
-                class: nameMatch[4]?.trim(),
-                weight: this.parseWeight(nameMatch[5])
+                weight: weight ? parseInt(weight) : undefined,
+                loaded: status1?.toUpperCase().includes('LOADED'),
+                received: status1?.toUpperCase().includes('RECEIVED')
             };
-        }
-        // Fallback ultra-simple: Bag ID + tout le reste comme nom
-        if (restOfLine.length >= 2) {
-            // Extraire juste le début du nom (avant tout ce qui ressemble à un code)
-            const simpleName = restOfLine.split(/\s+/);
-            let passengerName = simpleName[0];
-            // Essayer d'ajouter le deuxième mot si ça ressemble à un nom
-            if (simpleName.length > 1 && /^[A-Z\/\-']+$/i.test(simpleName[1])) {
-                passengerName += ' ' + simpleName[1];
-            }
-            if (passengerName.length >= 2) {
-                return {
-                    bagId: bagId,
-                    passengerName: passengerName.trim().replace(/\s+/g, ' ')
-                };
-            }
         }
         return null;
     }

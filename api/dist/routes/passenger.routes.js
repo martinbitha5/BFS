@@ -79,8 +79,10 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
             baggageCount: passenger.baggage_count || 0,
             checkedInAt: passenger.checked_in_at,
             airportCode: passenger.airport_code,
-            baggages: passenger.baggages || [],
-            boarding_status: passenger.boarding_status || []
+            baggages: Array.isArray(passenger.baggages) ? passenger.baggages : [],
+            // ⭐ IMPORTANT: Toujours retourner boarding_status comme un array
+            // Même s'il y a une seule relation (UNIQUE constraint), on le met dans un array
+            boarding_status: passenger.boarding_status ? [passenger.boarding_status] : []
         }));
         res.json({
             success: true,
@@ -127,9 +129,25 @@ router.get('/:id', airport_restriction_middleware_1.requireAirportCode, async (r
                 error: 'Accès refusé : Ce passager n\'appartient pas à votre aéroport'
             });
         }
+        // Transformer les données pour cohérence avec l'endpoint GET /
+        const transformedPassenger = {
+            id: data.id,
+            fullName: data.full_name,
+            pnr: data.pnr,
+            flightNumber: data.flight_number,
+            departure: data.departure,
+            arrival: data.arrival,
+            seatNumber: data.seat_number,
+            baggageCount: data.baggage_count || 0,
+            checkedInAt: data.checked_in_at,
+            airportCode: data.airport_code,
+            baggages: Array.isArray(data.baggages) ? data.baggages : [],
+            // ⭐ IMPORTANT: Toujours retourner boarding_status comme un array
+            boarding_status: data.boarding_status ? [data.boarding_status] : []
+        };
         res.json({
             success: true,
-            data
+            data: transformedPassenger
         });
     }
     catch (error) {
@@ -240,6 +258,7 @@ router.put('/:id', async (req, res, next) => {
 /**
  * POST /api/v1/passengers/sync
  * Synchronisation batch de passagers
+ * Gère les doublons en cherchant d'abord par (pnr, airport_code) avant d'insérer
  */
 router.post('/sync', async (req, res, next) => {
     try {
@@ -250,16 +269,50 @@ router.post('/sync', async (req, res, next) => {
                 error: 'passengers must be an array'
             });
         }
-        const { data, error } = await database_1.supabase
-            .from('passengers')
-            .upsert(passengers, { onConflict: 'id' })
-            .select();
-        if (error)
-            throw error;
+        const results = [];
+        // Traiter chaque passager individuellement
+        for (const passenger of passengers) {
+            try {
+                // Chercher d'abord si le passager existe
+                const { data: existing, error: searchError } = await database_1.supabase
+                    .from('passengers')
+                    .select('id')
+                    .eq('pnr', passenger.pnr)
+                    .eq('airport_code', passenger.airport_code)
+                    .single();
+                if (existing && !searchError) {
+                    // Passager existe, le mettre à jour
+                    const { data: updated, error: updateError } = await database_1.supabase
+                        .from('passengers')
+                        .update(passenger)
+                        .eq('id', existing.id)
+                        .select()
+                        .single();
+                    if (updateError)
+                        throw updateError;
+                    results.push(updated);
+                }
+                else {
+                    // Passager n'existe pas, l'insérer
+                    const { data: inserted, error: insertError } = await database_1.supabase
+                        .from('passengers')
+                        .insert([passenger])
+                        .select()
+                        .single();
+                    if (insertError)
+                        throw insertError;
+                    results.push(inserted);
+                }
+            }
+            catch (passengerError) {
+                console.error(`[Passengers/Sync] Erreur pour ${passenger.pnr}:`, passengerError);
+                // Continuer avec le passager suivant, mais logger l'erreur
+            }
+        }
         res.json({
             success: true,
-            count: data?.length || 0,
-            data
+            count: results.length,
+            data: results
         });
     }
     catch (error) {
