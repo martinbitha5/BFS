@@ -301,6 +301,8 @@ class FlightService {
         airportCode,
         departure,
         arrival,
+        apiUrl: apiUrl ? '✅ SET' : '❌ NOT SET',
+        apiKey: apiKey ? '✅ SET' : '❌ NOT SET'
       });
 
       if (!apiUrl) {
@@ -311,6 +313,12 @@ class FlightService {
 
       const url = `${apiUrl}/api/v1/flights/validate-boarding`;
       console.log('[FlightService] 📡 Appel API:', url);
+      console.log('[FlightService] 📤 Envoi:', {
+        flightNumber,
+        airportCode,
+        departure,
+        arrival,
+      });
 
       const response = await fetch(url, {
         method: 'POST',
@@ -327,15 +335,22 @@ class FlightService {
       });
 
       if (!response.ok) {
-        console.error('[FlightService] ❌ Erreur HTTP:', response.status);
+        const errorText = await response.text();
+        console.error('[FlightService] ❌ Erreur HTTP:', response.status, errorText);
         // En cas d'erreur API, fallback local
         return this.validateFlightLocally(flightNumber, airportCode);
       }
 
       const result = await response.json();
-      console.log('[FlightService] 📥 Résultat validation:', result);
+      console.log('[FlightService] 📥 Réponse validation:', {
+        success: result.success,
+        isValid: result.isValid,
+        reason: result.reason,
+        flight: result.flight ? `${result.flight.flightNumber} (${result.flight.departure}->${result.flight.arrival})` : null
+      });
 
       if (result.isValid && result.flight) {
+        console.log('[FlightService] ✅ Vol validé:', result.flight.flightNumber);
         return {
           isValid: true,
           flight: {
@@ -349,6 +364,7 @@ class FlightService {
         };
       }
 
+      console.log('[FlightService] ❌ Vol rejeté:', result.reason);
       return {
         isValid: false,
         reason: result.reason || `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui.`,

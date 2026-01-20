@@ -15,6 +15,33 @@ interface ScanValidationRequest extends Request {
 }
 
 /**
+ * Normalise un numéro de vol pour permettre la correspondance flexible
+ * ET64 = ET0064 = ET064 (en ignorant les zéros de remplissage)
+ */
+function normalizeFlightNumber(flight: string): string {
+  // Enlever espaces et mettre en majuscules
+  let normalized = flight.trim().toUpperCase();
+  
+  // Extraire la partie lettre et la partie numéro
+  const match = normalized.match(/^([A-Z]+)(\d+)$/);
+  if (match) {
+    const [, letters, digits] = match;
+    // Enlever les zéros au début de la partie numérique
+    const numericPart = digits.replace(/^0+/, '') || '0';
+    return `${letters}${numericPart}`;
+  }
+  
+  return normalized;
+}
+
+/**
+ * Vérifie si deux numéros de vol correspondent (en ignorant les variations de zéro)
+ */
+function flightNumbersMatch(flight1: string, flight2: string): boolean {
+  return normalizeFlightNumber(flight1) === normalizeFlightNumber(flight2);
+}
+
+/**
  * Valide qu'un vol est programmé avant d'accepter un scan
  */
 export async function validateFlightForScan(
@@ -23,8 +50,7 @@ export async function validateFlightForScan(
   scanDate: Date = new Date()
 ): Promise<{ valid: boolean; reason?: string; flight?: any }> {
   try {
-    // Normaliser le numéro de vol (enlever espaces, mettre en majuscules)
-    const normalizedFlight = flightNumber.trim().toUpperCase();
+    const normalizedInput = normalizeFlightNumber(flightNumber);
 
     // Utiliser la date locale au lieu de UTC pour éviter les problèmes de timezone
     const getLocalDateString = (date: Date) => {
@@ -36,35 +62,61 @@ export async function validateFlightForScan(
 
     const todayStr = getLocalDateString(scanDate);
 
-    // Vérifier si le vol existe dans flight_schedule pour cet aéroport
-    // Accepter SEULEMENT les vols d'AUJOURD'HUI (pas demain, pas hier)
-    const { data: scheduledFlight, error } = await supabase
+    console.log(`[VALIDATION-FLIGHT] Recherche vol: ${flightNumber} (normalisé: ${normalizedInput}) @ ${airportCode} pour ${todayStr}`);
+
+    // Vérifier si le vol existe dans flight_schedule pour cet aéroport et cette date
+    // Récupérer TOUS les vols pour cet aéroport cette date et filtrer côté code
+    const { data: allFlights, error } = await supabase
       .from('flight_schedule')
       .select('*')
-      .eq('flight_number', normalizedFlight)
       .eq('airport_code', airportCode)
       .eq('scheduled_date', todayStr)
-      .in('status', ['scheduled', 'boarding', 'departed'])
-      .order('scheduled_date', { ascending: true })
-      .limit(1)
-      .single();
+      .in('status', ['scheduled', 'boarding', 'departed']);
 
-    if (error || !scheduledFlight) {
+    if (error) {
+      console.error('[VALIDATION-FLIGHT] Erreur Supabase:', error);
       return {
         valid: false,
-        reason: `Vol ${normalizedFlight} n'est pas programmé pour aujourd'hui à l'aéroport ${airportCode}`
+        reason: `Erreur lors de la vérification du vol: ${error.message}`
       };
     }
 
-    return {
-      valid: true,
-      flight: scheduledFlight
-    };
-  } catch (err: any) {
-    console.error('[VALIDATION] Erreur validation vol:', err);
+    if (!allFlights || allFlights.length === 0) {
+      console.log(`[VALIDATION-FLIGHT] ❌ Aucun vol trouvé pour ${airportCode} le ${todayStr}`);
+      return {
+        valid: false,
+        reason: `Aucun vol n'est programmé pour l'aéroport ${airportCode} aujourd'hui`
+      };
+    }
+
+    console.log(`[VALIDATION-FLIGHT] ${allFlights.length} vol(s) trouvé(s) pour ${airportCode}:`, 
+      allFlights.map(f => `${f.flight_number} (${f.status})`).join(', ')
+    );
+
+    // Chercher une correspondance en comparant les numéros normalisés
+    const matchingFlight = allFlights.find(flight => 
+      flightNumbersMatch(flight.flight_number, normalizedInput)
+    );
+
+    if (matchingFlight) {
+      console.log(`[VALIDATION-FLIGHT] ✅ Vol trouvé: ${matchingFlight.flight_number} (${matchingFlight.status})`);
+      return {
+        valid: true,
+        flight: matchingFlight
+      };
+    }
+
+    // Aucune correspondance trouvée
+    console.log(`[VALIDATION-FLIGHT] ❌ Vol ${normalizedInput} non trouvé à ${airportCode}`);
     return {
       valid: false,
-      reason: 'Erreur lors de la validation du vol'
+      reason: `Vol ${flightNumber} n'est pas programmé pour aujourd'hui à l'aéroport ${airportCode}`
+    };
+  } catch (err: any) {
+    console.error('[VALIDATION-FLIGHT] Erreur validation vol:', err);
+    return {
+      valid: false,
+      reason: `Erreur lors de la validation du vol: ${err.message}`
     };
   }
 }
