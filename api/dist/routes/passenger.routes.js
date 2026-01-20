@@ -95,6 +95,52 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
     }
 });
 /**
+ * GET /api/v1/passengers/all
+ * SUPPORT ONLY: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
+ * ⭐ MUST BE BEFORE /:id route to avoid UUID parsing conflict
+ */
+router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        // Vérifier que c'est un support
+        const userRole = req.userRole || req.headers['x-user-role'];
+        if (userRole !== 'support') {
+            return res.status(403).json({
+                success: false,
+                error: 'Accès refusé. Cette route est réservée au support.'
+            });
+        }
+        let query = database_1.supabase
+            .from('passengers')
+            .select('*, baggages(*), boarding_status(*)');
+        // PAS DE FILTRAGE PAR AÉROPORT - récupérer tous
+        const { data, error } = await query;
+        if (error)
+            throw error;
+        // Transformer les données
+        const transformedData = data?.map(passenger => ({
+            id: passenger.id,
+            fullName: passenger.full_name,
+            pnr: passenger.pnr,
+            flightNumber: passenger.flight_number,
+            departure: passenger.departure,
+            arrival: passenger.arrival,
+            seatNumber: passenger.seat_number,
+            baggageCount: passenger.baggages?.length || 0,
+            checkedInAt: passenger.checked_in_at,
+            airportCode: passenger.airport_code,
+            baggages: passenger.baggages || [],
+            boarding_status: Array.isArray(passenger.boarding_status) ? passenger.boarding_status : [passenger.boarding_status].filter(Boolean)
+        })) || [];
+        res.json({
+            success: true,
+            data: transformedData
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
  * GET /api/v1/passengers/:id
  * Récupérer un passager spécifique
  * RESTRICTION: Vérifie que le passager appartient à l'aéroport de l'utilisateur
@@ -313,51 +359,6 @@ router.post('/sync', async (req, res, next) => {
             success: true,
             count: results.length,
             data: results
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
-/**
- * GET /api/v1/passengers/all
- * SUPPORT ONLY: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
- */
-router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
-    try {
-        // Vérifier que c'est un support
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
-            return res.status(403).json({
-                success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
-            });
-        }
-        let query = database_1.supabase
-            .from('passengers')
-            .select('*, baggages(*), boarding_status(*)');
-        // PAS DE FILTRAGE PAR AÉROPORT - récupérer tous
-        const { data, error } = await query;
-        if (error)
-            throw error;
-        // Transformer les données
-        const transformedData = data?.map(passenger => ({
-            id: passenger.id,
-            fullName: passenger.full_name,
-            pnr: passenger.pnr,
-            flightNumber: passenger.flight_number,
-            departure: passenger.departure,
-            arrival: passenger.arrival,
-            seatNumber: passenger.seat_number,
-            baggageCount: passenger.baggages?.length || 0,
-            checkedInAt: passenger.checked_in_at,
-            airportCode: passenger.airport_code,
-            baggages: passenger.baggages || [],
-            boarding_status: Array.isArray(passenger.boarding_status) ? passenger.boarding_status : [passenger.boarding_status].filter(Boolean)
-        })) || [];
-        res.json({
-            success: true,
-            data: transformedData
         });
     }
     catch (error) {
