@@ -12,7 +12,7 @@ import Legal from './pages/Legal';
 import Login from './pages/Login';
 import Passengers from './pages/Passengers';
 import Privacy from './pages/Privacy';
-import Support from './pages/Support';
+import SupportDashboard from './pages/SupportDashboard';
 import Terms from './pages/Terms';
 
 // Composant pour rediriger selon le role
@@ -53,9 +53,7 @@ function App() {
             path="/support"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Support />
-                </Layout>
+                <SupportDashboard />
               </ProtectedRoute>
             }
           />

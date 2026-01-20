@@ -25,6 +25,7 @@ import rawScansRoutes from './routes/raw-scans.routes';
 import realtimeRoutes from './routes/realtime.routes';
 import rushRoutes from './routes/rush.routes';
 import statsRoutes from './routes/stats.routes';
+import supportRoutes from './routes/support.routes';
 import syncRawScansRoutes from './routes/sync-raw-scans.routes';
 import userApprovalRoutes from './routes/user-approval.routes';
 import usersRoutes from './routes/users.routes';
@@ -106,6 +107,7 @@ app.use('/api/v1/sync-raw-scans', syncRawScansRoutes); // ✅ Sync raw scans - s
 app.use('/api/v1/export', apiKeyAuth, exportRoutes); // ✅ NEW: Export with parsing
 app.use('/api/v1/users', apiKeyAuth, usersRoutes); // ✅ NEW: Gestion des utilisateurs
 app.use('/api/v1/audit', apiKeyAuth, auditRoutes); // ✅ NEW: Logs d'audit
+app.use('/api/v1/support', apiKeyAuth, supportRoutes); // ✅ NEW: Routes support (bagages, utilisateurs, stats)
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
 app.use('/api/v1/realtime', realtimeRoutes); // ✅ NEW: SSE temps réel (auth via query params pour EventSource)
 

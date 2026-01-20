@@ -30,6 +30,7 @@ const raw_scans_routes_1 = __importDefault(require("./routes/raw-scans.routes"))
 const realtime_routes_1 = __importDefault(require("./routes/realtime.routes"));
 const rush_routes_1 = __importDefault(require("./routes/rush.routes"));
 const stats_routes_1 = __importDefault(require("./routes/stats.routes"));
+const support_routes_1 = __importDefault(require("./routes/support.routes"));
 const sync_raw_scans_routes_1 = __importDefault(require("./routes/sync-raw-scans.routes"));
 const user_approval_routes_1 = __importDefault(require("./routes/user-approval.routes"));
 const users_routes_1 = __importDefault(require("./routes/users.routes"));
@@ -101,6 +102,7 @@ app.use('/api/v1/sync-raw-scans', sync_raw_scans_routes_1.default); // ✅ Sync 
 app.use('/api/v1/export', auth_middleware_1.apiKeyAuth, export_routes_1.default); // ✅ NEW: Export with parsing
 app.use('/api/v1/users', auth_middleware_1.apiKeyAuth, users_routes_1.default); // ✅ NEW: Gestion des utilisateurs
 app.use('/api/v1/audit', auth_middleware_1.apiKeyAuth, audit_routes_1.default); // ✅ NEW: Logs d'audit
+app.use('/api/v1/support', auth_middleware_1.apiKeyAuth, support_routes_1.default); // ✅ NEW: Routes support (bagages, utilisateurs, stats)
 app.use('/api/v1/airports', airports_routes_1.default); // Endpoint public
 app.use('/api/v1/realtime', realtime_routes_1.default); // ✅ NEW: SSE temps réel (auth via query params pour EventSource)
 // 404 handler (must come before error handler)

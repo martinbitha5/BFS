@@ -319,4 +319,149 @@ router.post('/sync', async (req, res, next) => {
         next(error);
     }
 });
+/**
+ * GET /api/v1/passengers/all
+ * SUPPORT ONLY: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
+ */
+router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        // Vérifier que c'est un support
+        const userRole = req.userRole || req.headers['x-user-role'];
+        if (userRole !== 'support') {
+            return res.status(403).json({
+                success: false,
+                error: 'Accès refusé. Cette route est réservée au support.'
+            });
+        }
+        let query = database_1.supabase
+            .from('passengers')
+            .select('*, baggages(*), boarding_status(*)');
+        // PAS DE FILTRAGE PAR AÉROPORT - récupérer tous
+        const { data, error } = await query;
+        if (error)
+            throw error;
+        // Transformer les données
+        const transformedData = data?.map(passenger => ({
+            id: passenger.id,
+            fullName: passenger.full_name,
+            pnr: passenger.pnr,
+            flightNumber: passenger.flight_number,
+            departure: passenger.departure,
+            arrival: passenger.arrival,
+            seatNumber: passenger.seat_number,
+            baggageCount: passenger.baggages?.length || 0,
+            checkedInAt: passenger.checked_in_at,
+            airportCode: passenger.airport_code,
+            baggages: passenger.baggages || [],
+            boarding_status: Array.isArray(passenger.boarding_status) ? passenger.boarding_status : [passenger.boarding_status].filter(Boolean)
+        })) || [];
+        res.json({
+            success: true,
+            data: transformedData
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/v1/baggages/create
+ * Créer un nouveau bagage pour un passager
+ */
+router.post('/baggages/create', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { passengerId, tag_number, weight, status } = req.body;
+        if (!passengerId || !tag_number) {
+            return res.status(400).json({
+                success: false,
+                error: 'passengerId et tag_number sont requis'
+            });
+        }
+        // Insérer le bagage
+        const { data, error } = await database_1.supabase
+            .from('baggages')
+            .insert({
+            passenger_id: passengerId,
+            tag_number,
+            weight: weight || null,
+            status: status || 'checked_in',
+            checked_at: new Date().toISOString()
+        })
+            .select()
+            .single();
+        if (error)
+            throw error;
+        res.json({
+            success: true,
+            data: {
+                id: data.id,
+                tag_number: data.tag_number,
+                status: data.status,
+                weight: data.weight
+            }
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * DELETE /api/v1/baggages/:id
+ * Supprimer un bagage
+ */
+router.delete('/baggages/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { error } = await database_1.supabase
+            .from('baggages')
+            .delete()
+            .eq('id', id);
+        if (error)
+            throw error;
+        res.json({
+            success: true,
+            message: 'Bagage supprimé avec succès'
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * PUT /api/v1/baggages/:id
+ * Mettre à jour un bagage
+ */
+router.put('/baggages/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { tag_number, weight, status } = req.body;
+        const updateData = {};
+        if (tag_number)
+            updateData.tag_number = tag_number;
+        if (weight !== undefined)
+            updateData.weight = weight;
+        if (status)
+            updateData.status = status;
+        const { data, error } = await database_1.supabase
+            .from('baggages')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+        if (error)
+            throw error;
+        res.json({
+            success: true,
+            data: {
+                id: data.id,
+                tag_number: data.tag_number,
+                status: data.status,
+                weight: data.weight
+            }
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
 exports.default = router;
