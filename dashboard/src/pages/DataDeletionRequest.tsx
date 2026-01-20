@@ -76,14 +76,14 @@ export default function DataDeletionRequest() {
 
         {/* Success Message */}
         {success && (
-          <div className="bg-white rounded-lg shadow-2xl p-8 mb-6 border-l-4 border-green-500">
+          <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8 mb-6 border-l-4 border-green-500">
             <div className="flex items-start gap-4">
               <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0 mt-1" />
               <div className="flex-1">
-                <h3 className="font-bold text-green-900 text-xl mb-3">✅ Demande reçue avec succès</h3>
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-sm text-gray-700 space-y-2">
+                <h3 className="font-bold text-green-800 text-xl mb-3">✅ Demande reçue avec succès</h3>
+                <div className="bg-white/80 backdrop-blur p-4 rounded-lg border border-green-300 text-sm text-gray-800 space-y-2">
                   <p className="font-semibold text-gray-900">Prochaines étapes:</p>
-                  <ul className="list-disc list-inside space-y-1.5 text-gray-700">
+                  <ul className="list-disc list-inside space-y-1.5 text-gray-800">
                     <li>Un email de confirmation a été envoyé à <strong>{email}</strong></li>
                     <li>Votre demande sera traitée sous <strong>30 jours</strong></li>
                     <li>Toutes vos données seront supprimées de nos serveurs</li>
@@ -97,12 +97,12 @@ export default function DataDeletionRequest() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6 border-l-4 border-red-500">
+          <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-6 mb-6 border-l-4 border-red-500">
             <div className="flex items-start gap-4">
               <AlertCircle className="w-8 h-8 text-red-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-bold text-red-900 mb-2">❌ Erreur</h3>
-                <p className="text-red-800">{error}</p>
+                <h3 className="font-bold text-red-800 mb-2">❌ Erreur</h3>
+                <p className="text-red-700">{error}</p>
               </div>
             </div>
           </div>
@@ -110,10 +110,10 @@ export default function DataDeletionRequest() {
 
         {/* Form */}
         {!success && (
-          <div className="bg-white rounded-lg shadow-2xl p-8">
+          <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8">
             {/* Warning Box */}
-            <div className="mb-8 p-5 bg-orange-50 border-2 border-orange-200 rounded-lg">
-              <p className="text-sm text-orange-900 font-semibold">
+            <div className="mb-8 p-5 bg-white/80 backdrop-blur border-2 border-orange-300 rounded-lg">
+              <p className="text-sm text-orange-800 font-semibold">
                 ⚠️ <strong>Important:</strong> La suppression de votre compte est <strong>permanente</strong> et <strong>irréversible</strong>.
                 Tous vos données seront supprimées de nos serveurs.
               </p>
@@ -122,9 +122,9 @@ export default function DataDeletionRequest() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">
+                <label className="block text-sm font-bold text-gray-800 mb-3">
                   <div className="flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-blue-600" />
+                    <Mail className="w-5 h-5 text-blue-700" />
                     Adresse email associée au compte
                   </div>
                 </label>
@@ -143,30 +143,30 @@ export default function DataDeletionRequest() {
 
               {/* Reason */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">
-                  Raison de la suppression <span className="text-gray-400 font-normal">(optionnel)</span>
+                <label className="block text-sm font-bold text-gray-800 mb-3">
+                  Raison de la suppression <span className="text-gray-600 font-normal">(optionnel)</span>
                 </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Aidez-nous à améliorer nos services..."
                   rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition resize-none bg-white/95"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-700 mt-2">
                   Vos commentaires nous aideront à mieux servir nos utilisateurs
                 </p>
               </div>
 
               {/* Confirmation Checkbox */}
-              <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg border-2 border-red-200">
+              <div className="flex items-start gap-3 p-4 bg-white/80 backdrop-blur rounded-lg border-2 border-red-300">
                 <input
                   type="checkbox"
                   id="confirm"
                   required
                   className="w-5 h-5 text-red-600 rounded focus:ring-red-500 mt-0.5 cursor-pointer"
                 />
-                <label htmlFor="confirm" className="text-sm font-medium text-gray-700 cursor-pointer flex-1">
+                <label htmlFor="confirm" className="text-sm font-medium text-gray-800 cursor-pointer flex-1">
                   Je comprends que cette action supprimera <strong>définitivement</strong> mon compte et <strong>toutes les données associées</strong>
                 </label>
               </div>
@@ -183,19 +183,19 @@ export default function DataDeletionRequest() {
             </form>
 
             {/* Info Box */}
-            <div className="mt-8 p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
-              <h3 className="font-bold text-gray-900 mb-4 text-lg">ℹ️ Informations importantes</h3>
-              <ul className="space-y-3 text-sm text-gray-700">
+            <div className="mt-8 p-6 bg-white/70 backdrop-blur-md rounded-lg border-2 border-white/30">
+              <h3 className="font-bold text-gray-800 mb-4 text-lg">ℹ️ Informations importantes</h3>
+              <ul className="space-y-3 text-sm text-gray-800">
                 <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-700 font-bold">•</span>
                   <span>Vous recevrez un <strong>email de confirmation</strong> à l'adresse fournie</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-700 font-bold">•</span>
                   <span>Délai de traitement: <strong>30 jours maximum</strong></span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-700 font-bold">•</span>
                   <span>Les données seront supprimées de <strong>tous nos serveurs</strong></span>
                 </li>
                 <li className="flex gap-3">
