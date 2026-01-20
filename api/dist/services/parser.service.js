@@ -2069,23 +2069,26 @@ class ParserService {
      * Pour Ethiopian, chercher "ET" suivi de chiffres
      */
     extractFlightNumber(rawData) {
-        // Chercher un pattern comme "KQ555" ou "KQ 555" (code compagnie + espace optionnel + numéro)
-        // Pour Kenya Airways et autres compagnies
+        // PRIORITÉ 1: Kenya Airways - chercher "KQ" + espace optionnel + 3-4 chiffres
         const kqMatch = rawData.match(/KQ\s*([0-9]{3,4})/);
         if (kqMatch) {
             return `KQ${kqMatch[1]}`;
         }
-        // Chercher un pattern comme "9U123" ou "ET701" (code compagnie + numéro)
-        const flightMatch = rawData.match(/(9U|ET|EK|AF|SN|TK|WB|SA|SR)\d{3,4}/);
-        if (flightMatch) {
-            return flightMatch[0];
+        // PRIORITÉ 2: Compagnies connues avec espace optionnel et zéros optionnels
+        // Chercher: (9U|ET|EK|AF|SN|TK|WB|SA|SR) + espace optionnel + 2-4 chiffres optionnels (zéros) + 2-3 chiffres (numéro)
+        // Exemples: "ET64", "ET 64", "ET064", "ET 0064", "ET0064"
+        const airlineMatch = rawData.match(/(9U|ET|EK|AF|SN|TK|WB|SA|SR)\s*0*(\d{2,4})/);
+        if (airlineMatch) {
+            const airline = airlineMatch[1];
+            const number = airlineMatch[2];
+            return `${airline}${number}`;
         }
-        // Chercher un pattern générique [A-Z]{2}\d{3,4}
-        const genericMatch = rawData.match(/([A-Z]{2}\d{3,4})/);
+        // PRIORITÉ 3: Pattern générique [A-Z]{2} + espaces optionnels + chiffres
+        const genericMatch = rawData.match(/([A-Z]{2})\s*(\d{3,4})/);
         if (genericMatch) {
-            return genericMatch[1];
+            return `${genericMatch[1]}${genericMatch[2]}`;
         }
-        // Fallback : chercher juste un numéro de vol (3-4 chiffres)
+        // PRIORITÉ 4: Fallback - chercher juste un numéro de vol (3-4 chiffres)
         // Mais éviter les numéros qui font partie d'autres codes (comme 0062, 311Y, etc.)
         const numberMatches = rawData.matchAll(/\d{3,4}/g);
         for (const match of numberMatches) {
@@ -2102,6 +2105,7 @@ class ParserService {
                 }
             }
         }
+        console.warn('[PARSER] ❌ Impossible d\'extraire le numéro de vol de:', rawData.substring(0, 100));
         return 'UNKNOWN';
     }
     /**
