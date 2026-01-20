@@ -50,21 +50,29 @@ export default function DataDeletionRequest() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg mb-8">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-3">
-            <Trash2 className="w-8 h-8" />
-            <div>
-              <h1 className="text-3xl font-bold">Suppression de compte</h1>
-              <p className="text-blue-100 mt-1">Demande de suppression de votre compte et de vos données associées</p>
+    <div 
+      className="min-h-screen bg-cover bg-center relative"
+      style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
+    >
+      {/* Overlay sombre */}
+      <div className="absolute inset-0 bg-black/40 z-0"></div>
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg mb-8">
+          <div className="max-w-2xl mx-auto px-4 py-8">
+            <div className="flex items-center gap-3">
+              <Trash2 className="w-8 h-8" />
+              <div>
+                <h1 className="text-3xl font-bold">Suppression de compte</h1>
+                <p className="text-blue-100 mt-1">Demande de suppression de votre compte et de vos données associées</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-2xl mx-auto px-4 pb-8">
+        <div className="max-w-2xl mx-auto px-4 pb-8">
 
         {/* Success Message */}
         {success && (
@@ -198,6 +206,7 @@ export default function DataDeletionRequest() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
