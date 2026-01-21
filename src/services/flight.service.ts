@@ -293,11 +293,12 @@ class FlightService {
     arrival?: string
   ): Promise<{ isValid: boolean; flight?: AvailableFlight; reason?: string }> {
     try {
+      // ✅ Charger les variables depuis AsyncStorage (initialisées au démarrage)
       const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
       const apiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
 
       console.log('[FlightService] 🔍 Validation vol:', {
-        flightNumber,
+        flightNumber: flightNumber.toUpperCase(),
         airportCode,
         departure,
         arrival,
@@ -305,72 +306,76 @@ class FlightService {
         apiKey: apiKey ? '✅ SET' : '❌ NOT SET'
       });
 
-      if (!apiUrl) {
-        console.warn('[FlightService] ⚠️ API URL non configurée - validation locale uniquement');
-        // Fallback: valider localement avec les vols du jour
+      // ⚠️ PRIORITÉ: Essayer l'API si disponible
+      if (apiUrl && apiKey) {
+        try {
+          const url = `${apiUrl}/api/v1/flights/validate-boarding`;
+          console.log('[FlightService] 📡 Appel API:', url);
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              flightNumber: flightNumber.toUpperCase(),
+              airportCode,
+              departure,
+              arrival,
+            }),
+            timeout: 5000, // Timeout 5s
+          });
+
+          console.log('[FlightService] 📥 Réponse API:', response.status, response.statusText);
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('[FlightService] 📥 Réponse complète:', {
+              success: result.success,
+              isValid: result.isValid,
+              reason: result.reason,
+              flight: result.flight ? `${result.flight.flightNumber}` : null
+            });
+
+            if (result.isValid && result.flight) {
+              console.log('[FlightService] ✅ Vol validé via API:', result.flight.flightNumber);
+              return {
+                isValid: true,
+                flight: {
+                  flightNumber: result.flight.flightNumber,
+                  airline: result.flight.airline || '',
+                  airlineCode: result.flight.airlineCode || '',
+                  departure: result.flight.departure,
+                  arrival: result.flight.arrival,
+                  source: 'schedule',
+                },
+              };
+            } else {
+              // L'API dit que le vol n'est pas valide → fallback local
+              console.log('[FlightService] ⚠️ API rejette le vol, essai validation locale...');
+              return this.validateFlightLocally(flightNumber, airportCode);
+            }
+          } else {
+            // Erreur HTTP → fallback local
+            const errorText = await response.text();
+            console.warn('[FlightService] ⚠️ Erreur HTTP API:', response.status, errorText);
+            console.log('[FlightService] 🔄 Fallback à validation locale...');
+            return this.validateFlightLocally(flightNumber, airportCode);
+          }
+        } catch (apiError) {
+          console.warn('[FlightService] ⚠️ Erreur appel API:', apiError instanceof Error ? apiError.message : apiError);
+          console.log('[FlightService] 🔄 Fallback à validation locale...');
+          return this.validateFlightLocally(flightNumber, airportCode);
+        }
+      } else {
+        console.log('[FlightService] ⚠️ API non configurée (API_URL ou API_KEY absent)');
+        console.log('[FlightService] 🔄 Fallback à validation locale...');
         return this.validateFlightLocally(flightNumber, airportCode);
       }
-
-      const url = `${apiUrl}/api/v1/flights/validate-boarding`;
-      console.log('[FlightService] 📡 Appel API:', url);
-      console.log('[FlightService] 📤 Envoi:', {
-        flightNumber,
-        airportCode,
-        departure,
-        arrival,
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey || '',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          flightNumber,
-          airportCode,
-          departure,
-          arrival,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[FlightService] ❌ Erreur HTTP:', response.status, errorText);
-        // En cas d'erreur API, fallback local
-        return this.validateFlightLocally(flightNumber, airportCode);
-      }
-
-      const result = await response.json();
-      console.log('[FlightService] 📥 Réponse validation:', {
-        success: result.success,
-        isValid: result.isValid,
-        reason: result.reason,
-        flight: result.flight ? `${result.flight.flightNumber} (${result.flight.departure}->${result.flight.arrival})` : null
-      });
-
-      if (result.isValid && result.flight) {
-        console.log('[FlightService] ✅ Vol validé:', result.flight.flightNumber);
-        return {
-          isValid: true,
-          flight: {
-            flightNumber: result.flight.flightNumber,
-            airline: result.flight.airline || '',
-            airlineCode: result.flight.airlineCode || '',
-            departure: result.flight.departure,
-            arrival: result.flight.arrival,
-            source: 'schedule',
-          },
-        };
-      }
-
-      console.log('[FlightService] ❌ Vol rejeté:', result.reason);
-      return {
-        isValid: false,
-        reason: result.reason || `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui.`,
-      };
     } catch (error) {
       console.error('[FlightService] ❌ Erreur validation vol:', error);
+      console.log('[FlightService] 🔄 Fallback à validation locale...');
       // En cas d'erreur, fallback local
       return this.validateFlightLocally(flightNumber, airportCode);
     }
@@ -378,50 +383,76 @@ class FlightService {
 
   /**
    * Validation locale des vols (fallback si API indisponible)
+   * ⚠️ En production, si AUCUN vol n'est programmé, on retourne une erreur claire
    */
   private async validateFlightLocally(
     flightNumber: string,
     airportCode: string
   ): Promise<{ isValid: boolean; flight?: AvailableFlight; reason?: string }> {
     console.log('[FlightService] 🔄 Validation locale du vol...');
+    console.log('[FlightService] 📋 Paramètres:', { flightNumber: flightNumber.toUpperCase(), airportCode });
 
     try {
       // Charger les vols disponibles du jour
       const availableFlights = await this.getAvailableFlights(airportCode);
 
+      console.log('[FlightService] 📊 Vols disponibles en base locale:', availableFlights.length);
+      if (availableFlights.length > 0) {
+        console.log('[FlightService]    Vols:', availableFlights.map(f => f.flightNumber).join(', '));
+      }
+
       if (availableFlights.length === 0) {
-        // Aucun vol programmé = BLOQUER le scan
-        console.log('[FlightService] ❌ Aucun vol programmé - SCAN BLOQUÉ');
+        // ⚠️ AUCUN vol programmé = ERREUR DE CONFIGURATION (le superviseur doit programmer les vols)
+        const errorMsg = 'AUCUN VOL PROGRAMMÉ AUJOURD\'HUI. ❌ Le superviseur doit ajouter les vols du jour dans le dashboard.';
+        console.error('[FlightService] ❌', errorMsg);
         return {
           isValid: false,
-          reason: 'AUCUN VOL PROGRAMMÉ POUR AUJOURD\'HUI. Contactez le superviseur pour programmer les vols du jour.',
+          reason: errorMsg,
         };
       }
 
       // Chercher le vol correspondant
       const normalizedFlightNumber = flightNumber.trim().toUpperCase().replace(/\s+/g, '');
+      console.log('[FlightService] 🔍 Recherche du vol:', normalizedFlightNumber);
+
       const matchingFlight = availableFlights.find((flight) => {
         const dbFlightNumber = flight.flightNumber.trim().toUpperCase().replace(/\s+/g, '');
-        return (
-          dbFlightNumber === normalizedFlightNumber ||
-          dbFlightNumber.replace(/0+(\d)/g, '$1') === normalizedFlightNumber.replace(/0+(\d)/g, '$1')
-        );
+        
+        // Match exact
+        if (dbFlightNumber === normalizedFlightNumber) {
+          console.log('[FlightService]    ✅ Match exact trouvé:', dbFlightNumber);
+          return true;
+        }
+
+        // Match avec normalisation des zéros (ET0064 = ET64)
+        const normalizedDb = dbFlightNumber.replace(/0+(\d)/g, '$1');
+        const normalizedInput = normalizedFlightNumber.replace(/0+(\d)/g, '$1');
+        if (normalizedDb === normalizedInput) {
+          console.log('[FlightService]    ✅ Match avec normalisation zéros:', dbFlightNumber, '=', normalizedFlightNumber);
+          return true;
+        }
+
+        return false;
       });
 
       if (matchingFlight) {
+        console.log('[FlightService] ✅ Vol trouvé en validation locale:', matchingFlight.flightNumber);
         return {
           isValid: true,
           flight: matchingFlight,
         };
       }
 
+      // Vol non trouvé
+      const notFoundMsg = `Le vol ${flightNumber.toUpperCase()} n'est pas dans la liste des vols du jour. Vols disponibles: ${availableFlights.map(f => f.flightNumber).join(', ')}`;
+      console.warn('[FlightService] ⚠️', notFoundMsg);
       return {
         isValid: false,
-        reason: `Le vol ${flightNumber} n'est pas dans la liste des vols du jour.`,
+        reason: notFoundMsg,
       };
     } catch (error) {
-      console.error('[FlightService] Erreur validation locale:', error);
-      // En cas d'erreur, BLOQUER le scan pour sécurité
+      console.error('[FlightService] ❌ Erreur validation locale:', error instanceof Error ? error.message : error);
+      // En cas d'erreur base de données, BLOQUER pour sécurité
       return {
         isValid: false,
         reason: 'ERREUR DE VALIDATION. Impossible de vérifier les vols programmés. Contactez le support.',
