@@ -2134,15 +2134,15 @@ class ParserService {
    * Pour Ethiopian, chercher "ET" suivi de chiffres
    */
   private extractFlightNumber(rawData: string): string {
-    // PRIORITÉ 1: Kenya Airways - chercher "KQ" + espace optionnel + 3-4 chiffres
-    const kqMatch = rawData.match(/KQ\s*([0-9]{3,4})/);
+    // PRIORITÉ 1: Kenya Airways - chercher "KQ" + espace optionnel + 2-4 chiffres (avec support zéros)
+    const kqMatch = rawData.match(/KQ\s*0*(\d{2,4})/);
     if (kqMatch) {
       return `KQ${kqMatch[1]}`;
     }
 
     // PRIORITÉ 2: Compagnies connues avec espace optionnel et zéros optionnels
-    // Chercher: (9U|ET|EK|AF|SN|TK|WB|SA|SR) + espace optionnel + 2-4 chiffres optionnels (zéros) + 2-3 chiffres (numéro)
-    // Exemples: "ET64", "ET 64", "ET064", "ET 0064", "ET0064"
+    // Chercher: (9U|ET|EK|AF|SN|TK|WB|SA|SR) + espace optionnel + zéros optionnels + 2-4 chiffres
+    // Exemples: "ET64", "ET 64", "ET064", "ET 0064", "ET0064", "ET555", "9U404"
     const airlineMatch = rawData.match(/(9U|ET|EK|AF|SN|TK|WB|SA|SR)\s*0*(\d{2,4})/);
     if (airlineMatch) {
       const airline = airlineMatch[1];
@@ -2150,8 +2150,8 @@ class ParserService {
       return `${airline}${number}`;
     }
 
-    // PRIORITÉ 3: Pattern générique [A-Z]{2} + espaces optionnels + chiffres
-    const genericMatch = rawData.match(/([A-Z]{2})\s*(\d{3,4})/);
+    // PRIORITÉ 3: Pattern générique [A-Z]{2} + espaces optionnels + 2-4 chiffres (support tous numéros de vol)
+    const genericMatch = rawData.match(/([A-Z]{2})\s*(\d{2,4})/);
     if (genericMatch) {
       return `${genericMatch[1]}${genericMatch[2]}`;
     }
