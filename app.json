@@ -61,12 +61,6 @@
       "eas": {
         "projectId": "50201fae-7acd-45a9-a011-ad95545b6198"
       }
-    },
-    "env": {
-      "production": {
-        "EXPO_PUBLIC_API_URL": "https://api.brsats.com",
-        "EXPO_PUBLIC_API_KEY": "bfs-api-key-secure-2025"
-      }
     }
   }
 }

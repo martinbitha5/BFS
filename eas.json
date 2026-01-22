@@ -13,7 +13,10 @@
     },
     "production": {
       "autoIncrement": true,
-      "env": {}
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.brsats.com",
+        "EXPO_PUBLIC_API_KEY": "bfs-api-key-secure-2025"
+      }
     }
   },
   "submit": {
