@@ -344,9 +344,9 @@ router.post('/validate-boarding', async (req, res, next) => {
             .select('*')
             .eq('scheduled_date', today)
             .in('status', ['scheduled', 'boarding', 'departed']);
-        // Filtrer par aéroport si fourni
+        // Filtrer par aéroport si fourni (utiliser airport_code comme en dev)
         if (airportCode) {
-            query = query.or(`departure.eq.${airportCode},arrival.eq.${airportCode}`);
+            query = query.eq('airport_code', airportCode);
         }
         const { data, error } = await query;
         if (error)
@@ -363,40 +363,21 @@ router.post('/validate-boarding', async (req, res, next) => {
         // Chercher correspondance flexible
         const matchingFlight = data.find(flight => flightNumbersMatch(flight.flight_number, normalizedInput));
         if (matchingFlight) {
-            // Vérifier aussi que l'aéroport correspond si spécifié
-            if (airportCode && (matchingFlight.departure === airportCode || matchingFlight.arrival === airportCode)) {
-                console.log(`[ValidateBoarding] ✅ Vol valide: ${matchingFlight.flight_number} (${matchingFlight.status})`);
-                res.json({
-                    success: true,
-                    isValid: true,
-                    flight: toCamelCase(matchingFlight)
-                });
-            }
-            else if (!airportCode) {
-                // Pas de filtrage d'aéroport
-                console.log(`[ValidateBoarding] ✅ Vol valide: ${matchingFlight.flight_number}`);
-                res.json({
-                    success: true,
-                    isValid: true,
-                    flight: toCamelCase(matchingFlight)
-                });
-            }
-            else {
-                // Aéroport ne correspond pas
-                console.log(`[ValidateBoarding] ⚠️ Vol trouvé mais aéroport ne correspond pas: ${matchingFlight.flight_number} (${matchingFlight.departure}->${matchingFlight.arrival}) vs demandé: ${airportCode}`);
-                return res.json({
-                    success: true,
-                    isValid: false,
-                    reason: `Le vol ${flightNumber} existe mais ne passe pas par ${airportCode} (route: ${matchingFlight.departure} → ${matchingFlight.arrival})`
-                });
-            }
-        }
-        else {
-            console.log(`[ValidateBoarding] ❌ Vol ${normalizedInput} non trouvé à ${airportCode}`);
+            // ✅ Vol trouvé - l'aéroport a déjà été filtré dans la requête
+            console.log(`[ValidateBoarding] ✅ Vol valide: ${matchingFlight.flight_number} (${matchingFlight.status})`);
             res.json({
                 success: true,
+                isValid: true,
+                flight: toCamelCase(matchingFlight)
+            });
+        }
+        else {
+            // ❌ Vol non trouvé
+            console.log(`[ValidateBoarding] ❌ Vol ${normalizedInput} non trouvé pour ${airportCode} le ${today}`);
+            return res.json({
+                success: true,
                 isValid: false,
-                reason: `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui. Veuillez vérifier le numéro de vol ou contacter un superviseur.`
+                reason: `Le vol ${flightNumber} n'est pas programmé pour aujourd'hui`
             });
         }
     }

@@ -26,9 +26,15 @@
       "permissions": [
         "CAMERA",
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "CAMERA",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.anonymous.BFS"
+      "package": "com.anonymous.BFS",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "static",
@@ -61,6 +67,9 @@
       "eas": {
         "projectId": "50201fae-7acd-45a9-a011-ad95545b6198"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/50201fae-7acd-45a9-a011-ad95545b6198"
     }
   }
 }

@@ -71,7 +71,11 @@ class ParserService {
    * Parse les données brutes d'un boarding pass PDF417
    */
   parse(rawData: string): PassengerData {
+    console.log('[PARSER] 🔍 Début parsing - Longueur données:', rawData.length);
+    console.log('[PARSER] 📋 Données brutes (premiers 200 chars):', rawData.substring(0, 200));
+    
     const format = this.detectFormat(rawData);
+    console.log('[PARSER] 📌 Format détecté:', format);
 
     let result: PassengerData;
     if (format === 'AIR_CONGO') {
@@ -83,6 +87,14 @@ class ParserService {
     } else {
       result = this.parseGeneric(rawData);
     }
+    
+    console.log('[PARSER] ✅ Parsing terminé - Résultat:', {
+      format: result.format,
+      flightNumber: result.flightNumber,
+      departure: result.departure,
+      arrival: result.arrival,
+      pnr: result.pnr?.substring(0, 6) || 'N/A',
+    });
     
     return result;
   }
@@ -116,14 +128,17 @@ class ParserService {
     
     // STRATÉGIE 1: Chercher les vols ET avec numéros
     // Pattern flexible qui accepte ET précédé de n'importe quelle lettre sauf B ou 1
+    // Supporte maintenant ET64, ET555, ET80, ET0080, etc. (2-4 chiffres)
     const ethiopianFlightPatterns = [
       /ET\s+0?8[0-9]{2}/gi,      // ET 0840, ET 0863, ET 863, ET840 (vols 800-899)
-      /ET\s+0?[0-9]{3,4}/gi,     // ET 0080, ET 701, etc.
-      /[^B1]ET\s+\d{3,4}/gi,     // Précédé d'une lettre autre que B ou 1
-      /[A-Z]{3}ET\s+\d{3,4}/gi,  // ADDET 0840, FBMET 123, etc.
-      /ET\s*\d{3,4}/gi,          // ET suivi de 3-4 chiffres (avec ou sans espace)
-      /ET\d{3,4}/gi,             // ET suivi de 3-4 chiffres (sans espace)
-      /\bET\b\s*\d{3,4}/gi,      // ET (mot entier) suivi de 3-4 chiffres (avec ou sans espace)
+      /ET\s+0?[0-9]{2,4}/gi,     // ET 0080, ET 701, ET 64, ET 555 (2-4 chiffres)
+      /ET\s+0*([1-9]\d{1,3})/gi, // ET suivi d'espace puis zéros optionnels puis chiffres (évite 0000)
+      /[^B1]ET\s+\d{2,4}/gi,     // Précédé d'une lettre autre que B ou 1, 2-4 chiffres
+      /[A-Z]{3}ET\s+\d{2,4}/gi,  // ADDET 0840, FBMET 123, FIHET 64, etc.
+      /ET\s*\d{2,4}/gi,          // ET suivi de 2-4 chiffres (avec ou sans espace)
+      /ET\d{2,4}/gi,             // ET suivi de 2-4 chiffres (sans espace)
+      /\bET\b\s*\d{2,4}/gi,      // ET (mot entier) suivi de 2-4 chiffres (avec ou sans espace)
+      /ET\s*0*([1-9]\d{1,3})/gi, // ET suivi d'espace optionnel, zéros optionnels, puis chiffres
     ];
     
     let ethiopianFlightFound = false;
@@ -1784,31 +1799,79 @@ class ParserService {
    * Extrait le numéro de vol pour Ethiopian Airlines
    */
   private extractFlightNumberEthiopian(rawData: string): string | undefined {
-    // Format: ET701, ET4071, ET80, ET0080, ou ET 0840 (avec espace)
-    // Chercher d'abord avec espace (format plus récent)
-    const volMatchWithSpace = rawData.match(/ET\s+(\d{2,4})/);
-    if (volMatchWithSpace) {
-      return `ET${volMatchWithSpace[1]}`;
-    }
+    console.log('[PARSER] 🔍 Extraction numéro de vol Ethiopian - Données brutes (premiers 200 chars):', rawData.substring(0, 200));
     
-    // Fallback: chercher sans espace (ET80, ET0080, ET701, etc.)
-    // Accepter 2-4 chiffres pour gérer ET80 et ET0080
-    const volMatch = rawData.match(/ET(\d{2,4})/);
-    if (volMatch) {
-      // Vérifier que ce n'est pas "BET" ou "1ET" (codes compagnie)
-      const matchIndex = rawData.indexOf(volMatch[0]);
-      if (matchIndex > 0) {
-        const beforeChar = rawData[matchIndex - 1];
-        if (beforeChar === 'B' || beforeChar === '1') {
-          // C'est "BET" ou "1ET", continuer la recherche
-        } else {
-          return volMatch[0];
+    // Format: ET701, ET4071, ET80, ET0080, ou ET 0840 (avec espace)
+    // Patterns améliorés pour gérer toutes les variations
+    
+    // PRIORITÉ 1: Chercher avec espace(s) - format plus récent (ET 0840, ET 64, ET 555)
+    const patternsWithSpace = [
+      /ET\s+0*([1-9]\d{1,3})/,  // ET suivi d'espace(s) puis zéros optionnels puis chiffres
+      /ET\s+(\d{2,4})/,          // ET suivi d'espace(s) puis 2-4 chiffres
+    ];
+    
+    for (const pattern of patternsWithSpace) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const number = match[1].replace(/^0+/, ''); // Enlever les zéros en tête
+        if (number.length >= 1) {
+          const result = `ET${number}`;
+          console.log('[PARSER] ✅ Numéro de vol Ethiopian trouvé (avec espace):', result);
+          return result;
         }
-      } else {
-        return volMatch[0];
       }
     }
     
+    // PRIORITÉ 2: Chercher sans espace (ET80, ET0080, ET701, ET64, ET555, etc.)
+    // Accepter 2-4 chiffres pour gérer ET80 et ET0080
+    const patternsWithoutSpace = [
+      /ET0*([1-9]\d{1,3})/,  // ET suivi de zéros optionnels puis chiffres
+      /ET(\d{2,4})/,          // ET suivi directement de 2-4 chiffres
+    ];
+    
+    for (const pattern of patternsWithoutSpace) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const matchIndex = rawData.indexOf(match[0]);
+        
+        // Vérifier que ce n'est pas "BET" ou "1ET" (codes compagnie)
+        if (matchIndex > 0) {
+          const beforeChar = rawData[matchIndex - 1];
+          if (beforeChar === 'B' || beforeChar === '1') {
+            // C'est "BET" ou "1ET", continuer la recherche
+            continue;
+          }
+        }
+        
+        const number = match[1].replace(/^0+/, ''); // Enlever les zéros en tête
+        if (number.length >= 1) {
+          const result = `ET${number}`;
+          console.log('[PARSER] ✅ Numéro de vol Ethiopian trouvé (sans espace):', result);
+          return result;
+        }
+      }
+    }
+    
+    // PRIORITÉ 3: Chercher dans les patterns de route (ex: FIHMDKET 0080, FIHADDET 064)
+    const routePatterns = [
+      /([A-Z]{3})([A-Z]{3})ET\s+0*(\d{2,4})/,  // Route + ET + espace + numéro
+      /([A-Z]{3})([A-Z]{3})ET0*(\d{2,4})/,      // Route + ET + numéro
+    ];
+    
+    for (const pattern of routePatterns) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const number = match[3].replace(/^0+/, '');
+        if (number.length >= 1) {
+          const result = `ET${number}`;
+          console.log('[PARSER] ✅ Numéro de vol Ethiopian trouvé depuis route:', result);
+          return result;
+        }
+      }
+    }
+    
+    console.warn('[PARSER] ⚠️ Numéro de vol Ethiopian non trouvé');
+    console.warn('[PARSER] Données brutes (premiers 300 chars):', rawData.substring(0, 300));
     return undefined;
   }
 
@@ -2134,29 +2197,117 @@ class ParserService {
    * Pour Ethiopian, chercher "ET" suivi de chiffres
    */
   private extractFlightNumber(rawData: string): string {
+    console.log('[PARSER] 🔍 Extraction numéro de vol - Données brutes (premiers 200 chars):', rawData.substring(0, 200));
+    
     // PRIORITÉ 1: Kenya Airways - chercher "KQ" + espace optionnel + 2-4 chiffres (avec support zéros)
-    const kqMatch = rawData.match(/KQ\s*0*(\d{2,4})/);
-    if (kqMatch) {
-      return `KQ${kqMatch[1]}`;
+    // Patterns: KQ555, KQ 555, KQ0555, KQ 0555
+    const kqPatterns = [
+      /KQ\s+0*([1-9]\d{1,3})/,  // KQ suivi d'espace(s) puis zéros optionnels puis chiffres
+      /KQ0*([1-9]\d{1,3})/,      // KQ suivi directement de zéros optionnels puis chiffres
+      /KQ\s*(\d{3,4})/,          // KQ suivi d'espace optionnel puis 3-4 chiffres
+    ];
+    
+    for (const pattern of kqPatterns) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const number = match[1].replace(/^0+/, ''); // Enlever les zéros en tête
+        if (number.length >= 2) {
+          const result = `KQ${number}`;
+          console.log('[PARSER] ✅ Numéro de vol KQ trouvé:', result);
+          return result;
+        }
+      }
     }
 
     // PRIORITÉ 2: Compagnies connues avec espace optionnel et zéros optionnels
     // Chercher: (9U|ET|EK|AF|SN|TK|WB|SA|SR) + espace optionnel + zéros optionnels + 2-4 chiffres
     // Exemples: "ET64", "ET 64", "ET064", "ET 0064", "ET0064", "ET555", "9U404"
-    const airlineMatch = rawData.match(/(9U|ET|EK|AF|SN|TK|WB|SA|SR)\s*0*(\d{2,4})/);
-    if (airlineMatch) {
-      const airline = airlineMatch[1];
-      const number = airlineMatch[2];
-      return `${airline}${number}`;
+    // Patterns améliorés pour gérer plus de variations
+    const airlinePatterns = [
+      /(9U|ET|EK|AF|SN|TK|WB|SA|SR)\s+0*([1-9]\d{1,3})/,  // Avec espace(s) et zéros optionnels
+      /(9U|ET|EK|AF|SN|TK|WB|SA|SR)0*([1-9]\d{1,3})/,      // Sans espace, zéros optionnels
+      /(9U|ET|EK|AF|SN|TK|WB|SA|SR)\s*(\d{2,4})/,          // Avec espace optionnel, 2-4 chiffres
+    ];
+    
+    for (const pattern of airlinePatterns) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const airline = match[1];
+        let number = match[2];
+        
+        // Éviter "BET" ou "1ET" (codes compagnie, pas Ethiopian)
+        const matchIndex = rawData.indexOf(match[0]);
+        if (matchIndex > 0 && airline === 'ET') {
+          const beforeChar = rawData[matchIndex - 1];
+          if (beforeChar === 'B' || beforeChar === '1') {
+            continue; // C'est "BET" ou "1ET", continuer la recherche
+          }
+        }
+        
+        // Enlever les zéros en tête mais garder au moins 2 chiffres
+        number = number.replace(/^0+/, '');
+        if (number.length >= 1) {
+          const result = `${airline}${number}`;
+          console.log('[PARSER] ✅ Numéro de vol trouvé:', result);
+          return result;
+        }
+      }
     }
 
     // PRIORITÉ 3: Pattern générique [A-Z]{2} + espaces optionnels + 2-4 chiffres (support tous numéros de vol)
-    const genericMatch = rawData.match(/([A-Z]{2})\s*(\d{2,4})/);
-    if (genericMatch) {
-      return `${genericMatch[1]}${genericMatch[2]}`;
+    // Mais éviter les faux positifs (comme "BET", "1ET", etc.)
+    const genericPatterns = [
+      /([A-Z]{2})\s+0*([1-9]\d{1,3})/,  // Avec espace(s)
+      /([A-Z]{2})0*([1-9]\d{1,3})/,      // Sans espace
+      /([A-Z]{2})\s*(\d{2,4})/,          // Pattern plus large
+    ];
+    
+    for (const pattern of genericPatterns) {
+      const match = rawData.match(pattern);
+      if (match) {
+        const code = match[1];
+        let number = match[2];
+        
+        // Éviter les codes invalides
+        if (code === 'BE' || code === '1E' || code.match(/^\d/)) {
+          continue;
+        }
+        
+        // Vérifier que ce n'est pas "BET" ou "1ET"
+        const matchIndex = rawData.indexOf(match[0]);
+        if (matchIndex > 0) {
+          const beforeChar = rawData[matchIndex - 1];
+          if ((code === 'ET' && (beforeChar === 'B' || beforeChar === '1')) ||
+              (code[0] === 'E' && beforeChar === 'B')) {
+            continue;
+          }
+        }
+        
+        number = number.replace(/^0+/, '');
+        if (number.length >= 1) {
+          const result = `${code}${number}`;
+          console.log('[PARSER] ✅ Numéro de vol générique trouvé:', result);
+          return result;
+        }
+      }
     }
 
-    // PRIORITÉ 4: Fallback - chercher juste un numéro de vol (3-4 chiffres)
+    // PRIORITÉ 4: Chercher dans les patterns de route (ex: FIHMDKET 0080)
+    // Format: [AERO][AERO]ET suivi de numéro de vol
+    const routeFlightPattern = /([A-Z]{3})([A-Z]{3})ET\s*0*(\d{2,4})/;
+    const routeMatch = rawData.match(routeFlightPattern);
+    if (routeMatch) {
+      const number = routeMatch[3].replace(/^0+/, '');
+      if (number.length >= 1) {
+        // Essayer de déterminer le code compagnie depuis le contexte
+        // Si on voit "ET" dans le pattern, c'est probablement Ethiopian
+        const result = `ET${number}`;
+        console.log('[PARSER] ✅ Numéro de vol depuis route trouvé:', result);
+        return result;
+      }
+    }
+
+    // PRIORITÉ 5: Fallback - chercher juste un numéro de vol (3-4 chiffres)
     // Mais éviter les numéros qui font partie d'autres codes (comme 0062, 311Y, etc.)
     const numberMatches = rawData.matchAll(/\d{3,4}/g);
     for (const match of numberMatches) {
@@ -2169,12 +2320,21 @@ class ParserService {
         // Vérifier que ce n'est pas un code de bagage (10+ chiffres)
         const after = rawData.substring(index, index + 12);
         if (!after.match(/^\d{10}/)) {
-          return num;
+          // Chercher un code compagnie avant ce numéro
+          const contextBefore = rawData.substring(Math.max(0, index - 10), index);
+          const airlineBefore = contextBefore.match(/([A-Z]{2})\s*$/);
+          if (airlineBefore && airlineBefore[1] !== 'BE' && airlineBefore[1] !== '1E') {
+            const result = `${airlineBefore[1]}${num.replace(/^0+/, '')}`;
+            console.log('[PARSER] ✅ Numéro de vol depuis contexte trouvé:', result);
+            return result;
+          }
         }
       }
     }
 
-    console.warn('[PARSER] ❌ Impossible d\'extraire le numéro de vol de:', rawData.substring(0, 100));
+    console.warn('[PARSER] ❌ Impossible d\'extraire le numéro de vol');
+    console.warn('[PARSER] Données brutes (premiers 300 chars):', rawData.substring(0, 300));
+    console.warn('[PARSER] Longueur totale:', rawData.length);
     return 'UNKNOWN';
   }
 

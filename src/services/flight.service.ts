@@ -151,13 +151,76 @@ class FlightService {
 
   /**
    * Récupère les vols depuis les passagers enregistrés
+   * PRIORITÉ: API Supabase (pour les données cloud en production)
+   * FALLBACK: SQLite local (en offline ou si API unavailable)
    */
   private async getFlightsFromPassengers(
     airportCode: string,
     date: string
   ): Promise<AvailableFlight[]> {
+    // ✅ ÉTAPE 1: Essayer d'abord via l'API (Supabase)
+    try {
+      const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
+      const apiKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
+
+      if (apiUrl && apiKey) {
+        console.log('[FlightService] 📡 Chargement des passagers depuis API...');
+        
+        const url = `${apiUrl}/api/v1/passengers?airport=${airportCode}&date=${date}`;
+        const response = await fetch(url, {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const passengers = result.data || [];
+
+          console.log(`[FlightService] ✅ ${passengers.length} passagers chargés depuis l'API`);
+
+          // Grouper par vol et compter les passagers et bagages
+          const flightsMap = new Map<string, AvailableFlight>();
+
+          for (const passenger of passengers) {
+            const key = passenger.flightNumber || 'UNKNOWN';
+            
+            if (!flightsMap.has(key)) {
+              flightsMap.set(key, {
+                flightNumber: passenger.flightNumber,
+                airline: passenger.airline || '',
+                airlineCode: passenger.airline_code || '',
+                departure: passenger.departure,
+                arrival: passenger.arrival,
+                passengerCount: 0,
+                baggageCount: 0,
+                source: 'passengers' as const,
+              });
+            }
+
+            const flight = flightsMap.get(key)!;
+            flight.passengerCount++;
+            flight.baggageCount += passenger.baggageCount || 0;
+          }
+
+          const flights = Array.from(flightsMap.values());
+          console.log(`[FlightService] 📊 ${flights.length} vols avec passagers chargés depuis l'API`);
+          return flights;
+        } else {
+          console.warn('[FlightService] ⚠️ API retourne une erreur, fallback sur SQLite...');
+        }
+      } else {
+        console.log('[FlightService] ℹ️ API non configurée, fallback sur SQLite...');
+      }
+    } catch (error) {
+      console.warn('[FlightService] ⚠️ Erreur API (fallback sur SQLite):', error instanceof Error ? error.message : error);
+    }
+
+    // ✅ ÉTAPE 2: Fallback sur SQLite local (si API unavailable ou offline)
     const db = databaseServiceInstance.getDatabase();
     if (!db) {
+      console.warn('[FlightService] ⚠️ SQLite non disponible - aucun passager à charger');
       return [];
     }
 
@@ -186,6 +249,8 @@ class FlightService {
         GROUP BY p.flight_number, p.airline, p.airline_code, p.departure, p.arrival
         ORDER BY MIN(p.checked_in_at) ASC
       `, [date, airportCode, airportCode]);
+
+      console.log(`[FlightService] ✅ ${flights.length} vols chargés depuis SQLite (fallback)`);
 
       return flights.map(f => ({
         flightNumber: f.flight_number,

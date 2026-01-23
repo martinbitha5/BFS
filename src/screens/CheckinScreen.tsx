@@ -97,46 +97,80 @@ export default function CheckinScreen({ navigation }: Props) {
       let arrival = '';
 
       try {
+        console.log('[CheckinScreen] 🔍 Parsing boarding pass - Longueur données:', data.length);
+        console.log('[CheckinScreen] 📋 Données brutes (premiers 200 chars):', data.substring(0, 200));
+        
         parsedData = parserService.parse(data);
         flightNumber = parsedData.flightNumber || '';
         departure = parsedData.departure || '';
         arrival = parsedData.arrival || '';
+        
+        console.log('[CheckinScreen] ✅ Parsing terminé:', {
+          flightNumber,
+          departure,
+          arrival,
+          format: parsedData.format,
+        });
+        
+        if (!flightNumber || flightNumber === 'UNKNOWN') {
+          console.error('[CheckinScreen] ❌ Numéro de vol non trouvé ou UNKNOWN');
+          console.error('[CheckinScreen] Données complètes (premiers 500 chars):', data.substring(0, 500));
+        }
       } catch (parseError) {
+        console.error('[CheckinScreen] ❌ Erreur lors du parsing:', parseError);
+        console.error('[CheckinScreen] Données brutes (premiers 500 chars):', data.substring(0, 500));
         // Parsing error - continue
       }
 
-      // ✅ ÉTAPE 2: Valider que le vol est programmé pour aujourd'hui
-      if (flightNumber) {
-        const validation = await flightService.validateFlightForToday(
-          flightNumber,
-          user.airportCode,
-          departure,
-          arrival
+      // ✅ ÉTAPE 2: Vérifier si le numéro de vol a été extrait
+      if (!flightNumber || flightNumber === 'UNKNOWN') {
+        await playErrorSound();
+        setProcessing(false);
+        setScanned(false);
+        
+        Alert.alert(
+          'ERREUR DE SCAN',
+          'Impossible d\'extraire le numéro de vol du boarding pass. Veuillez réessayer ou contacter le support.',
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => setShowScanner(true),
+            },
+          ],
+          { cancelable: false }
         );
-
-        if (!validation.isValid) {
-          await playErrorSound();
-          setProcessing(false);
-          setScanned(false);
-          
-          // Utiliser Alert native qui reste affichée
-          Alert.alert(
-            'VOL NON AUTORISÉ',
-            validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.',
-            [
-              {
-                text: 'Nouveau scan',
-                onPress: () => setShowScanner(true),
-              },
-            ],
-            { cancelable: false }
-          );
-          return;
-        }
-
+        return;
       }
 
-      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
+      // ✅ ÉTAPE 3: Valider que le vol est programmé pour aujourd'hui
+      const validation = await flightService.validateFlightForToday(
+        flightNumber,
+        user.airportCode,
+        departure,
+        arrival
+      );
+
+      if (!validation.isValid) {
+        await playErrorSound();
+        setProcessing(false);
+        setScanned(false);
+        
+        // Utiliser Alert native qui reste affichée
+        Alert.alert(
+          'VOL NON AUTORISÉ',
+          validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.',
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => setShowScanner(true),
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
+      // ✅ ÉTAPE 4: Vérifier que l'aéroport correspond
       if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
         await playErrorSound();
         setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);

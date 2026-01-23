@@ -9,10 +9,11 @@ const router = Router();
  * GET /api/v1/passengers
  * Récupérer tous les passagers avec filtres optionnels
  * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+ * Paramètres: flight, pnr, date (format YYYY-MM-DD)
  */
 router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { flight, pnr } = req.query;
+    const { flight, pnr, date } = req.query;
     const airportCode = req.userAirportCode; // Peut être undefined si accès total
     
     // Auto-sync si la table est vide mais que des raw_scans existent
@@ -34,6 +35,11 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
     if (pnr) {
       query = query.eq('pnr', pnr.toString().toUpperCase());
     }
+    // ✅ Filtrer par date si fournie
+    if (date) {
+      query = query.gte('checked_in_at', `${date}T00:00:00`)
+              .lt('checked_in_at', `${date}T23:59:59`);
+    }
 
     const { data, error } = await query;
 
@@ -45,6 +51,8 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
       fullName: passenger.full_name,
       pnr: passenger.pnr,
       flightNumber: passenger.flight_number,
+      airline: passenger.airline || '',
+      airline_code: passenger.airline_code || '',
       departure: passenger.departure,
       arrival: passenger.arrival,
       seatNumber: passenger.seat_number,
@@ -98,6 +106,8 @@ router.get('/all', requireAirportCode, async (req: Request & { userAirportCode?:
       fullName: passenger.full_name,
       pnr: passenger.pnr,
       flightNumber: passenger.flight_number,
+      airline: passenger.airline || '',
+      airline_code: passenger.airline_code || '',
       departure: passenger.departure,
       arrival: passenger.arrival,
       seatNumber: passenger.seat_number,
