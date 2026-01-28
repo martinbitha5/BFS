@@ -1,8 +1,9 @@
-import { CheckCircle, Clock, Luggage, Package, Plane, RefreshCw, Users } from 'lucide-react';
+import { CheckCircle, Clock, Download, Luggage, Package, Plane, RefreshCw, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { exportToExcel } from '../utils/exportExcel';
 
 interface AirportStats {
   totalPassengers: number;
@@ -73,6 +74,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchData = useCallback(async () => {
     if (!user?.airport_code) return;
@@ -111,6 +115,96 @@ export default function Dashboard() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  const handleExportData = async () => {
+    if (!user?.airport_code || !stats) return;
+
+    setExporting(true);
+    try {
+      // Récupérer les passagers et bagages avec les paramètres actuels
+      const [passengersRes, baggagesRes] = await Promise.all([
+        api.get(`/api/v1/passengers?airport=${user.airport_code}`),
+        api.get(`/api/v1/baggage?airport=${user.airport_code}`)
+      ]);
+
+      // Extraire les données de la réponse
+      const passengersData = passengersRes.data as any;
+      const baggagesData = baggagesRes.data as any;
+
+      // Traiter les passagers - supporter différents formats de réponse
+      let allPassengers: any[] = [];
+      if (Array.isArray(passengersData)) {
+        allPassengers = passengersData;
+      } else if (passengersData?.data && Array.isArray(passengersData.data)) {
+        allPassengers = passengersData.data;
+      } else if (passengersData?.results && Array.isArray(passengersData.results)) {
+        allPassengers = passengersData.results;
+      }
+
+      // Traiter les bagages - supporter différents formats de réponse
+      let allBaggages: any[] = [];
+      if (Array.isArray(baggagesData)) {
+        allBaggages = baggagesData;
+      } else if (baggagesData?.data && Array.isArray(baggagesData.data)) {
+        allBaggages = baggagesData.data;
+      } else if (baggagesData?.results && Array.isArray(baggagesData.results)) {
+        allBaggages = baggagesData.results;
+      }
+
+      // Formater les passagers selon ce qui s'affiche dans le dashboard
+      const formattedPassengers = allPassengers.map((p: any) => ({
+        pnr: p.pnr || p.PNR || '',
+        id: p.id || p.passenger_id || '',
+        full_name: p.full_name || p.fullName || p.name || '',
+        flight_number: p.flight_number || p.flightNumber || p.flight || '',
+        departure: p.departure || p.origin || '',
+        arrival: p.arrival || p.destination || '',
+        seat_number: p.seat_number || p.seatNumber || p.seat || '-',
+        checked_in_at: p.checked_in_at || p.checkedInAt || new Date().toISOString(),
+        boarding_status: p.boarding_status || p.boardingStatus || [],
+        baggage_count: p.baggage_count || p.baggageCount || 0
+      }));
+
+      // Formater les bagages selon ce qui s'affiche dans le dashboard
+      const formattedBaggages = allBaggages.map((b: any) => ({
+        tag_number: b.tag_number || b.tagNumber || b.tag || '',
+        passenger_id: b.passenger_id || b.passengerId || b.passengerID || '',
+        passenger_name: b.passenger_name || b.passengerName || b.full_name || '',
+        flight_number: b.flight_number || b.flightNumber || b.flight || '',
+        weight: b.weight || 0,
+        status: b.status || 'unknown',
+        checked_at: b.checked_at || b.checkedAt || b.registeredAt || new Date().toISOString(),
+        arrived_at: b.arrived_at || b.arrivedAt || null,
+        current_location: b.current_location || b.currentLocation || b.location || '-'
+      }));
+
+      // Préparer les données pour l'export
+      const exportData = {
+        passengers: formattedPassengers,
+        baggages: formattedBaggages,
+        statistics: stats,
+        birsItems: []
+      };
+
+      // Appeler la fonction d'export avec les dates sélectionnées
+      await exportToExcel(
+        exportData,
+        user.airport_code,
+        exportStartDate,
+        exportEndDate
+      );
+
+      // Afficher un message de succès
+      setError('');
+    } catch (err: unknown) {
+      const error = err as { message?: string; response?: { data?: { error?: string } } };
+      const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de l\'export';
+      console.error('Erreur export:', errorMsg);
+      setError(errorMsg);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -151,14 +245,42 @@ export default function Dashboard() {
             )}
           </p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <label className="text-sm text-white/70">Du:</label>
+            <input
+              type="date"
+              value={exportStartDate}
+              onChange={(e) => setExportStartDate(e.target.value)}
+              className="px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-primary-500"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-sm text-white/70">Au:</label>
+            <input
+              type="date"
+              value={exportEndDate}
+              onChange={(e) => setExportEndDate(e.target.value)}
+              className="px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-primary-500"
+            />
+          </div>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+          <button
+            onClick={handleExportData}
+            disabled={exporting || stats === null}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} />
+            {exporting ? 'Export...' : 'Exporter'}
+          </button>
+        </div>
       </div>
 
       {error && (

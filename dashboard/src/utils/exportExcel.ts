@@ -21,9 +21,22 @@ export const exportToExcel = async (
 ) => {
   const { passengers = [], baggages = [] } = data;
 
-  // Vérifier qu'il y a des données
-  if (passengers.length === 0 && baggages.length === 0) {
-    throw new Error('Aucune donnée à exporter');
+  // Filtrer les données par date si fourni
+  const filterByDate = (item: any, start?: string, end?: string) => {
+    if (!start || !end) return true;
+    const itemDate = new Date(item.checked_at || item.checked_in_at || item.created_at || new Date());
+    const startDateTime = new Date(start);
+    const endDateTime = new Date(end);
+    endDateTime.setHours(23, 59, 59, 999);
+    return itemDate >= startDateTime && itemDate <= endDateTime;
+  };
+
+  const filteredPassengers = passengers.filter(p => filterByDate(p, startDate, endDate));
+  const filteredBaggages = baggages.filter(b => filterByDate(b, startDate, endDate));
+
+  // Vérifier qu'il y a des données après filtrage
+  if (filteredPassengers.length === 0 && filteredBaggages.length === 0) {
+    throw new Error('Aucune donnée à exporter pour cette période');
   }
 
   // Créer le workbook
@@ -48,12 +61,12 @@ export const exportToExcel = async (
   const { birsItems = [] } = data;
   
   const stats = {
-    totalPassengers: passengers.length,
-    totalBaggages: baggages.length,
-    boardedPassengers: passengers.filter((p: any) => p.boarding_status?.[0]?.boarded).length,
-    notBoardedPassengers: passengers.filter((p: any) => !p.boarding_status?.[0]?.boarded).length,
-    arrivedBaggages: baggages.filter((b: any) => b.status === 'arrived').length,
-    inTransitBaggages: baggages.filter((b: any) => b.status === 'checked').length,
+    totalPassengers: filteredPassengers.length,
+    totalBaggages: filteredBaggages.length,
+    boardedPassengers: filteredPassengers.filter((p: any) => p.boarding_status?.[0]?.boarded).length,
+    notBoardedPassengers: filteredPassengers.filter((p: any) => !p.boarding_status?.[0]?.boarded).length,
+    arrivedBaggages: filteredBaggages.filter((b: any) => b.status === 'arrived').length,
+    inTransitBaggages: filteredBaggages.filter((b: any) => b.status === 'checked').length,
     // Statistiques BIRS
     totalBirsItems: birsItems.length,
     arrivedBirsItems: birsItems.filter((item: any) => item.reconciled_at).length,
@@ -152,7 +165,7 @@ export const exportToExcel = async (
   infoSheet.getColumn('B').width = 30;
 
   // ===== FEUILLE 2: PASSAGERS =====
-  if (passengers.length > 0) {
+  if (filteredPassengers.length > 0) {
     const passSheet = workbook.addWorksheet('Passagers', {
       properties: { tabColor: { argb: 'FF22C55E' } }
     });
@@ -164,7 +177,6 @@ export const exportToExcel = async (
       'Départ',
       'Arrivée',
       'Siège',
-      'Enregistrement',
       'Statut',
       'Bagages'
     ];
@@ -180,7 +192,7 @@ export const exportToExcel = async (
     passHeaderRow.height = 25;
     passHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    passengers.forEach((p: any) => {
+    filteredPassengers.forEach((p: any) => {
       const boarded = p.boarding_status?.[0]?.boarded || false;
       passSheet.addRow([
         p.pnr,
@@ -189,7 +201,6 @@ export const exportToExcel = async (
         p.departure,
         p.arrival,
         p.seat_number || '-',
-        new Date(p.checked_in_at).toLocaleString('fr-FR'),
         boarded ? 'Embarqué' : 'Non embarqué',
         p.baggage_count || 0
       ]);
@@ -202,9 +213,8 @@ export const exportToExcel = async (
     passSheet.getColumn(4).width = 10;  // Départ
     passSheet.getColumn(5).width = 10;  // Arrivée
     passSheet.getColumn(6).width = 8;   // Siège
-    passSheet.getColumn(7).width = 20;  // Enregistrement
-    passSheet.getColumn(8).width = 15;  // Statut
-    passSheet.getColumn(9).width = 10;  // Bagages
+    passSheet.getColumn(7).width = 15;  // Statut
+    passSheet.getColumn(8).width = 10;  // Bagages
 
     // Bordures et alignement
     passSheet.eachRow((row, rowNumber) => {
@@ -223,18 +233,17 @@ export const exportToExcel = async (
   }
 
   // ===== FEUILLE 3: BAGAGES =====
-  if (baggages.length > 0) {
+  if (filteredBaggages.length > 0) {
     const bagSheet = workbook.addWorksheet('Bagages', {
       properties: { tabColor: { argb: 'FFF59E0B' } }
     });
 
     const bagHeaders = [
       'Tag',
-      'Passager ID',
+      'Nom Complet',
       'Vol',
       'Poids (kg)',
       'Statut',
-      'Enregistré le',
       'Arrivé le',
       'Localisation'
     ];
@@ -250,18 +259,35 @@ export const exportToExcel = async (
     bagHeaderRow.height = 25;
     bagHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    baggages.forEach((b: any) => {
+    filteredBaggages.forEach((b: any) => {
       const statusLabel = b.status === 'arrived' ? 'Arrivé'
         : b.status === 'rush' ? 'RUSH'
-          : 'En transit';
+        : b.status === 'loaded' ? 'Loaded'
+        : b.passenger_id ? 'Loaded'  // Si bagage lié au passager → Loaded
+          : 'Enregistré';
+
+      // Chercher le passager correspondant - essayer plusieurs approches
+      let passengerName = '-';
+      
+      // Si le bagage a un champ passenger_name directement, l'utiliser
+      if (b.passenger_name && b.passenger_name !== b.passenger_id) {
+        passengerName = b.passenger_name;
+      } else if (b.passenger_id) {
+        // Sinon chercher dans les passagers
+        const passenger = filteredPassengers.find((p: any) => 
+          p.pnr === b.passenger_id || 
+          p.id === b.passenger_id ||
+          p.full_name?.toLowerCase() === (b.passenger_id || '').toLowerCase()
+        );
+        passengerName = passenger?.full_name || b.passenger_id || '-';
+      }
 
       bagSheet.addRow([
         b.tag_number,
-        b.passenger_id,
+        passengerName,
         b.flight_number,
         b.weight,
         statusLabel,
-        new Date(b.checked_at).toLocaleString('fr-FR'),
         b.arrived_at ? new Date(b.arrived_at).toLocaleString('fr-FR') : '-',
         b.current_location || '-'
       ]);
@@ -269,13 +295,12 @@ export const exportToExcel = async (
 
     // Largeurs de colonnes
     bagSheet.getColumn(1).width = 15;  // Tag
-    bagSheet.getColumn(2).width = 15;  // Passager ID
+    bagSheet.getColumn(2).width = 25;  // Nom Complet
     bagSheet.getColumn(3).width = 12;  // Vol
     bagSheet.getColumn(4).width = 10;  // Poids
     bagSheet.getColumn(5).width = 12;  // Statut
-    bagSheet.getColumn(6).width = 20;  // Enregistré le
-    bagSheet.getColumn(7).width = 20;  // Arrivé le
-    bagSheet.getColumn(8).width = 15;  // Localisation
+    bagSheet.getColumn(6).width = 20;  // Arrivé le
+    bagSheet.getColumn(7).width = 15;  // Localisation
 
     // Bordures et alignement
     bagSheet.eachRow((row, rowNumber) => {
@@ -293,75 +318,11 @@ export const exportToExcel = async (
     });
   }
 
-  // ===== FEUILLE 4: EMBARQUEMENTS =====
-  if (passengers.length > 0) {
-    const boardSheet = workbook.addWorksheet('Embarquements', {
-      properties: { tabColor: { argb: 'FF8B5CF6' } }
-    });
-
-    const boardHeaders = [
-      'PNR',
-      'Nom Complet',
-      'Vol',
-      'Départ → Arrivée',
-      'Statut',
-      'Check-in',
-      'Embarquement'
-    ];
-    boardSheet.addRow(boardHeaders);
-
-    const boardHeaderRow = boardSheet.getRow(1);
-    boardHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
-    boardHeaderRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF2563EB' }
-    };
-    boardHeaderRow.height = 25;
-    boardHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
-    passengers.forEach((p: any) => {
-      const boarded = p.boarding_status?.[0]?.boarded || false;
-      const boardedAt = p.boarding_status?.[0]?.boarded_at;
-
-      boardSheet.addRow([
-        p.pnr,
-        p.full_name,
-        p.flight_number,
-        `${p.departure} → ${p.arrival}`,
-        boarded ? 'Embarqué' : 'Non embarqué',
-        new Date(p.checked_in_at).toLocaleString('fr-FR'),
-        boardedAt ? new Date(boardedAt).toLocaleString('fr-FR') : '-'
-      ]);
-    });
-
-    // Largeurs de colonnes
-    boardSheet.getColumn(1).width = 15;  // PNR
-    boardSheet.getColumn(2).width = 25;  // Nom
-    boardSheet.getColumn(3).width = 12;  // Vol
-    boardSheet.getColumn(4).width = 20;  // Route
-    boardSheet.getColumn(5).width = 15;  // Statut
-    boardSheet.getColumn(6).width = 20;  // Check-in
-    boardSheet.getColumn(7).width = 20;  // Embarquement
-
-    // Bordures et alignement
-    boardSheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        });
-      }
-    });
-  }
+  // ===== FEUILLE 4: BRS INTERNATIONAL =====
+  // Cette section est gérée plus bas dans le code
 
   // =============================================
-  // FEUILLE 5 : BIRS INTERNATIONAL (BAGAGES ATTENDUS)
+  // FEUILLE 4 : BRS INTERNATIONAL (BAGAGES ATTENDUS)
   // =============================================
   // birsItems est déjà extrait au début de la fonction
   
