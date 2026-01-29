@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { CheckCircle, Download, FileText, Package, RefreshCw, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
@@ -122,17 +124,184 @@ export default function BRSInternational() {
 
   const exportReport = async (reportId: string, flightNumber: string) => {
     try {
-      const response = await api.get(`/api/v1/birs/reports/${reportId}/export?airport=${user?.airport_code}`, {
-        responseType: 'blob'
+      setError('');
+      const response = await api.get(`/api/v1/birs/reports/${reportId}`);
+      const data = response.data as { data: { items: ReportItem[] } };
+      const reportItems = data.data.items || [];
+
+      if (reportItems.length === 0) {
+        setError('Aucune donnée à exporter pour ce rapport');
+        return;
+      }
+
+      // Créer le workbook avec ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'BFS System - BRS International';
+      workbook.created = new Date();
+
+      // ===== FEUILLE 1: RÉSUMÉ AVEC LOGO =====
+      const infoSheet = workbook.addWorksheet('Résumé', {
+        properties: { tabColor: { argb: 'FF4472C4' } }
       });
 
-      const blob = new Blob([response.data as BlobPart], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `BRS_${flightNumber}_${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      // Charger et ajouter le logo
+      try {
+        const response = await fetch('/assets/logo-ats-csi.png');
+        if (response.ok) {
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+
+          const imageId = workbook.addImage({
+            buffer: arrayBuffer,
+            extension: 'png',
+          });
+
+          infoSheet.addImage(imageId, {
+            tl: { col: 0, row: 0 },
+            ext: { width: 250, height: 120 }
+          });
+        }
+      } catch (err) {
+        console.error('Erreur logo:', err);
+      }
+
+      // Ajouter les informations
+      infoSheet.getCell('A8').value = 'RAPPORT BRS INTERNATIONAL - BAGAGES ATTENDUS';
+      infoSheet.getCell('A8').font = { bold: true, size: 14, color: { argb: 'FF1F2937' } };
+
+      infoSheet.getCell('A9').value = 'Baggage Found Solution - African Transport Systems';
+      infoSheet.getCell('A9').font = { italic: true, size: 10, color: { argb: 'FF6B7280' } };
+
+      infoSheet.getCell('A11').value = 'Vol';
+      infoSheet.getCell('B11').value = flightNumber;
+      infoSheet.getCell('B11').font = { bold: true };
+
+      infoSheet.getCell('A12').value = 'Aéroport';
+      infoSheet.getCell('B12').value = user?.airport_code || '';
+      infoSheet.getCell('B12').font = { bold: true };
+
+      infoSheet.getCell('A13').value = 'Date d\'export';
+      infoSheet.getCell('B13').value = new Date().toLocaleString('fr-FR');
+
+      infoSheet.getCell('A15').value = 'RÉSUMÉ DU RAPPORT';
+      infoSheet.getCell('A15').font = { bold: true, size: 12, color: { argb: 'FF2563EB' } };
+
+      const reconciled = reportItems.filter(item => item.reconciled_at).length;
+      const pending = reportItems.filter(item => !item.reconciled_at).length;
+      const rate = reportItems.length > 0 ? Math.round((reconciled / reportItems.length) * 100) : 0;
+
+      infoSheet.getCell('A16').value = 'Total Bagages';
+      infoSheet.getCell('B16').value = reportItems.length;
+      infoSheet.getCell('B16').font = { bold: true };
+
+      infoSheet.getCell('A17').value = 'Bagages Réconciliés';
+      infoSheet.getCell('B17').value = reconciled;
+      infoSheet.getCell('B17').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } };
+
+      infoSheet.getCell('A18').value = 'Bagages En Attente';
+      infoSheet.getCell('B18').value = pending;
+      infoSheet.getCell('B18').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+
+      infoSheet.getCell('A19').value = 'Taux de Réconciliation';
+      infoSheet.getCell('B19').value = `${rate}%`;
+      infoSheet.getCell('B19').font = { bold: true };
+
+      infoSheet.getColumn('A').width = 30;
+      infoSheet.getColumn('B').width = 25;
+
+      // ===== FEUILLE 2: DÉTAILS DES BAGAGES =====
+      const detailsSheet = workbook.addWorksheet('Détails', {
+        properties: { tabColor: { argb: 'FF22C55E' } }
+      });
+
+      const headers = [
+        'Tag Bagage',
+        'Passager',
+        'PNR',
+        'Siège',
+        'Poids (kg)',
+        'Route',
+        'Statut',
+        'Date Réconciliation'
+      ];
+
+      detailsSheet.addRow(headers);
+
+      const headerRow = detailsSheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0066CC' }
+      };
+      headerRow.height = 25;
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Ajouter les données
+      reportItems.forEach((item: ReportItem) => {
+        const row = detailsSheet.addRow([
+          item.bag_id,
+          item.passenger_name,
+          item.pnr,
+          item.seat_number || '-',
+          item.weight || 0,
+          item.route || '-',
+          item.reconciled_at ? 'Réconcilié' : 'En Attente',
+          item.reconciled_at ? new Date(item.reconciled_at).toLocaleString('fr-FR') : '-'
+        ]);
+
+        // Colorer la ligne selon le statut
+        const statusCell = row.getCell(7);
+        if (item.reconciled_at) {
+          statusCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF90EE90' }
+          };
+        } else {
+          statusCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFCCCC' }
+          };
+        }
+      });
+
+      // Bordures et largeurs
+      detailsSheet.getColumn(1).width = 15;
+      detailsSheet.getColumn(2).width = 25;
+      detailsSheet.getColumn(3).width = 12;
+      detailsSheet.getColumn(4).width = 8;
+      detailsSheet.getColumn(5).width = 12;
+      detailsSheet.getColumn(6).width = 15;
+      detailsSheet.getColumn(7).width = 14;
+      detailsSheet.getColumn(8).width = 20;
+
+      detailsSheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          });
+        }
+      });
+
+      // Générer et sauvegarder
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const fileName = `BRS_International_${flightNumber}_${dateStr}.xlsx`;
+      saveAs(blob, fileName);
+
+      setSuccess(`Rapport ${flightNumber} exporté avec succès`);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       setError(error.response?.data?.error || 'Erreur export');
