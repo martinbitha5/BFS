@@ -25,8 +25,10 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
       console.warn('[AUTO-SYNC] Erreur:', err)
     );
 
-    // Récupérer tous les passagers
-    let passQuery = supabase.from('passengers').select('*');
+    // Récupérer les passagers D'AUJOURD'HUI SEULEMENT
+    let passQuery = supabase.from('passengers').select('*')
+      .gte('checked_in_at', `${today}T00:00:00`)
+      .lt('checked_in_at', `${today}T23:59:59`);
     if (!filterAirport) {
       passQuery = passQuery.eq('airport_code', airport.toUpperCase());
     }
@@ -34,8 +36,10 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
 
     if (passError) throw passError;
 
-    // Récupérer tous les bagages
-    let bagQuery = supabase.from('baggages').select('*');
+    // Récupérer les bagages D'AUJOURD'HUI SEULEMENT
+    let bagQuery = supabase.from('baggages').select('*')
+      .gte('created_at', `${today}T00:00:00`)
+      .lt('created_at', `${today}T23:59:59`);
     if (!filterAirport) {
       bagQuery = bagQuery.eq('airport_code', airport.toUpperCase());
     }
@@ -43,8 +47,10 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
 
     if (bagError) throw bagError;
 
-    // Récupérer les statuts d'embarquement (via jointure avec passengers)
-    let boardQuery = supabase.from('boarding_status').select('*, passengers!inner(airport_code)');
+    // Récupérer les statuts d'embarquement D'AUJOURD'HUI (via jointure avec passengers)
+    let boardQuery = supabase.from('boarding_status').select('*, passengers!inner(airport_code, checked_in_at)')
+      .gte('passengers.checked_in_at', `${today}T00:00:00`)
+      .lt('passengers.checked_in_at', `${today}T23:59:59`);
     if (!filterAirport) {
       boardQuery = boardQuery.eq('passengers.airport_code', airport.toUpperCase());
     }
@@ -65,13 +71,14 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     
     const { data: scheduledFlights } = await scheduledFlightsQuery;
     
-    // Calculer les statistiques
+    // Calculer les statistiques (déjà filtrées par aujourd'hui)
     const totalPassengers = passengers?.length || 0;
     const totalBaggages = baggages?.length || 0;
     const boardedPassengers = boardingStatuses?.filter(bs => bs.boarded).length || 0;
     const arrivedBaggages = baggages?.filter(b => b.status === 'arrived').length || 0;
-    const todayPassengers = passengers?.filter(p => p.checked_in_at?.startsWith(today)).length || 0;
-    const todayBaggages = baggages?.filter(b => b.created_at?.startsWith(today)).length || 0;
+    // todayPassengers et todayBaggages sont maintenant égaux aux totaux car on filtre déjà par aujourd'hui
+    const todayPassengers = totalPassengers;
+    const todayBaggages = totalBaggages;
     
     // Combiner les vols des passagers ET les vols programmés
     const flightsFromPassengers = passengers?.map(p => p.flight_number) || [];
