@@ -93,7 +93,9 @@ export default function BoardingScreen({ navigation }: Props) {
         setProcessing(false);
         setScanned(false);
         
-        setToastMessage('❌ Erreur de scan: Impossible d\'extraire le numéro de vol du boarding pass. Veuillez réessayer.');
+        // Afficher les données brutes pour debug en production
+        const rawPreview = data.substring(0, 80).replace(/[^\x20-\x7E]/g, '?');
+        setToastMessage(`❌ Erreur de scan: Vol non extrait. Debug: Len=${data.length}, Format=${parsedData?.format || 'N/A'}, Data=${rawPreview}`);
         setToastType('error');
         setShowToast(true);
         resetScanner();

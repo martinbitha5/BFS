@@ -128,9 +128,13 @@ export default function CheckinScreen({ navigation }: Props) {
         setProcessing(false);
         setScanned(false);
         
+        // Afficher les données brutes pour debug en production
+        const rawPreview = data.substring(0, 100).replace(/[^\x20-\x7E]/g, '?');
+        const dataInfo = `Longueur: ${data.length}, Format détecté: ${parsedData?.format || 'N/A'}, Début: ${rawPreview}`;
+        
         Alert.alert(
           'ERREUR DE SCAN',
-          'Impossible d\'extraire le numéro de vol du boarding pass. Veuillez réessayer ou contacter le support.',
+          `Impossible d'extraire le numéro de vol du boarding pass.\n\nDébug: ${dataInfo}`,
           [
             {
               text: 'Nouveau scan',
