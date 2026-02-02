@@ -246,6 +246,10 @@ export default function CheckinScreen({ navigation }: Props) {
             const apiKey = await AsyncStorage.getItem('@bfs:api_key');
             const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
             
+            // Timeout 10s pour éviter les blocages en production
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const syncResponse = await fetch(`${apiUrl}/api/v1/passengers/sync`, {
               method: 'POST',
               headers: {
@@ -268,8 +272,10 @@ export default function CheckinScreen({ navigation }: Props) {
                   checked_in: true,
                   checked_in_at: new Date().toISOString(),
                 }]
-              })
+              }),
+              signal: controller.signal,
             });
+            clearTimeout(timeoutId);
             
             if (syncResponse.ok) {
               console.log('[CHECKIN] ✅ Passager synchronisé au serveur:', parsedData.pnr);

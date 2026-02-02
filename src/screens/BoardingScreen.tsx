@@ -264,6 +264,10 @@ export default function BoardingScreen({ navigation }: Props) {
           const apiKey = await AsyncStorage.getItem('@bfs:api_key');
           const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
 
+          // Créer un AbortController pour le timeout (10s)
+          const controller1 = new AbortController();
+          const timeout1 = setTimeout(() => controller1.abort(), 10000);
+
           // ÉTAPE 1: Chercher le passager par PNR (doit déjà exister du check-in)
           console.log('[Boarding] 1️⃣  Looking for passenger by PNR:', passengerData.pnr);
           const checkResponse = await fetch(
@@ -273,9 +277,11 @@ export default function BoardingScreen({ navigation }: Props) {
               headers: {
                 'x-api-key': apiKey || '',
                 'x-airport-code': user.airportCode || '',
-              }
+              },
+              signal: controller1.signal,
             }
           );
+          clearTimeout(timeout1);
 
           if (!checkResponse.ok) {
             const errorText = await checkResponse.text();
@@ -302,6 +308,10 @@ export default function BoardingScreen({ navigation }: Props) {
             boarded_by: user.id,
           };
 
+          // Timeout 10s pour le sync
+          const controller2 = new AbortController();
+          const timeout2 = setTimeout(() => controller2.abort(), 10000);
+
           const response = await fetch(`${apiUrl}/api/v1/boarding/sync-hash`, {
             method: 'POST',
             headers: {
@@ -309,7 +319,9 @@ export default function BoardingScreen({ navigation }: Props) {
               'x-api-key': apiKey || '',
             },
             body: JSON.stringify(boardingUpdate),
+            signal: controller2.signal,
           });
+          clearTimeout(timeout2);
 
           if (response.ok) {
             console.log('✅ Embarquement synchronisé au serveur');

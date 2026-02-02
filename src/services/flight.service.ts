@@ -377,6 +377,10 @@ class FlightService {
           const url = `${apiUrl}/api/v1/flights/validate-boarding`;
           console.log('[FlightService] 📡 Appel API:', url);
 
+          // Créer un AbortController pour le timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+
           const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -389,8 +393,10 @@ class FlightService {
               departure,
               arrival,
             }),
-            timeout: 5000, // Timeout 5s
+            signal: controller.signal,
           });
+
+          clearTimeout(timeoutId);
 
           console.log('[FlightService] 📥 Réponse API:', response.status, response.statusText);
 

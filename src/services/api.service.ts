@@ -13,8 +13,10 @@ class ApiService {
   constructor() {
     // ⚠️ NOTE: L'URL est déterminée au startup de App.tsx
     // et sauvegardée dans AsyncStorage
+    // En production, TOUJOURS utiliser l'URL de production comme fallback
     this.api = axios.create({
-      baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+      baseURL: process.env.EXPO_PUBLIC_API_URL || 'https://api.brsats.com',
+      timeout: 15000, // Timeout 15s pour éviter les blocages
     });
 
     // Intercepteur pour ajouter l'API key et le token

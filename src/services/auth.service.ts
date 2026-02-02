@@ -92,13 +92,21 @@ class AuthService {
 
   async login(email: string, password: string): Promise<UserSession> {
     if (!this.supabase) {
-      throw new Error('Supabase not configured');
+      throw new Error('Service d\'authentification non configuré. Vérifiez votre connexion internet et réessayez.');
     }
 
-    const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    let authData, authError;
+    try {
+      const result = await this.supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      authData = result.data;
+      authError = result.error;
+    } catch (networkError: any) {
+      console.error('[Auth] Erreur réseau lors de la connexion:', networkError);
+      throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+    }
 
     if (authError) {
       throw new Error(normalizeAuthError(authError.message, 'login'));
@@ -109,14 +117,22 @@ class AuthService {
     }
 
     // Récupérer le profil utilisateur
-    const { data: userData, error: userError } = await this.supabase
-      .from('users')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
+    let userData, userError;
+    try {
+      const result = await this.supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+      userData = result.data;
+      userError = result.error;
+    } catch (networkError: any) {
+      console.error('[Auth] Erreur réseau lors de la récupération du profil:', networkError);
+      throw new Error('Impossible de récupérer votre profil. Vérifiez votre connexion internet.');
+    }
 
     if (userError || !userData) {
-      throw new Error(`Erreur de récupération du profil: ${userError?.message}`);
+      throw new Error(`Erreur de récupération du profil: ${userError?.message || 'Profil non trouvé'}`);
     }
 
     const user: User = {

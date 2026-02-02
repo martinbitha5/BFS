@@ -42,10 +42,11 @@ const router = (0, express_1.Router)();
  * GET /api/v1/passengers
  * Récupérer tous les passagers avec filtres optionnels
  * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+ * Paramètres: flight, pnr, date (format YYYY-MM-DD)
  */
 router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const { flight, pnr } = req.query;
+        const { flight, pnr, date } = req.query;
         const airportCode = req.userAirportCode; // Peut être undefined si accès total
         // Auto-sync si la table est vide mais que des raw_scans existent
         if (airportCode) {
@@ -64,6 +65,11 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
         if (pnr) {
             query = query.eq('pnr', pnr.toString().toUpperCase());
         }
+        // ✅ Filtrer par date si fournie
+        if (date) {
+            query = query.gte('checked_in_at', `${date}T00:00:00`)
+                .lt('checked_in_at', `${date}T23:59:59`);
+        }
         const { data, error } = await query;
         if (error)
             throw error;
@@ -73,6 +79,8 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
             fullName: passenger.full_name,
             pnr: passenger.pnr,
             flightNumber: passenger.flight_number,
+            airline: passenger.airline || '',
+            airline_code: passenger.airline_code || '',
             departure: passenger.departure,
             arrival: passenger.arrival,
             seatNumber: passenger.seat_number,
@@ -122,6 +130,8 @@ router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (r
             fullName: passenger.full_name,
             pnr: passenger.pnr,
             flightNumber: passenger.flight_number,
+            airline: passenger.airline || '',
+            airline_code: passenger.airline_code || '',
             departure: passenger.departure,
             arrival: passenger.arrival,
             seatNumber: passenger.seat_number,

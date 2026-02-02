@@ -270,11 +270,13 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         // Pattern pour matcher avec ou sans zéros: ET64, ET064, ET0064
         const flightPattern = `${companyCode}%${numericPart}`;
 
-        // Compter les passagers de ce vol (avec pattern flexible)
+        // Compter les passagers de ce vol POUR AUJOURD'HUI UNIQUEMENT
         let passCountQuery = supabase
           .from('passengers')
           .select('*', { count: 'exact', head: true })
-          .ilike('flight_number', flightPattern);
+          .ilike('flight_number', flightPattern)
+          .gte('checked_in_at', `${today}T00:00:00`)
+          .lt('checked_in_at', `${today}T23:59:59`);
         
         if (filterByAirport) {
           passCountQuery = passCountQuery.eq('airport_code', airport.toUpperCase());
@@ -282,12 +284,14 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         
         const { count: passengerCount } = await passCountQuery;
 
-        // Compter les passagers embarqués
-        // D'abord récupérer les IDs des passagers de ce vol
+        // Compter les passagers embarqués POUR AUJOURD'HUI
+        // D'abord récupérer les IDs des passagers de ce vol enregistrés aujourd'hui
         let passengersQuery = supabase
           .from('passengers')
           .select('id')
-          .ilike('flight_number', flightPattern);
+          .ilike('flight_number', flightPattern)
+          .gte('checked_in_at', `${today}T00:00:00`)
+          .lt('checked_in_at', `${today}T23:59:59`);
         
         if (filterByAirport) {
           passengersQuery = passengersQuery.eq('airport_code', airport.toUpperCase());
@@ -306,11 +310,13 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
           boardedCount = count || 0;
         }
 
-        // Compter les bagages de ce vol (avec pattern flexible)
+        // Compter les bagages de ce vol POUR AUJOURD'HUI UNIQUEMENT
         let bagCountQuery = supabase
           .from('baggages')
           .select('*', { count: 'exact', head: true })
-          .ilike('flight_number', flightPattern);
+          .ilike('flight_number', flightPattern)
+          .gte('created_at', `${today}T00:00:00`)
+          .lt('created_at', `${today}T23:59:59`);
         
         if (filterByAirport) {
           bagCountQuery = bagCountQuery.eq('airport_code', airport.toUpperCase());

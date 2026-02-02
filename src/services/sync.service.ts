@@ -200,9 +200,6 @@ class SyncService {
                 throw new Error(`Table non supportée: ${item.tableName}`);
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sync.service.ts:afterSwitch',message:'HTTP method determined',data:{tableName:item.tableName,operation:item.operation,httpMethod:method,endpoint:endpoint},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
 
         console.log(`[Sync] 📡 Requête: ${method} ${endpoint}`);
         console.log(`[Sync] 📦 Données:`, JSON.stringify(data, null, 2));
@@ -218,11 +215,17 @@ class SyncService {
                 headers['x-api-key'] = apiKey;
             }
             
+            // Timeout 15s pour éviter les blocages en production
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            
             const response = await fetch(endpoint, {
                 method,
                 headers,
                 body: JSON.stringify(data),
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
 
             console.log(`[Sync] 📨 Réponse HTTP: ${response.status} ${response.statusText}`);
 
