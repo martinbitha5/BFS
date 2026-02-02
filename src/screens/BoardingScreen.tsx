@@ -935,17 +935,17 @@ export default function BoardingScreen({ navigation }: Props) {
           enableTorch={torchEnabled}
 
           onBarcodeScanned={(event) => {
-
             if (scanned || processing || !showScanner || lastPassenger) return;
-
+            // IMPORTANT: Ignorer les scans trop courts (< 40 chars)
+            if (event.data.length < 40) {
+              console.log('[BoardingScreen] Scan ignoré - données trop courtes:', event.data.length);
+              return;
+            }
             handleBarCodeScanned({ data: event.data });
-
           }}
-
           barcodeScannerSettings={{
-            // IMPORTANT: Lire UNIQUEMENT le PDF417 qui contient les données complètes du boarding pass
-            // Les autres codes-barres (Code39, Code128) sur le boarding pass ne contiennent que le nom
-            barcodeTypes: ['pdf417'],
+            // Accepter tous les formats pour trouver le bon code-barres
+            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
           }}
 
           onCameraReady={() => {}}
