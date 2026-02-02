@@ -490,9 +490,9 @@ export default function CheckinScreen({ navigation }: Props) {
             handleBarCodeScanned({ data: event.data });
           }}
           barcodeScannerSettings={{
-            // Support MAXIMAL de TOUS les formats pour accepter n'importe quel boarding pass
-            // Production: accepte tous les formats possibles (PDF417, QR, Aztec, DataMatrix, Code128, Code39, etc.)
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39', 'code93', 'ean13', 'ean8', 'codabar', 'itf14', 'upc_a', 'upc_e'],
+            // IMPORTANT: Lire UNIQUEMENT le PDF417 qui contient les données complètes du boarding pass
+            // Les autres codes-barres (Code39, Code128) sur le boarding pass ne contiennent que le nom
+            barcodeTypes: ['pdf417'],
           }}
           onCameraReady={() => {}}
           onMountError={(error) => {
