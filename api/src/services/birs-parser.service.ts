@@ -257,37 +257,77 @@ class BirsParserService {
       // Ex: "0DT356221 Econ CPT* FIH BOKOSO XHYWKW CAR0044DT 1 Loaded	Y"
       // Format: TAG CLASS ORIGIN DEST SURNAME PNR LOCATION SEQ STATUS OK
       // =====================================================
-      const sitaMatch = line.match(/^(0[A-Z]{2}\d{6})\s+(Prio|Econ|First|Business)\s+([A-Z]{3}\*?)\s+([A-Z]{3})\s+([A-Z]+)\s+/i);
       
-      if (sitaMatch) {
-        const bagId = sitaMatch[1];
-        const flightClass = sitaMatch[2];
-        const origin = sitaMatch[3].replace('*', '');
-        const destination = sitaMatch[4];
-        const passengerName = sitaMatch[5];
+      // Pattern plus flexible: Tag commence par 0 + 2 lettres + 5-7 chiffres
+      const sitaTagMatch = line.match(/^(0[A-Z]{2}\d{5,7})\s+/i);
+      
+      if (sitaTagMatch) {
+        const bagId = sitaTagMatch[1];
+        const restOfLine = line.substring(sitaTagMatch[0].length);
         
-        // Extraire le statut
-        const loaded = line.toUpperCase().includes('LOADED');
-        const notLoaded = line.toUpperCase().includes('NOT-LOADED') || line.toUpperCase().includes('NOT LOADED');
-        const expected = line.toUpperCase().includes('EXPECTED');
+        // Extraire les parties: Class Route Surname...
+        const parts = restOfLine.split(/\s+/);
         
-        // Extraire le PNR (6 caractères alphanumériques après le nom)
-        const pnrMatch = line.match(/[A-Z]+\s+([A-Z0-9]{5,7})\s+/i);
-        const pnr = pnrMatch ? pnrMatch[1] : undefined;
+        // Chercher la classe (Prio, Econ, First, Business)
+        let flightClass = '';
+        let passengerName = '';
+        let origin = '';
+        let destination = '';
+        let pnr = '';
         
-        items.push({
-          bagId: bagId,
-          passengerName: passengerName,
-          class: flightClass,
-          route: `${origin}-${destination}`,
-          pnr: pnr,
-          loaded: loaded && !notLoaded,
-          received: loaded && !notLoaded
-        });
-        parsed++;
-        processed.add(i);
-        i++;
-        continue;
+        for (let p = 0; p < parts.length; p++) {
+          const part = parts[p];
+          
+          // Classe
+          if (/^(Prio|Econ|First|Business)$/i.test(part)) {
+            flightClass = part;
+            continue;
+          }
+          
+          // Route (3 lettres, peut avoir *)
+          if (/^[A-Z]{3}\*?$/i.test(part) && !origin) {
+            origin = part.replace('*', '');
+            continue;
+          }
+          if (/^[A-Z]{3}$/i.test(part) && origin && !destination) {
+            destination = part;
+            continue;
+          }
+          
+          // Nom passager (lettres majuscules, au moins 3 caractères)
+          if (/^[A-Z]{3,}$/i.test(part) && destination && !passengerName) {
+            passengerName = part;
+            continue;
+          }
+          
+          // PNR (5-7 caractères alphanumériques)
+          if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
+            pnr = part;
+            break; // On a tout ce qu'il faut
+          }
+        }
+        
+        // Si on a au moins un tag et un nom de passager
+        if (passengerName && passengerName.length >= 2) {
+          // Extraire le statut
+          const loaded = line.toUpperCase().includes('LOADED') && !line.toUpperCase().includes('NOT-LOADED');
+          const notLoaded = line.toUpperCase().includes('NOT-LOADED') || line.toUpperCase().includes('NOT LOADED');
+          const expected = line.toUpperCase().includes('EXPECTED');
+          
+          items.push({
+            bagId: bagId,
+            passengerName: passengerName,
+            class: flightClass || undefined,
+            route: origin && destination ? `${origin}-${destination}` : undefined,
+            pnr: pnr || undefined,
+            loaded: loaded,
+            received: loaded
+          });
+          parsed++;
+          processed.add(i);
+          i++;
+          continue;
+        }
       }
 
       // =====================================================
