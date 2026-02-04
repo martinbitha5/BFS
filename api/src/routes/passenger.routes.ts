@@ -329,6 +329,7 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
     for (const passenger of passengers) {
       try {
         // Nettoyer les données du passager - ne garder que les colonnes valides
+        // Note: airline et airline_code n'existent pas dans la table passengers
         const cleanPassenger: any = {
           pnr: passenger.pnr,
           full_name: passenger.full_name,
@@ -341,16 +342,6 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
           baggage_base_number: passenger.baggage_base_number,
           checked_in_at: passenger.checked_in_at || new Date().toISOString()
         };
-        
-        // Ajouter airline_code si présent
-        if (passenger.airline_code) {
-          cleanPassenger.airline_code = passenger.airline_code;
-        }
-        
-        // Ajouter airline si présent
-        if (passenger.airline) {
-          cleanPassenger.airline = passenger.airline;
-        }
 
         // Chercher d'abord si le passager existe
         const { data: existing, error: searchError } = await supabase

@@ -172,6 +172,7 @@ class SyncService {
                 endpoint = `${apiUrl}/api/v1/passengers/sync`;
                 method = 'POST';
                 // Nettoyer et mapper les colonnes du passager pour l'API
+                // Note: airline et airline_code n'existent pas dans la table passengers
                 const cleanPassenger = {
                     pnr: data.pnr,
                     full_name: data.full_name || data.fullName,
@@ -183,8 +184,6 @@ class SyncService {
                     baggage_count: data.baggage_count ?? data.baggageCount ?? 0,
                     baggage_base_number: data.baggage_base_number || data.baggageBaseNumber || null,
                     checked_in_at: data.checked_in_at || data.checkedInAt || new Date().toISOString(),
-                    airline_code: data.airline_code || data.airlineCode || null,
-                    airline: data.airline || null,
                 };
                 // Wrapper les données dans un tableau pour /sync
                 data = { passengers: [cleanPassenger] };

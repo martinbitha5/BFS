@@ -366,8 +366,6 @@ export default function CheckinScreen({ navigation }: Props) {
                   baggage_count: parsedData.baggageInfo?.count ?? 0,
                   baggage_base_number: parsedData.baggageInfo?.baseNumber || null,
                   checked_in_at: new Date().toISOString(),
-                  airline_code: parsedData.companyCode || null,
-                  airline: parsedData.airline || null,
                 }]
               }),
               signal: controller.signal,
