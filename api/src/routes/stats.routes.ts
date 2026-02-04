@@ -368,10 +368,21 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
 /**
  * GET /api/v1/stats/global
  * Statistiques globales de tous les aéroports
- * RESTRICTION: Réservé aux superviseurs uniquement
+ * RESTRICTION: Réservé aux utilisateurs avec accès complet (support, baggage_dispute, superviseur ALL)
  */
-router.get('/global', requireAirportCode, async (req, res, next) => {
+router.get('/global', requireAirportCode, async (req: Request & { hasFullAccess?: boolean; userRole?: string }, res: Response, next: NextFunction) => {
   try {
+    const hasFullAccess = (req as any).hasFullAccess;
+    const userRole = (req as any).userRole || req.headers['x-user-role'];
+
+    // Vérifier que l'utilisateur a un accès complet
+    if (!hasFullAccess && userRole !== 'support' && userRole !== 'baggage_dispute') {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès refusé. Cette route nécessite un accès global.'
+      });
+    }
+
     const today = new Date().toISOString().split('T')[0];
 
     const { data: passengers, error: passError } = await supabase
@@ -395,21 +406,41 @@ router.get('/global', requireAirportCode, async (req, res, next) => {
     const totalPassengers = passengers?.length || 0;
     const totalBaggages = baggages?.length || 0;
     const boardedPassengers = boardingStatuses?.filter(bs => bs.boarded).length || 0;
-    const arrivedBaggages = baggages?.filter(b => b.status === 'arrived').length || 0;
+    
+    // Compter les bagages arrivés/livrés
+    const arrivedBaggages = baggages?.filter(b => 
+      b.status === 'arrived' || b.status === 'delivered' || b.status === 'reconciled'
+    ).length || 0;
+    
+    // Compter les bagages en transit
+    const inTransitBaggages = baggages?.filter(b => 
+      b.status === 'in_transit' || b.status === 'loaded'
+    ).length || 0;
+    
     const todayPassengers = passengers?.filter(p => p.checked_in_at?.startsWith(today)).length || 0;
     const todayBaggages = baggages?.filter(b => b.created_at?.startsWith(today)).length || 0;
 
-    // Grouper par aéroport
+    // Grouper par aéroport (utiliser airport_code, pas airportCode)
     const airportStats = passengers?.reduce((acc: any, p) => {
-      if (!acc[p.airportCode]) {
-        acc[p.airportCode] = {
+      const code = p.airport_code || 'UNKNOWN';
+      if (!acc[code]) {
+        acc[code] = {
           passengers: 0,
           baggages: 0
         };
       }
-      acc[p.airportCode].passengers++;
+      acc[code].passengers++;
       return acc;
     }, {});
+
+    // Ajouter les bagages par aéroport
+    baggages?.forEach(b => {
+      const code = b.airport_code || 'UNKNOWN';
+      if (!airportStats[code]) {
+        airportStats[code] = { passengers: 0, baggages: 0 };
+      }
+      airportStats[code].baggages++;
+    });
 
     res.json({
       success: true,
@@ -419,7 +450,7 @@ router.get('/global', requireAirportCode, async (req, res, next) => {
         boardedPassengers,
         notBoardedPassengers: totalPassengers - boardedPassengers,
         arrivedBaggages,
-        inTransitBaggages: totalBaggages - arrivedBaggages,
+        inTransitBaggages,
         todayPassengers,
         todayBaggages,
         airportStats,

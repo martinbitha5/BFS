@@ -58,20 +58,38 @@ export default function Dashboard() {
       setError(null);
 
       const token = localStorage.getItem('bfs_support_token');
+      if (!token) {
+        setError('Session expirée. Veuillez vous reconnecter.');
+        setLoading(false);
+        return;
+      }
+
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      // Fetch stats
+      // Fetch stats - utiliser les routes appropriées
       const [passengersRes, usersRes, airlinesRes, pendingRes] = await Promise.all([
-        api.get('/api/v1/passengers/all', { headers }).catch(() => ({ data: { data: [] } })),
-        api.get('/api/v1/support/users/all', { headers }).catch(() => ({ data: { data: [] } })),
-        api.get('/api/v1/airlines', { headers }).catch(() => ({ data: { data: [] } })),
-        api.get('/api/v1/airline-approval/requests?status=pending', { headers }).catch(() => ({ data: { data: [] } }))
+        api.get('/api/v1/passengers/all', { headers }).catch((err) => {
+          console.warn('Erreur passagers:', err?.response?.data?.error || err.message);
+          return { data: { data: [] } };
+        }),
+        api.get('/api/v1/support/users/all', { headers }).catch((err) => {
+          console.warn('Erreur utilisateurs:', err?.response?.data?.error || err.message);
+          return { data: { data: [] } };
+        }),
+        api.get('/api/v1/airlines', { headers }).catch((err) => {
+          console.warn('Erreur airlines:', err?.response?.data?.error || err.message);
+          return { data: { data: [] } };
+        }),
+        api.get('/api/v1/airline-approval/requests?status=pending', { headers }).catch((err) => {
+          console.warn('Erreur demandes:', err?.response?.data?.error || err.message);
+          return { data: { data: [] } };
+        })
       ]);
 
-      const passengers = (passengersRes.data as ApiResponse<any[]>).data || [];
-      const users = (usersRes.data as ApiResponse<any[]>).data || [];
-      const airlines = (airlinesRes.data as ApiResponse<any[]>).data || [];
-      const pending = (pendingRes.data as ApiResponse<AirlineRequest[]>).data || [];
+      const passengers = (passengersRes.data as unknown as ApiResponse<any[]>)?.data || [];
+      const users = (usersRes.data as unknown as ApiResponse<any[]>)?.data || [];
+      const airlines = (airlinesRes.data as unknown as ApiResponse<any[]>)?.data || [];
+      const pending = (pendingRes.data as unknown as ApiResponse<AirlineRequest[]>)?.data || [];
 
       // Calculate total baggages
       const totalBaggages = passengers.reduce((sum: number, p: any) => sum + (p.baggages?.length || 0), 0);
@@ -88,7 +106,7 @@ export default function Dashboard() {
       setLastUpdate(new Date());
     } catch (err: any) {
       console.error('Error fetching data:', err);
-      setError(err.message || 'Erreur lors du chargement');
+      setError(err.response?.data?.error || err.message || 'Erreur lors du chargement');
     } finally {
       setLoading(false);
     }

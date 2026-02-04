@@ -1,14 +1,20 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 
 const router = Router();
 
 // GET /api/v1/rush/baggages - Liste des bagages RUSH
 // GET /api/v1/rush/recent - Obtenir les derniers bagages RUSH
-router.get('/recent', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/recent', requireAirportCode, async (req: Request & { hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.query;
-    const limit = 10; // Limiter aux 10 derniers bagages
+    const hasFullAccess = (req as any).hasFullAccess;
+    const limit = 20; // Limiter aux 20 derniers bagages
+
+    // Si l'utilisateur a un accès complet et demande ALL, ne pas filtrer par aéroport
+    const filterByAirport = !(hasFullAccess && String(airport).toUpperCase() === 'ALL');
+    const airportCode = filterByAirport ? airport : undefined;
 
     const rushBaggages: any[] = [];
 
@@ -17,7 +23,7 @@ router.get('/recent', async (req: Request, res: Response, next: NextFunction) =>
       .from('baggages')
       .select(`
         *,
-        passengers (full_name, pnr, flight_number)
+        passengers (full_name, pnr, flight_number, departure, arrival)
       `)
       .eq('status', 'rush')
       .order('last_scanned_at', { ascending: false })
@@ -26,16 +32,35 @@ router.get('/recent', async (req: Request, res: Response, next: NextFunction) =>
     if (nationalError) throw nationalError;
 
     if (nationalBags) {
-      const filtered = airport
-        ? nationalBags.filter((b: any) =>
-            b.current_location === airport
-          )
+      // Filtrer par aéroport seulement si nécessaire
+      const filtered = filterByAirport && airportCode
+        ? nationalBags.filter((b: any) => {
+            const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+            return b.current_location === airportCode || 
+                   b.airport_code === airportCode ||
+                   pax?.departure === airportCode || 
+                   pax?.arrival === airportCode;
+          })
         : nationalBags;
 
-      rushBaggages.push(...filtered.map((b: any) => ({
-        ...b,
-        baggageType: 'national'
-      })));
+      rushBaggages.push(...filtered.map((b: any) => {
+        const pax = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+        return {
+          id: b.id,
+          tag_number: b.tag_number,
+          flight_number: b.flight_number || pax?.flight_number,
+          status: b.status,
+          origin_airport: pax?.departure || b.airport_code,
+          destination_airport: pax?.arrival || b.current_location,
+          created_at: b.created_at,
+          last_scanned_at: b.last_scanned_at,
+          passengers: pax ? {
+            full_name: pax.full_name,
+            pnr: pax.pnr
+          } : null,
+          baggageType: 'national'
+        };
+      }));
     }
 
     // Récupérer les bagages internationaux en RUSH
@@ -46,8 +71,9 @@ router.get('/recent', async (req: Request, res: Response, next: NextFunction) =>
       .order('last_scanned_at', { ascending: false })
       .limit(limit);
 
-    if (airport) {
-      query = query.eq('current_location', airport);
+    // Filtrer par aéroport seulement si nécessaire
+    if (filterByAirport && airportCode) {
+      query = query.or(`current_location.eq.${airportCode},airport_code.eq.${airportCode}`);
     }
 
     const { data: internationalBags, error: internationalError } = await query;
@@ -56,14 +82,25 @@ router.get('/recent', async (req: Request, res: Response, next: NextFunction) =>
 
     if (internationalBags) {
       rushBaggages.push(...internationalBags.map(b => ({
-        ...b,
+        id: b.id,
+        tag_number: b.tag_number,
+        flight_number: b.flight_number,
+        status: b.status,
+        origin_airport: b.origin_airport || b.airport_code,
+        destination_airport: b.destination_airport || b.current_location,
+        created_at: b.created_at,
+        last_scanned_at: b.last_scanned_at,
+        passengers: b.passenger_name ? {
+          full_name: b.passenger_name,
+          pnr: b.pnr
+        } : null,
         baggageType: 'international'
       })));
     }
 
-    // Trier par date de scan et limiter au nombre total voulu
+    // Trier par date de création et limiter au nombre total voulu
     const sortedBaggages = rushBaggages
-      .sort((a, b) => new Date(b.last_scanned_at).getTime() - new Date(a.last_scanned_at).getTime())
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
       .slice(0, limit);
 
     res.json({

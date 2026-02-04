@@ -5,16 +5,24 @@ const database_1 = require("../config/database");
 const airport_restriction_middleware_1 = require("../middleware/airport-restriction.middleware");
 const router = (0, express_1.Router)();
 /**
+ * Helper pour vérifier si l'utilisateur est support ou baggage_dispute
+ */
+const checkSupportAccess = (req) => {
+    const userRole = req.userRole || req.headers['x-user-role'];
+    const authorized = userRole === 'support' || userRole === 'baggage_dispute';
+    return { authorized, role: userRole };
+};
+/**
  * POST /api/v1/support/baggages/create
- * SUPPORT ONLY: Créer un bagage supplémentaire pour un passager
+ * SUPPORT/LITIGE: Créer un bagage supplémentaire pour un passager
  */
 router.post('/baggages/create', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { authorized } = checkSupportAccess(req);
+        if (!authorized) {
             return res.status(403).json({
                 success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
+                error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
             });
         }
         const { passengerId, tag_number, weight, status } = req.body;
@@ -43,7 +51,7 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
             passenger_id: passengerId,
             tag_number: tag_number,
             weight: weight || null,
-            status: status || 'checked_in',
+            status: status || 'checked',
             checked_at: new Date().toISOString(),
             airport_code: passenger.airport_code
         })
@@ -70,15 +78,15 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
 });
 /**
  * DELETE /api/v1/support/baggages/:id
- * SUPPORT ONLY: Supprimer un bagage
+ * SUPPORT/LITIGE: Supprimer un bagage
  */
 router.delete('/baggages/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { authorized } = checkSupportAccess(req);
+        if (!authorized) {
             return res.status(403).json({
                 success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
+                error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
             });
         }
         const { id } = req.params;
@@ -114,15 +122,15 @@ router.delete('/baggages/:id', airport_restriction_middleware_1.requireAirportCo
 });
 /**
  * PUT /api/v1/support/baggages/:id
- * SUPPORT ONLY: Mettre à jour un bagage
+ * SUPPORT/LITIGE: Mettre à jour un bagage
  */
 router.put('/baggages/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { authorized } = checkSupportAccess(req);
+        if (!authorized) {
             return res.status(403).json({
                 success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
+                error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
             });
         }
         const { id } = req.params;
@@ -168,13 +176,14 @@ router.put('/baggages/:id', airport_restriction_middleware_1.requireAirportCode,
     }
 });
 /**
- * GET /api/v1/users/all
+ * GET /api/v1/support/users/all
  * SUPPORT ONLY: Récupérer TOUS les utilisateurs
  */
 router.get('/users/all', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { authorized, role } = checkSupportAccess(req);
+        // Seul le support peut voir tous les utilisateurs (pas baggage_dispute)
+        if (role !== 'support') {
             return res.status(403).json({
                 success: false,
                 error: 'Accès refusé. Cette route est réservée au support.'
@@ -202,8 +211,9 @@ router.get('/users/all', airport_restriction_middleware_1.requireAirportCode, as
  */
 router.delete('/users/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { role } = checkSupportAccess(req);
+        // Seul le support peut supprimer des utilisateurs
+        if (role !== 'support') {
             return res.status(403).json({
                 success: false,
                 error: 'Accès refusé. Cette route est réservée au support.'
@@ -250,15 +260,15 @@ router.delete('/users/:id', airport_restriction_middleware_1.requireAirportCode,
 });
 /**
  * GET /api/v1/support/stats
- * SUPPORT ONLY: Statistiques complètes du système
+ * SUPPORT/LITIGE: Statistiques complètes du système
  */
 router.get('/stats', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        const { authorized } = checkSupportAccess(req);
+        if (!authorized) {
             return res.status(403).json({
                 success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
+                error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
             });
         }
         // Compter les entités

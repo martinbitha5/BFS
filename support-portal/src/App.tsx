@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Airlines from './pages/Airlines';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Passengers from './pages/Passengers';
 import Users from './pages/Users';
 
 // Composant de protection des routes
@@ -80,6 +81,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Airlines />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Gestion Passagers */}
+          <Route
+            path="/passengers"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Passengers />
                 </Layout>
               </ProtectedRoute>
             }
