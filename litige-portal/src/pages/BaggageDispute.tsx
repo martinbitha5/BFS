@@ -91,20 +91,34 @@ export default function BaggageDispute() {
 
       // Récupérer toutes les données en parallèle (accès à tous les aéroports)
       // Note: L'intercepteur ajoute automatiquement airport=ALL pour les utilisateurs baggage_dispute
+      const errors: string[] = [];
+      
       const [statsRes, baggagesRes, rushRes] = await Promise.all([
         api.get('/api/v1/stats/global').catch((err) => {
-          console.warn('Erreur stats:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur stats:', msg);
+          errors.push(`Stats: ${msg}`);
           return { data: { data: { totalBaggages: 0, arrivedBaggages: 0, inTransitBaggages: 0, todayBaggages: 0 } } };
         }),
         api.get('/api/v1/baggage').catch((err) => {
-          console.warn('Erreur bagages:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur bagages:', msg);
+          errors.push(`Bagages: ${msg}`);
           return { data: { data: [] } };
         }),
         api.get('/api/v1/rush/recent').catch((err) => {
-          console.warn('Erreur rush:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur rush:', msg);
+          errors.push(`Rush: ${msg}`);
           return { data: { data: [] } };
         })
       ]);
+      
+      // Afficher les erreurs si présentes
+      if (errors.length > 0) {
+        console.error('Erreurs de chargement:', errors);
+        setError(`Erreurs de chargement: ${errors.join(', ')}`);
+      }
 
       const statsData = (statsRes.data as { data: GlobalStats }).data;
       const baggagesData = (baggagesRes.data as { data: Baggage[] }).data || [];

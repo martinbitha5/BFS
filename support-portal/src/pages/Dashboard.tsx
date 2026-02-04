@@ -66,24 +66,39 @@ export default function Dashboard() {
 
       // Note: L'intercepteur ajoute automatiquement le token et les headers nécessaires
       // Fetch stats - utiliser les routes appropriées
+      const errors: string[] = [];
+      
       const [passengersRes, usersRes, airlinesRes, pendingRes] = await Promise.all([
         api.get('/api/v1/passengers/all').catch((err) => {
-          console.warn('Erreur passagers:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur passagers:', msg);
+          errors.push(`Passagers: ${msg}`);
           return { data: { data: [] } };
         }),
         api.get('/api/v1/support/users/all').catch((err) => {
-          console.warn('Erreur utilisateurs:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur utilisateurs:', msg);
+          errors.push(`Utilisateurs: ${msg}`);
           return { data: { data: [] } };
         }),
         api.get('/api/v1/airlines').catch((err) => {
-          console.warn('Erreur airlines:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur airlines:', msg);
+          errors.push(`Compagnies: ${msg}`);
           return { data: { data: [] } };
         }),
         api.get('/api/v1/airline-approval/requests', { params: { status: 'pending' } }).catch((err) => {
-          console.warn('Erreur demandes:', err?.response?.data?.error || err.message);
+          const msg = err?.response?.data?.error || err.message;
+          console.warn('Erreur demandes:', msg);
+          errors.push(`Demandes: ${msg}`);
           return { data: { data: [] } };
         })
       ]);
+      
+      // Afficher les erreurs si présentes
+      if (errors.length > 0) {
+        console.error('Erreurs de chargement:', errors);
+      }
 
       const passengers = (passengersRes.data as unknown as ApiResponse<any[]>)?.data || [];
       const users = (usersRes.data as unknown as ApiResponse<any[]>)?.data || [];
