@@ -26,16 +26,16 @@ interface Baggage {
 
 interface Passenger {
   id: string;
-  full_name: string;
+  fullName: string;
   pnr: string;
-  flight_number: string;
-  seat_number?: string;
+  flightNumber: string;
+  seatNumber?: string;
   class?: string;
   departure: string;
   arrival: string;
-  airport_code: string;
-  baggage_count: number;
-  checked_in: boolean;
+  airportCode: string;
+  baggageCount: number;
+  checkedInAt?: string;
   baggages?: Baggage[];
   created_at?: string;
 }
@@ -140,7 +140,7 @@ export default function Passengers() {
       const data = response.data as ApiResponse<Baggage>;
       if (data.success) {
         const addedTag = newBaggageTag;
-        setSuccessMessage(`Bagage ${addedTag} ajouté à ${selectedPassenger.full_name}`);
+        setSuccessMessage(`Bagage ${addedTag} ajouté à ${selectedPassenger.fullName}`);
         setNewBaggageTag('');
         setNewBaggageWeight('');
         
@@ -175,10 +175,10 @@ export default function Passengers() {
 
   // Filtrer les passagers par recherche
   const filteredPassengers = passengers.filter(p =>
-    p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.pnr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.flight_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.airport_code?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.flightNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.airportCode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Trier par date de création (plus récent en premier)
@@ -271,13 +271,13 @@ export default function Passengers() {
                       <User className="w-6 h-6 text-indigo-400" />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold">{passenger.full_name}</h3>
+                      <h3 className="text-white font-semibold">{passenger.fullName}</h3>
                       <div className="flex items-center gap-3 text-white/60 text-sm">
                         <span className="flex items-center gap-1">
                           <Tag className="w-3 h-3" /> {passenger.pnr || 'N/A'}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Plane className="w-3 h-3" /> {passenger.flight_number}
+                          <Plane className="w-3 h-3" /> {passenger.flightNumber}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
@@ -285,7 +285,7 @@ export default function Passengers() {
                           {passenger.departure} → {passenger.arrival}
                         </span>
                         <span className="text-white/50 text-xs">
-                          {passenger.airport_code}
+                          {passenger.airportCode}
                         </span>
                       </div>
                     </div>
@@ -298,11 +298,11 @@ export default function Passengers() {
                           {passenger.baggages?.length || 0}
                         </span>
                         <span className="text-white/50 text-sm">
-                          / {passenger.baggage_count} déclaré(s)
+                          / {passenger.baggageCount} déclaré(s)
                         </span>
                       </div>
                       <p className="text-xs text-white/40">
-                        {passenger.checked_in ? 'Enregistré' : 'Non enregistré'}
+                        {passenger.checkedInAt ? 'Enregistré' : 'Non enregistré'}
                       </p>
                     </div>
                     <button
@@ -337,10 +337,10 @@ export default function Passengers() {
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Briefcase className="w-6 h-6 text-amber-400" />
-                  Bagages de {selectedPassenger.full_name}
+                  Bagages de {selectedPassenger.fullName}
                 </h2>
                 <p className="text-sm text-white/60">
-                  {selectedPassenger.pnr} • Vol {selectedPassenger.flight_number}
+                  {selectedPassenger.pnr} • Vol {selectedPassenger.flightNumber}
                 </p>
               </div>
               <button onClick={handleCloseBaggageModal} className="text-white/60 hover:text-white">
@@ -361,11 +361,11 @@ export default function Passengers() {
                   </div>
                   <div>
                     <span className="text-white/50">Aéroport</span>
-                    <p className="text-white font-medium">{selectedPassenger.airport_code}</p>
+                    <p className="text-white font-medium">{selectedPassenger.airportCode}</p>
                   </div>
                   <div>
                     <span className="text-white/50">Siège</span>
-                    <p className="text-white font-medium">{selectedPassenger.seat_number || 'N/A'}</p>
+                    <p className="text-white font-medium">{selectedPassenger.seatNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <span className="text-white/50">Classe</span>
@@ -378,7 +378,7 @@ export default function Passengers() {
               <div>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Briefcase className="w-4 h-4" />
-                  Bagages actuels ({selectedPassenger.baggages?.length || 0} / {selectedPassenger.baggage_count} déclaré)
+                  Bagages actuels ({selectedPassenger.baggages?.length || 0} / {selectedPassenger.baggageCount} déclaré)
                 </h3>
                 {selectedPassenger.baggages && selectedPassenger.baggages.length > 0 ? (
                   <div className="space-y-2">

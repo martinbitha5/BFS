@@ -1,6 +1,7 @@
-import { AlertCircle, Settings, Shield } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -32,17 +33,16 @@ export default function Login() {
       style={{ backgroundImage: 'url(/images/airport-bg.jpg)' }}
     >
       {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/80 via-purple-900/70 to-pink-900/60"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/85 to-slate-900/90"></div>
       
       <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10">
         {/* Logo et titre */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
-            <Shield className="w-10 h-10 text-white" />
+          <div className="flex justify-center mb-4">
+            <Logo width={120} height={60} />
           </div>
-          <h1 className="text-3xl font-bold text-white">Panneau Support</h1>
-          <p className="text-white/70 mt-2 flex items-center justify-center gap-2">
-            <Settings className="w-4 h-4" />
+          <h1 className="text-2xl font-bold text-white">Panneau Support</h1>
+          <p className="text-white/60 mt-1 text-sm">
             Administration BFS System
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="support@bfs.cd"
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
               disabled={loading}
             />
           </div>
@@ -84,7 +84,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
               disabled={loading}
             />
           </div>
@@ -92,7 +92,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-transparent transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-transparent transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>

@@ -16,6 +16,7 @@ const checkSupportAccess = (req: Request): { authorized: boolean; role: string |
 /**
  * POST /api/v1/support/baggages/create
  * SUPPORT/LITIGE: Créer un bagage supplémentaire pour un passager
+ * Met à jour automatiquement baggage_count si nécessaire
  */
 router.post('/baggages/create', requireAirportCode, async (req: Request & { userRole?: string }, res: Response, next: NextFunction) => {
   try {
@@ -36,10 +37,10 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
       });
     }
 
-    // Vérifier que le passager existe
+    // Vérifier que le passager existe et récupérer ses infos + nombre de bagages actuels
     const { data: passenger, error: passengerError } = await supabase
       .from('passengers')
-      .select('id, full_name, airport_code')
+      .select('id, full_name, airport_code, baggage_count, baggages(id)')
       .eq('id', passengerId)
       .single();
 
@@ -66,6 +67,21 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
 
     if (baggageError) {
       throw baggageError;
+    }
+
+    // Calculer le nouveau nombre de bagages (après ajout)
+    const currentBaggageCount = Array.isArray(passenger.baggages) ? passenger.baggages.length : 0;
+    const newBaggageCount = currentBaggageCount + 1;
+    const declaredCount = passenger.baggage_count || 0;
+
+    // Si le nombre de bagages réels dépasse le nombre déclaré, mettre à jour baggage_count
+    if (newBaggageCount > declaredCount) {
+      await supabase
+        .from('passengers')
+        .update({ baggage_count: newBaggageCount })
+        .eq('id', passengerId);
+      
+      console.log(`[Support] baggage_count mis à jour: ${declaredCount} → ${newBaggageCount} pour ${passenger.full_name}`);
     }
 
     console.log(`[Support] Bagage créé pour ${passenger.full_name}: ${tag_number}`);

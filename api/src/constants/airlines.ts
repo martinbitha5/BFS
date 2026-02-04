@@ -19,7 +19,7 @@ export const KNOWN_AIRLINES: Airline[] = [
   {
     code: 'DT',
     name: 'TAAG Angola Airlines',
-    destinations: ['LAD', 'FIH', 'JNB', 'CPT', 'LIS', 'GRU', 'BZV', 'POG', 'LOS', 'NBO'],
+    destinations: ['LAD', 'FIH', 'JNB', 'CPT', 'LIS', 'GRU', 'BZV', 'POG', 'LOS', 'NBO', 'NBJ'],
   },
   {
     code: '9U',

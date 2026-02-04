@@ -111,7 +111,7 @@ router.get('/all', requireAirportCode, async (req: Request & { userAirportCode?:
       departure: passenger.departure,
       arrival: passenger.arrival,
       seatNumber: passenger.seat_number,
-      baggageCount: passenger.baggages?.length || 0,
+      baggageCount: passenger.baggage_count || 0,  // Nombre de bagages DÉCLARÉS
       checkedInAt: passenger.checked_in_at,
       airportCode: passenger.airport_code,
       baggages: passenger.baggages || [],
@@ -376,6 +376,7 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
 /**
  * POST /api/v1/baggages/create
  * Créer un nouveau bagage pour un passager
+ * Met à jour automatiquement baggage_count si nécessaire
  */
 router.post('/baggages/create', requireAirportCode, async (req: Request & { userAirportCode?: string }, res: Response, next: NextFunction) => {
   try {
@@ -385,6 +386,20 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
       return res.status(400).json({
         success: false,
         error: 'passengerId et tag_number sont requis'
+      });
+    }
+
+    // Récupérer le passager avec ses bagages actuels
+    const { data: passenger, error: passengerError } = await supabase
+      .from('passengers')
+      .select('id, baggage_count, baggages(id)')
+      .eq('id', passengerId)
+      .single();
+
+    if (passengerError || !passenger) {
+      return res.status(404).json({
+        success: false,
+        error: 'Passager non trouvé'
       });
     }
 
@@ -402,6 +417,18 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
       .single();
 
     if (error) throw error;
+
+    // Mettre à jour baggage_count si nécessaire
+    const currentBaggageCount = Array.isArray(passenger.baggages) ? passenger.baggages.length : 0;
+    const newBaggageCount = currentBaggageCount + 1;
+    const declaredCount = passenger.baggage_count || 0;
+
+    if (newBaggageCount > declaredCount) {
+      await supabase
+        .from('passengers')
+        .update({ baggage_count: newBaggageCount })
+        .eq('id', passengerId);
+    }
 
     res.json({
       success: true,
