@@ -11,6 +11,7 @@ interface AirportRestrictedRequest extends Request {
   userActualAirportCode?: string; // L'aéroport réel de l'utilisateur (depuis la BDD)
   hasFullAccess?: boolean; // true si l'utilisateur a accès à tous les aéroports
   userId?: string;
+  userRole?: string; // Rôle de l'utilisateur (supervisor, support, baggage_dispute)
 }
 
 /**
@@ -82,6 +83,9 @@ export const requireAirportCode = async (
         if (!userError && userData) {
           userAirportCode = userData.airport_code?.toUpperCase();
           
+          // Stocker le rôle dans la requête
+          (req as AirportRestrictedRequest).userRole = userData.role;
+          
           // L'utilisateur a accès total si son airport_code est 'ALL' 
           // OU si son rôle est 'support' ou 'baggage_dispute' (accès global)
           hasFullAccess = userAirportCode === 'ALL' || userData.role === 'support' || userData.role === 'baggage_dispute';
@@ -109,6 +113,9 @@ export const requireAirportCode = async (
 
         if (!error && user) {
           userAirportCode = user.airport_code?.toUpperCase();
+          
+          // Stocker le rôle dans la requête
+          (req as AirportRestrictedRequest).userRole = user.role;
           
           // L'utilisateur a accès total si son airport_code est 'ALL' 
           // OU si son rôle est 'support' ou 'baggage_dispute'

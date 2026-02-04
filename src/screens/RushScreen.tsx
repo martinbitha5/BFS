@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Card, Toast } from '../components';
+import { Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { authServiceInstance } from '../services';
 import { apiService } from '../services/api.service';
@@ -13,11 +12,9 @@ import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.
 export default function RushScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showScanner, setShowScanner] = useState(true);
-  const [torchEnabled, setTorchEnabled] = useState(false);
   const [tagNumber, setTagNumber] = useState('');
   const [reason, setReason] = useState('');
   const [nextFlight, setNextFlight] = useState('');
@@ -28,12 +25,69 @@ export default function RushScreen() {
   
   const isProcessingRef = useRef(false);
 
-  const handleBarcodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || processing || isProcessingRef.current) {
+  // ========== PDA LASER SCANNER SUPPORT ==========
+  const pdaInputRef = useRef<TextInput>(null);
+  const [pdaScanData, setPdaScanData] = useState('');
+  const pdaScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const focusPdaInput = useCallback(() => {
+    if (showScanner && !processing && !tagNumber) {
+      setTimeout(() => {
+        pdaInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showScanner, processing, tagNumber]);
+
+  const handlePdaScanComplete = useCallback((data: string) => {
+    // Ignorer si traitement en cours ou scanner non affiché
+    if (isProcessingRef.current || !showScanner) {
+      console.log('[PDA SCAN - RUSH] ⏳ Scan ignoré (traitement en cours)');
+      setPdaScanData('');
       return;
     }
 
-    isProcessingRef.current = true;
+    if (data.length >= 6) {
+      console.log('[PDA SCAN - RUSH] ✅ Tag bagage reçu:', data.length, 'chars');
+      isProcessingRef.current = true;
+      setPdaScanData('');
+      if (pdaScanTimeoutRef.current) {
+        clearTimeout(pdaScanTimeoutRef.current);
+        pdaScanTimeoutRef.current = null;
+      }
+      handleBarcodeScanned({ data });
+    } else if (data.length > 0) {
+      console.log('[PDA SCAN - RUSH] ⚠️ Données ignorées:', data.length, 'chars');
+      setPdaScanData('');
+      focusPdaInput();
+    }
+  }, [showScanner]);
+
+  const handlePdaInput = useCallback((text: string) => {
+    if (pdaScanTimeoutRef.current) {
+      clearTimeout(pdaScanTimeoutRef.current);
+    }
+    const cleanedText = text.replace(/[\r\n]/g, '');
+    setPdaScanData(cleanedText);
+    if (text.includes('\n') || text.includes('\r')) {
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+    pdaScanTimeoutRef.current = setTimeout(() => {
+      handlePdaScanComplete(cleanedText);
+    }, 300);
+  }, [handlePdaScanComplete]);
+
+  useEffect(() => {
+    focusPdaInput();
+  }, [showScanner, focusPdaInput]);
+
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    // Note: isProcessingRef.current est déjà vérifié et mis à true dans handlePdaScanComplete
+    if (scanned || processing) {
+      return;
+    }
+
+    // Bloquer les scans multiples via les états React
     setScanned(true);
     setProcessing(true);
 
@@ -124,24 +178,6 @@ export default function RushScreen() {
     }
   };
 
-  if (!permission) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
-        <ActivityIndicator size="large" color={colors.primary.main} />
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background.default }]}>
-        <Ionicons name="camera-outline" size={64} color={colors.text.secondary} />
-        <Text style={[styles.message, { color: colors.text.primary }]}>Permission caméra requise</Text>
-        <Button title="Autoriser la caméra" onPress={requestPermission} />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default }]}>
       <Toast
@@ -221,55 +257,47 @@ export default function RushScreen() {
           </Card>
         </ScrollView>
       ) : showScanner ? (
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          enableTorch={torchEnabled}
-          onBarcodeScanned={(event) => {
-            if (isProcessingRef.current || !event || !event.data) {
-              return;
-            }
-            handleBarcodeScanned(event);
-          }}
-          barcodeScannerSettings={{
-            // Formats de tags RFID / étiquettes bagages (même config que BaggageScreen)
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec', 'pdf417'],
-            interval: 1000,
-          }}
-          onCameraReady={() => {}}
-          onMountError={(error) => {
-            console.error('[RUSH SCAN] Erreur de caméra:', error);
-            setToastMessage('Erreur de caméra');
-            setToastType('error');
-            setShowToast(true);
-          }}>
-          <View style={styles.overlay}>
-            <View style={styles.scanArea}>
-              <View style={[styles.corner, { borderColor: colors.error.main }]} />
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.error.main }]} />
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.error.main }]} />
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.error.main }]} />
+        <View style={styles.pdaScanContainer}>
+          {/* Hidden TextInput to capture PDA laser scanner input */}
+          <TextInput
+            ref={pdaInputRef}
+            style={styles.hiddenInput}
+            value={pdaScanData}
+            onChangeText={handlePdaInput}
+            autoFocus={true}
+            showSoftInputOnFocus={false}
+            caretHidden={true}
+            blurOnSubmit={false}
+            onBlur={focusPdaInput}
+          />
+          
+          <View style={styles.pdaScanContent}>
+            <View style={[styles.pdaIconContainer, { backgroundColor: colors.error.main + '20' }]}>
+              <Ionicons name="scan" size={80} color={colors.error.main} />
             </View>
-            <Card style={styles.instructionCard}>
+            
+            <Card style={styles.pdaInfoCard}>
               <View style={styles.rushBanner}>
                 <Ionicons name="warning" size={24} color="#fff" />
                 <Text style={styles.rushBannerText}>MODE RUSH</Text>
               </View>
-              <Text style={styles.instruction}>Scannez le bagage à déclarer en RUSH</Text>
-              <Text style={styles.subInstruction}>Le bagage sera marqué comme prioritaire</Text>
+              
+              <Text style={[styles.pdaTitle, { color: colors.text.primary }]}>
+                Scanner Laser PDA
+              </Text>
+              <Text style={[styles.pdaSubtitle, { color: colors.text.secondary }]}>
+                Appuyez sur le bouton de scan du PDA pour scanner l'étiquette du bagage à déclarer en RUSH
+              </Text>
+              
+              <View style={[styles.pdaStatusContainer, { backgroundColor: colors.success.main + '15' }]}>
+                <Ionicons name="radio-button-on" size={16} color={colors.success.main} />
+                <Text style={[styles.pdaStatusText, { color: colors.success.main }]}>
+                  Prêt à scanner
+                </Text>
+              </View>
             </Card>
-            <TouchableOpacity
-              style={styles.torchButton}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-              activeOpacity={0.7}>
-              <Ionicons
-                name={torchEnabled ? 'flashlight' : 'flashlight-outline'}
-                size={32}
-                color={torchEnabled ? colors.warning.main : '#fff'}
-              />
-            </TouchableOpacity>
           </View>
-        </CameraView>
+        </View>
       ) : null}
     </View>
   );
@@ -477,6 +505,61 @@ const styles = StyleSheet.create({
   },
   scanAgainButtonText: {
     fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
+  },
+  // PDA Scanner styles
+  pdaScanContainer: {
+    flex: 1,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  pdaScanContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  pdaIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  pdaInfoCard: {
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  pdaTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  pdaSubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.lg,
+  },
+  pdaStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  pdaStatusText: {
+    fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold,
   },
 });

@@ -43,18 +43,23 @@ api.interceptors.request.use((config) => {
   if (userData && !isAuthRoute) {
     try {
       const user = JSON.parse(userData);
-      if (user.airport_code) {
+      
+      // Pour les utilisateurs support/baggage_dispute, utiliser 'ALL' par défaut
+      const effectiveAirportCode = user.airport_code || 
+        (user.role === 'support' || user.role === 'baggage_dispute' ? 'ALL' : null);
+      
+      if (effectiveAirportCode) {
         // Ajouter l'aéroport aux query params si ce n'est pas déjà présent
         const params = config.params as Record<string, unknown> | undefined;
         if (params && !params.airport) {
-          params.airport = user.airport_code;
+          params.airport = effectiveAirportCode;
         } else if (!config.params) {
-          config.params = { airport: user.airport_code };
+          config.params = { airport: effectiveAirportCode };
         }
         
         // Ajouter aussi dans les headers pour les routes qui l'utilisent
         if (config.headers) {
-          config.headers['x-airport-code'] = user.airport_code;
+          config.headers['x-airport-code'] = effectiveAirportCode;
           config.headers['x-user-id'] = user.id;
           config.headers['x-user-role'] = user.role;
         }
@@ -62,7 +67,7 @@ api.interceptors.request.use((config) => {
         // Ajouter dans le body pour les requêtes POST/PUT si nécessaire
         const data = config.data as Record<string, unknown> | undefined;
         if (data && typeof data === 'object' && !data.airport_code) {
-          data.airport_code = user.airport_code;
+          data.airport_code = effectiveAirportCode;
         }
       }
     } catch (e) {

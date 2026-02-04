@@ -1,19 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
 import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
+// ✅ OPTIMISATION: Imports statiques pour réduire la latence
+import { authServiceInstance, databaseServiceInstance, rawScanService } from '../services';
 import { birsDatabaseService } from '../services/birs-database.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
 import { BirsReportItem, InternationalBaggage } from '../types/birs.types';
 import { Passenger } from '../types/passenger.types';
+import { logAudit } from '../utils/audit.util';
 import { getScanErrorMessage, getScanResultMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
@@ -23,7 +24,6 @@ export default function ArrivalScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { currentFlight } = useFlightContext();
-  const [permission, requestPermission] = useCameraPermissions();
   const [baggage, setBaggage] = useState<Baggage | null>(null);
   const [passenger, setPassenger] = useState<Passenger | null>(null);
   const [internationalBaggage, setInternationalBaggage] = useState<InternationalBaggage | null>(null);
@@ -34,9 +34,66 @@ export default function ArrivalScreen({ navigation }: Props) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
-  const [torchEnabled, setTorchEnabled] = useState(false);
   const [lastScannedTag, setLastScannedTag] = useState<string | null>(null);
   const [lastScanTime, setLastScanTime] = useState<number>(0);
+
+  const isProcessingRef = useRef(false);
+
+  // ========== PDA LASER SCANNER SUPPORT ==========
+  const pdaInputRef = useRef<TextInput>(null);
+  const [pdaScanData, setPdaScanData] = useState('');
+  const pdaScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const focusPdaInput = useCallback(() => {
+    if (showScanner && !processing) {
+      setTimeout(() => {
+        pdaInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showScanner, processing]);
+
+  const handlePdaScanComplete = useCallback((data: string) => {
+    // Ignorer si traitement en cours ou scanner non affiché
+    if (isProcessingRef.current || !showScanner) {
+      console.log('[PDA SCAN - ARRIVAL] ⏳ Scan ignoré (traitement en cours)');
+      setPdaScanData('');
+      return;
+    }
+
+    if (data.length >= 6) {
+      console.log('[PDA SCAN - ARRIVAL] ✅ Tag bagage reçu:', data.length, 'chars');
+      isProcessingRef.current = true;
+      setPdaScanData('');
+      if (pdaScanTimeoutRef.current) {
+        clearTimeout(pdaScanTimeoutRef.current);
+        pdaScanTimeoutRef.current = null;
+      }
+      handleRfidScanned({ data });
+    } else if (data.length > 0) {
+      console.log('[PDA SCAN - ARRIVAL] ⚠️ Données ignorées:', data.length, 'chars');
+      setPdaScanData('');
+      focusPdaInput();
+    }
+  }, [showScanner]);
+
+  const handlePdaInput = useCallback((text: string) => {
+    if (pdaScanTimeoutRef.current) {
+      clearTimeout(pdaScanTimeoutRef.current);
+    }
+    const cleanedText = text.replace(/[\r\n]/g, '');
+    setPdaScanData(cleanedText);
+    if (text.includes('\n') || text.includes('\r')) {
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+    pdaScanTimeoutRef.current = setTimeout(() => {
+      handlePdaScanComplete(cleanedText);
+    }, 300);
+  }, [handlePdaScanComplete]);
+
+  useEffect(() => {
+    focusPdaInput();
+  }, [showScanner, focusPdaInput]);
 
   const handleRfidScanned = async ({ data }: { data: string }) => {
     const now = Date.now();
@@ -136,7 +193,7 @@ export default function ArrivalScreen({ navigation }: Props) {
               setShowToast(true);
               
               // Enregistrer l'action d'audit
-              const { logAudit } = await import('../utils/audit.util');
+              // ✅ OPTIMISATION: Import statique
               await logAudit(
                 'INTERNATIONAL_BAGGAGE_RECEIVED',
                 'arrival',
@@ -155,7 +212,7 @@ export default function ArrivalScreen({ navigation }: Props) {
         await playErrorSound();
         
         // Enregistrer l'action d'audit pour le bagage suspect
-        const { logAudit } = await import('../utils/audit.util');
+        // ✅ OPTIMISATION: Import statique
         await logAudit(
           'BAGGAGE_SUSPECT_DETECTED',
           'arrival',
@@ -221,7 +278,7 @@ export default function ArrivalScreen({ navigation }: Props) {
       }
 
       // ✅ Vérifier dans raw_scans si déjà confirmé à l'arrivée
-      const { rawScanService } = await import('../services');
+      // ✅ OPTIMISATION: Import statique
       const existingScan = await rawScanService.findByRawData(baggage.tagNumber);
       if (existingScan && existingScan.statusArrival) {
         await playErrorSound();
@@ -236,7 +293,7 @@ export default function ArrivalScreen({ navigation }: Props) {
       await databaseServiceInstance.updateBaggageStatus(baggage.id, 'arrived', user.id);
 
       // Enregistrer l'action d'audit
-      const { logAudit } = await import('../utils/audit.util');
+      // ✅ OPTIMISATION: Import statique
       await logAudit(
         'CONFIRM_ARRIVAL',
         'baggage',
@@ -310,6 +367,7 @@ export default function ArrivalScreen({ navigation }: Props) {
   };
 
   const resetAll = () => {
+    isProcessingRef.current = false;
     setBaggage(null);
     setPassenger(null);
     setInternationalBaggage(null);
@@ -320,23 +378,6 @@ export default function ArrivalScreen({ navigation }: Props) {
     setLastScannedTag(null);
     setLastScanTime(0);
   };
-
-  if (!permission) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
-        <Text style={styles.message}>Permission caméra requise</Text>
-        <Button title="Autoriser la caméra" onPress={requestPermission} />
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -569,58 +610,51 @@ export default function ArrivalScreen({ navigation }: Props) {
           </Card>
         </ScrollView>
       ) : showScanner ? (
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          enableTorch={torchEnabled}
-          onBarcodeScanned={handleRfidScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec'],
-            interval: 1000,
-          }}
-          onCameraReady={() => {}}
-          onMountError={(error) => {
-            console.error('[ARRIVAL] Erreur de montage de la caméra:', error);
-          }}>
-          <View style={styles.overlay}>
-            <View style={styles.scanArea}>
-              <View style={[styles.corner, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
+        <View style={styles.pdaScanContainer}>
+          {/* Hidden TextInput to capture PDA laser scanner input */}
+          <TextInput
+            ref={pdaInputRef}
+            style={styles.hiddenInput}
+            value={pdaScanData}
+            onChangeText={handlePdaInput}
+            autoFocus={true}
+            showSoftInputOnFocus={false}
+            caretHidden={true}
+            blurOnSubmit={false}
+            onBlur={focusPdaInput}
+          />
+          
+          <View style={styles.pdaScanContent}>
+            <View style={[styles.pdaIconContainer, { backgroundColor: colors.primary.main + '20' }]}>
+              <Ionicons name="airplane-outline" size={80} color={colors.primary.main} />
             </View>
-            <Card style={styles.instructionCard}>
+            
+            <Card style={styles.pdaInfoCard}>
               {currentFlight && (
-                <View style={styles.flightInfoBanner}>
-                  <Ionicons name="airplane" size={20} color="#fff" />
-                  <Text style={styles.flightInfoText}>
+                <View style={[styles.flightInfoBanner, { backgroundColor: colors.primary.main + '20' }]}>
+                  <Ionicons name="airplane" size={20} color={colors.primary.main} />
+                  <Text style={[styles.flightInfoText, { color: colors.primary.main }]}>
                     Vol: {currentFlight.flightNumber} | {currentFlight.departure} → {currentFlight.arrival}
                   </Text>
                 </View>
               )}
-              <Text style={styles.instruction}>
-                Scannez le tag RFID ou code-barres du bagage arrivé
+              
+              <Text style={[styles.pdaTitle, { color: colors.text.primary }]}>
+                Scanner Laser PDA - Arrivée
               </Text>
-              {currentFlight && (
-                <Text style={[styles.subInstruction, { color: 'rgba(255,255,255,0.7)', marginTop: Spacing.xs }]}>
-                  {currentFlight.departure !== currentFlight.arrival ? 
-                    `Bagage en provenance de ${currentFlight.departure}` : 
-                    'Vol local'}
+              <Text style={[styles.pdaSubtitle, { color: colors.text.secondary }]}>
+                Appuyez sur le bouton de scan du PDA pour scanner l'étiquette du bagage arrivé
+              </Text>
+              
+              <View style={[styles.pdaStatusContainer, { backgroundColor: colors.success.main + '15' }]}>
+                <Ionicons name="radio-button-on" size={16} color={colors.success.main} />
+                <Text style={[styles.pdaStatusText, { color: colors.success.main }]}>
+                  Prêt à scanner
                 </Text>
-              )}
+              </View>
             </Card>
-            <TouchableOpacity
-              style={styles.torchButton}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-              activeOpacity={0.7}>
-              <Ionicons
-                name={torchEnabled ? 'flashlight' : 'flashlight-outline'}
-                size={32}
-                color={torchEnabled ? colors.primary.main : '#fff'}
-              />
-            </TouchableOpacity>
           </View>
-        </CameraView>
+        </View>
       ) : null}
     </View>
   );
@@ -860,5 +894,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  // PDA Scanner styles
+  pdaScanContainer: {
+    flex: 1,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  pdaScanContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  pdaIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  pdaInfoCard: {
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  pdaTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  pdaSubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.lg,
+  },
+  pdaStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  pdaStatusText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
   },
 });

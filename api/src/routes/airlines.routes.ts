@@ -17,6 +17,38 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
 })();
 
 /**
+ * GET /api/v1/airlines
+ * Récupérer toutes les compagnies aériennes (pour le support)
+ */
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data: airlines, error } = await supabase
+      .from('airlines')
+      .select('id, name, code, email, approved, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Formater pour correspondre à l'interface attendue
+    const formattedAirlines = airlines?.map(a => ({
+      id: a.id,
+      name: a.name,
+      code: a.code,
+      email: a.email,
+      is_approved: a.approved,
+      created_at: a.created_at
+    })) || [];
+
+    res.json({
+      success: true,
+      data: formattedAirlines
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/airlines/signup
  * Inscription d'une nouvelle compagnie aérienne (crée une demande d'approbation)
  */
@@ -31,10 +63,10 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    if (code.length !== 2) {
+    if (code.length < 2 || code.length > 3) {
       return res.status(400).json({
         success: false,
-        error: 'Le code IATA doit contenir exactement 2 lettres',
+        error: 'Le code IATA doit contenir 2 ou 3 lettres',
       });
     }
 
@@ -295,10 +327,10 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
       });
     }
 
-    if (code.length !== 2) {
+    if (code.length < 2 || code.length > 3) {
       return res.status(400).json({
         success: false,
-        error: 'Le code IATA doit contenir exactement 2 lettres',
+        error: 'Le code IATA doit contenir 2 ou 3 lettres',
       });
     }
 

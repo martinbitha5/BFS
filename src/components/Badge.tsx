@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import React, { memo, useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 
 interface BadgeProps {
   label: string;
@@ -9,31 +9,35 @@ interface BadgeProps {
   size?: 'sm' | 'md';
 }
 
-export default function Badge({ label, variant = 'primary', size = 'md' }: BadgeProps) {
+// ✅ Mémorisé avec React.memo pour éviter les re-renders inutiles
+const Badge = memo(function Badge({ label, variant = 'primary', size = 'md' }: BadgeProps) {
   const { colors } = useTheme();
   
-  const getVariantStyle = () => {
+  // ✅ Mémoiser les styles calculés
+  const variantStyle = useMemo(() => {
     const variantColors = colors[variant];
     return {
       backgroundColor: variantColors.light + '15',
     };
-  };
+  }, [colors, variant]);
 
-  const getVariantTextStyle = () => {
+  const variantTextStyle = useMemo(() => {
     const variantColors = colors[variant];
     return {
       color: variantColors.dark,
     };
-  };
+  }, [colors, variant]);
 
   return (
-    <View style={[styles.badge, styles[size], getVariantStyle()]}>
-      <Text style={[styles.text, styles[`${size}Text`], getVariantTextStyle()]}>
+    <View style={[styles.badge, styles[size], variantStyle]}>
+      <Text style={[styles.text, styles[`${size}Text`], variantTextStyle]}>
         {label}
       </Text>
     </View>
   );
-}
+});
+
+export default Badge;
 
 const styles = StyleSheet.create({
   badge: {

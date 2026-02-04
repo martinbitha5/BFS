@@ -1,16 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Button, Card, Toast } from '../components';
+import { Badge, Card, Toast } from '../components';
 import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, flightService, parserService } from '../services';
+// ✅ OPTIMISATION: Imports statiques au lieu d'imports dynamiques pour réduire la latence
+import { authServiceInstance, databaseServiceInstance, flightService, parserService, rawScanService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { PassengerData } from '../types/passenger.types';
+import { logAudit } from '../utils/audit.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkin'>;
@@ -19,7 +21,6 @@ export default function CheckinScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { setCurrentFlight } = useFlightContext();
-  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(true);
   const [showScanner, setShowScanner] = useState(true);
@@ -30,9 +31,91 @@ export default function CheckinScreen({ navigation }: Props) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
-  const [torchEnabled, setTorchEnabled] = useState(false);
   const lastScanTimeRef = useRef<number>(0);
+  const isProcessingRef = useRef(false);
   const SCAN_COOLDOWN = 2000; // 2 secondes entre chaque scan
+
+  // ========== PDA LASER SCANNER SUPPORT ==========
+  const pdaInputRef = useRef<TextInput>(null);
+  const [pdaScanData, setPdaScanData] = useState('');
+  const pdaScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Focus le TextInput pour recevoir les données du PDA
+  const focusPdaInput = useCallback(() => {
+    if (showScanner && !processing && !lastPassenger) {
+      setTimeout(() => {
+        pdaInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showScanner, processing, lastPassenger]);
+
+  // Traiter le scan du PDA - DÉTECTION IMMÉDIATE
+  const handlePdaScanComplete = useCallback((data: string) => {
+    // Ignorer si traitement en cours ou scanner non affiché
+    if (isProcessingRef.current || !showScanner) {
+      console.log('[PDA SCAN] ⏳ Scan ignoré (traitement en cours ou scanner masqué)');
+      setPdaScanData('');
+      return;
+    }
+
+    // ✅ TRAITEMENT IMMÉDIAT SI DONNÉES VALIDES
+    if (data.length >= 50 && (data.startsWith('M1') || data.startsWith('M2'))) {
+      console.log('[PDA SCAN] ✅ Données valides détectées IMMÉDIATEMENT:', data.length, 'chars');
+      isProcessingRef.current = true; // Bloquer immédiatement
+      setPdaScanData('');
+      // Annuler tout timeout en attente
+      if (pdaScanTimeoutRef.current) {
+        clearTimeout(pdaScanTimeoutRef.current);
+        pdaScanTimeoutRef.current = null;
+      }
+      handleBarCodeScanned({ data });
+      return;
+    }
+    
+    // ⚠️ Pour les données incomplètes, on continue d'attendre
+    if (data.length > 0 && data.length < 50) {
+      console.log('[PDA SCAN] 🕐 Données incomplètes (' + data.length + ' chars) - en attente de la suite...');
+    } else if (data.length > 0) {
+      console.log('[PDA SCAN] ⚠️ Données ignorées (format invalide):', data.length, 'chars');
+      setPdaScanData('');
+      focusPdaInput();
+    }
+  }, [showScanner]);
+
+  // Gérer les données reçues du PDA
+  const handlePdaInput = useCallback((text: string) => {
+    // Annuler le timeout précédent
+    if (pdaScanTimeoutRef.current) {
+      clearTimeout(pdaScanTimeoutRef.current);
+    }
+
+    // Nettoyer les retours à la ligne (le PDA peut envoyer Enter à la fin)
+    const cleanedText = text.replace(/[\r\n]/g, '');
+    setPdaScanData(cleanedText);
+
+    // ✅ DÉTECTION IMMÉDIATE DES DONNÉES COMPLÈTES
+    if (cleanedText.length >= 50 && (cleanedText.startsWith('M1') || cleanedText.startsWith('M2'))) {
+      console.log('[PDA INPUT] ✅ Détection IMMÉDIATE de données valides:', cleanedText.length, 'chars');
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+
+    // Si le texte contient un retour à la ligne, c'est la fin du scan
+    if (text.includes('\n') || text.includes('\r')) {
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+
+    // ⏱️ Attendre seulement 100ms pour les données incomplètes
+    pdaScanTimeoutRef.current = setTimeout(() => {
+      handlePdaScanComplete(cleanedText);
+    }, 100);
+  }, [handlePdaScanComplete]);
+
+  // Re-focus le TextInput quand l'écran de scan est affiché
+  useEffect(() => {
+    focusPdaInput();
+  }, [showScanner, focusPdaInput]);
 
   useEffect(() => {
     loadUser();
@@ -50,7 +133,7 @@ export default function CheckinScreen({ navigation }: Props) {
       if (!user) return;
 
       // ✅ Compter les scans check-in d'aujourd'hui depuis raw_scans
-      const { rawScanService } = await import('../services');
+      // ✅ OPTIMISATION: Import statique
       const stats = await rawScanService.getStats(user.airportCode);
       setScansToday(stats.checkinCompleted);
     } catch (error) {
@@ -84,6 +167,7 @@ export default function CheckinScreen({ navigation }: Props) {
       if (!user) {
         await playErrorSound();
         Alert.alert('Erreur', 'Utilisateur non connecté');
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -125,16 +209,23 @@ export default function CheckinScreen({ navigation }: Props) {
       // ✅ ÉTAPE 2: Vérifier si le numéro de vol a été extrait
       if (!flightNumber || flightNumber === 'UNKNOWN') {
         await playErrorSound();
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         
-        // Afficher les données brutes pour debug en production
-        const rawPreview = data.substring(0, 100).replace(/[^\x20-\x7E]/g, '?');
-        const dataInfo = `Longueur: ${data.length}, Format détecté: ${parsedData?.format || 'N/A'}, Début: ${rawPreview}`;
+        // Message d'erreur plus explicite selon le cas
+        let errorDetail = '';
+        if (data.length < 50) {
+          errorDetail = `\n\nCause probable: Code-barres incorrect scanné (${data.length} caractères).\nAssurez-vous de scanner le grand code-barres PDF417 du boarding pass (rectangle avec lignes horizontales), pas les petits codes 1D.`;
+        } else if (!data.startsWith('M1') && !data.startsWith('M2')) {
+          errorDetail = `\n\nCause probable: Format non reconnu. Le boarding pass doit commencer par "M1" ou "M2" (standard IATA).`;
+        } else {
+          errorDetail = `\n\nDonnées: ${data.length} chars, Format: ${parsedData?.format || 'N/A'}`;
+        }
         
         Alert.alert(
           'ERREUR DE SCAN',
-          `Impossible d'extraire le numéro de vol du boarding pass.\n\nDébug: ${dataInfo}`,
+          `Impossible d'extraire le numéro de vol du boarding pass.${errorDetail}`,
           [
             {
               text: 'Nouveau scan',
@@ -156,6 +247,7 @@ export default function CheckinScreen({ navigation }: Props) {
 
       if (!validation.isValid) {
         await playErrorSound();
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         
@@ -180,6 +272,7 @@ export default function CheckinScreen({ navigation }: Props) {
         setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);
         setToastType('error');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         setShowScanner(true);
@@ -187,7 +280,7 @@ export default function CheckinScreen({ navigation }: Props) {
       }
 
       // ✅ ÉTAPE 4: Stockage brut du scan
-      const { rawScanService } = await import('../services');
+      // ✅ OPTIMISATION: Import statique
 
       // Vérifier si ce scan existe déjà avec le statut check-in
       const existingScan = await rawScanService.findByRawData(data);
@@ -196,6 +289,7 @@ export default function CheckinScreen({ navigation }: Props) {
         setToastMessage('⚠️ Déjà scanné au check-in !');
         setToastType('warning');
         setShowToast(true);
+        isProcessingRef.current = false;
         setProcessing(false);
         setScanned(false);
         return;
@@ -210,9 +304,8 @@ export default function CheckinScreen({ navigation }: Props) {
       });
 
       // ✅ ÉTAPE 5: Créer/mettre à jour le passager en base SQLite avec les données parsées
+      // ✅ OPTIMISATION: Import statique
       if (parsedData) {
-        const { databaseServiceInstance } = await import('../services');
-        
         // Chercher si le passager existe déjà par PNR
         let existingPassenger = await databaseServiceInstance.getPassengerByPnr(parsedData.pnr);
         
@@ -235,7 +328,7 @@ export default function CheckinScreen({ navigation }: Props) {
             seatNumber: parsedData.seatNumber,
             // ✅ FIX: Ne mettre baggage_count > 0 que si baggageInfo existe vraiment
             baggageCount: parsedData.baggageInfo?.count ?? 0,
-            baggageBaseNumber: parsedData.baggageInfo?.baseNumber || null,
+            baggageBaseNumber: parsedData.baggageInfo?.baseNumber || undefined,
             rawData: data,
             format: parsedData.format,
             checkedInAt: new Date().toISOString(),
@@ -245,8 +338,8 @@ export default function CheckinScreen({ navigation }: Props) {
           });
           
           // 🚀 AUSSI créer le passager au serveur via SYNC (pour que le boarding puisse le chercher)
+          // ✅ OPTIMISATION: Import statique pour AsyncStorage
           try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const apiKey = await AsyncStorage.getItem('@bfs:api_key');
             const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
             
@@ -298,7 +391,7 @@ export default function CheckinScreen({ navigation }: Props) {
       }
 
       // Enregistrer l'action d'audit
-      const { logAudit } = await import('../utils/audit.util');
+      // ✅ OPTIMISATION: Import statique
       await logAudit(
         'CHECKIN_PASSENGER',
         'passenger',
@@ -358,6 +451,7 @@ export default function CheckinScreen({ navigation }: Props) {
       setToastMessage(error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement du scan');
       setToastType('error');
       setShowToast(true);
+      isProcessingRef.current = false;
       setProcessing(false);
       setScanned(false);
       setShowScanner(true);
@@ -366,29 +460,13 @@ export default function CheckinScreen({ navigation }: Props) {
 
   const resetScanner = () => {
     // Réinitialiser tous les états pour permettre un nouveau check-in
+    isProcessingRef.current = false;
     setLastPassenger(null);
     setScanned(false);
     setProcessing(false);
     setShowScanner(true);
     setScanning(true);
   };
-
-  if (!permission) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>Permission caméra requise</Text>
-        <Button title="Autoriser la caméra" onPress={requestPermission} />
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -478,65 +556,63 @@ export default function CheckinScreen({ navigation }: Props) {
           </Card>
         </ScrollView>
       ) : showScanner && !lastPassenger ? (
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          enableTorch={torchEnabled}
-          onBarcodeScanned={(event) => {
-            // Ne pas scanner si on est déjà en traitement ou si un résultat est affiché
-            if (scanned || processing || lastPassenger || !showScanner) {
-              return;
-            }
-            // IMPORTANT: Ignorer les scans trop courts (< 40 chars)
-            // Les boarding pass complets font 60-150+ caractères
-            // Les petits codes-barres (nom seulement) font ~20 chars
-            if (event.data.length < 40) {
-              console.log('[CheckinScreen] Scan ignoré - données trop courtes:', event.data.length, 'chars');
-              return; // Continuer à scanner jusqu'à obtenir des données complètes
-            }
-            handleBarCodeScanned({ data: event.data });
-          }}
-          barcodeScannerSettings={{
-            // Accepter tous les formats pour trouver le bon code-barres
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
-          }}
-          onCameraReady={() => {}}
-          onMountError={(error) => {
-            console.error('Erreur de montage de la caméra:', error);
-            const errorMessage = error?.message || 'Inconnue';
-            setToastMessage(`Erreur de caméra: ${errorMessage}. ${Platform.OS === 'web' ? 'Assurez-vous que votre navigateur autorise l\'accès à la caméra et utilisez HTTPS.' : 'Vérifiez les permissions de la caméra.'}`);
-            setToastType('error');
-            setShowToast(true);
-          }}>
-          <View style={styles.overlay}>
-            <View style={styles.scanArea}>
-              <View style={[styles.corner, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
+        <View style={[styles.pdaScanContainer, { backgroundColor: colors.background.default }]}>
+          {/* TextInput invisible pour recevoir les données du scanner PDA */}
+          <TextInput
+            ref={pdaInputRef}
+            style={styles.pdaInput}
+            value={pdaScanData}
+            onChangeText={handlePdaInput}
+            autoFocus={true}
+            showSoftInputOnFocus={false}
+            caretHidden={true}
+            blurOnSubmit={false}
+            onSubmitEditing={() => {
+              if (pdaScanData.length > 0) {
+                handlePdaScanComplete(pdaScanData);
+              }
+            }}
+          />
+          
+          {/* Interface visuelle pour le scan PDA */}
+          <View style={styles.pdaScanContent}>
+            <View style={[styles.pdaIconContainer, { backgroundColor: colors.primary.light }]}>
+              <Ionicons name="scan" size={80} color={colors.primary.main} />
             </View>
-            <Card style={styles.instructionCard}>
-              <Text style={styles.instruction}>
-                Scannez le boarding pass PDF417
-              </Text>
-              {__DEV__ && (
-                <Text style={[styles.instruction, { fontSize: 12, marginTop: 8, opacity: 0.7 }]}>
-                  Mode debug: Scanner actif
+            
+            <Text style={[styles.pdaScanTitle, { color: colors.text.primary }]}>
+              Scanner PDA Prêt
+            </Text>
+            
+            <Text style={[styles.pdaScanSubtitle, { color: colors.text.secondary }]}>
+              Appuyez sur le bouton de scan du PDA{'\n'}pour scanner le boarding pass
+            </Text>
+
+            <Card style={styles.pdaInfoCard}>
+              <View style={styles.pdaInfoRow}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.success.main} />
+                <Text style={[styles.pdaInfoText, { color: colors.text.secondary }]}>
+                  Check-in passagers
                 </Text>
-              )}
+              </View>
+              <View style={styles.pdaInfoRow}>
+                <Ionicons name="today" size={20} color={colors.primary.main} />
+                <Text style={[styles.pdaInfoText, { color: colors.text.secondary }]}>
+                  Scans aujourd'hui: {scansToday}
+                </Text>
+              </View>
             </Card>
-            <TouchableOpacity
-              style={styles.torchButton}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-              activeOpacity={0.7}>
-              <Ionicons
-                name={torchEnabled ? 'flashlight' : 'flashlight-outline'}
-                size={32}
-                color={torchEnabled ? colors.primary.main : '#fff'}
-              />
-            </TouchableOpacity>
+
+            {processing && (
+              <View style={styles.pdaProcessingContainer}>
+                <ActivityIndicator size="large" color={colors.primary.main} />
+                <Text style={[styles.pdaProcessingText, { color: colors.text.secondary }]}>
+                  Traitement en cours...
+                </Text>
+              </View>
+            )}
           </View>
-        </CameraView>
+        </View>
       ) : null}
     </View>
   );
@@ -545,6 +621,67 @@ export default function CheckinScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  // TextInput invisible pour le scanner PDA
+  pdaInput: {
+    position: 'absolute',
+    top: -100,
+    left: 0,
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  // Styles pour l'interface de scan PDA
+  pdaScanContainer: {
+    flex: 1,
+  },
+  pdaScanContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  pdaIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  pdaScanTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  pdaScanSubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  pdaInfoCard: {
+    width: '100%',
+    maxWidth: 300,
+    padding: Spacing.lg,
+  },
+  pdaInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  pdaInfoText: {
+    fontSize: FontSizes.sm,
+  },
+  pdaProcessingContainer: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  pdaProcessingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.md,
   },
   headerCard: {
     margin: Spacing.lg,

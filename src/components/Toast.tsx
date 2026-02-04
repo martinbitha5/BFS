@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
-import { Colors, Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Text } from 'react-native';
+import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '../theme';
 
 interface ToastProps {
   message: string;
@@ -10,15 +10,35 @@ interface ToastProps {
   onHide: () => void;
 }
 
-export default function Toast({
+// ✅ Mémorisé avec React.memo pour éviter les re-renders inutiles
+const Toast = memo(function Toast({
   message,
   type = 'info',
   visible,
   duration = 3000,
   onHide,
 }: ToastProps) {
-  const translateY = new Animated.Value(-100);
-  const opacity = new Animated.Value(0);
+  // ✅ Utiliser useRef pour éviter de recréer les Animated.Values à chaque render
+  const translateY = useRef(new Animated.Value(-100)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  // ✅ Mémorisé avec useCallback
+  const hideToast = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -100,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onHide();
+    });
+  }, [translateY, opacity, onHide]);
 
   useEffect(() => {
     if (visible) {
@@ -44,24 +64,7 @@ export default function Toast({
     } else {
       hideToast();
     }
-  }, [visible]);
-
-  const hideToast = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: -100,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onHide();
-    });
-  };
+  }, [visible, translateY, opacity, duration, hideToast]);
 
   if (!visible) return null;
 
@@ -105,7 +108,9 @@ export default function Toast({
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );
-}
+});
+
+export default Toast;
 
 const styles = StyleSheet.create({
   container: {

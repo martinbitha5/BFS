@@ -1,33 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-import { CameraView, useCameraPermissions } from 'expo-camera';
-
-import React, { useState } from 'react';
-
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { Badge, Button, Card, Toast } from '../components';
-
+import { Badge, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
-
 import { RootStackParamList } from '../navigation/RootStack';
-
-import { authServiceInstance, flightService, parserService } from '../services';
-
+// ✅ OPTIMISATION: Imports statiques au lieu d'imports dynamiques pour réduire la latence
+import { authServiceInstance, flightService, parserService, rawScanService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
-
 import { BoardingConfirmation } from '../types/boarding-new.types';
-
 import { BoardingStatus } from '../types/boarding.types';
-
 import { Passenger, PassengerData } from '../types/passenger.types';
-
+import { logAudit } from '../utils/audit.util';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
-
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 
@@ -41,8 +27,6 @@ export default function BoardingScreen({ navigation }: Props) {
   const { colors } = useTheme();
 
   const insets = useSafeAreaInsets();
-
-  const [permission, requestPermission] = useCameraPermissions();
 
   const [scanned, setScanned] = useState(false);
 
@@ -60,9 +44,85 @@ export default function BoardingScreen({ navigation }: Props) {
 
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
 
-  const [torchEnabled, setTorchEnabled] = useState(false);
-
+  const isProcessingRef = useRef(false);
   
+  // ========== PDA LASER SCANNER SUPPORT ==========
+  const pdaInputRef = useRef<TextInput>(null);
+  const [pdaScanData, setPdaScanData] = useState('');
+  const pdaScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Focus le TextInput pour recevoir les données du PDA
+  const focusPdaInput = useCallback(() => {
+    if (showScanner && !processing && !lastPassenger) {
+      setTimeout(() => {
+        pdaInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showScanner, processing, lastPassenger]);
+
+  // Traiter le scan du PDA - DÉTECTION IMMÉDIATE
+  const handlePdaScanComplete = useCallback((data: string) => {
+    // Ignorer si traitement en cours ou scanner non affiché
+    if (isProcessingRef.current || !showScanner) {
+      console.log('[PDA SCAN - BOARDING] ⏳ Scan ignoré (traitement en cours)');
+      setPdaScanData('');
+      return;
+    }
+
+    // ✅ TRAITEMENT IMMÉDIAT SI DONNÉES VALIDES
+    if (data.length >= 50 && (data.startsWith('M1') || data.startsWith('M2'))) {
+      console.log('[PDA SCAN - BOARDING] ✅ Données valides détectées IMMÉDIATEMENT:', data.length, 'chars');
+      isProcessingRef.current = true;
+      setPdaScanData('');
+      if (pdaScanTimeoutRef.current) {
+        clearTimeout(pdaScanTimeoutRef.current);
+        pdaScanTimeoutRef.current = null;
+      }
+      handleBarCodeScanned({ data });
+      return;
+    }
+    
+    // ⚠️ Pour les données incomplètes, on continue d'attendre
+    if (data.length > 0 && data.length < 50) {
+      console.log('[PDA SCAN - BOARDING] 🕐 Données incomplètes (' + data.length + ' chars) - en attente de la suite...');
+    } else if (data.length > 0) {
+      console.log('[PDA SCAN - BOARDING] ⚠️ Données ignorées:', data.length, 'chars');
+      setPdaScanData('');
+      focusPdaInput();
+    }
+  }, [showScanner]);
+
+  // Gérer les données reçues du PDA
+  const handlePdaInput = useCallback((text: string) => {
+    if (pdaScanTimeoutRef.current) {
+      clearTimeout(pdaScanTimeoutRef.current);
+    }
+
+    const cleanedText = text.replace(/[\r\n]/g, '');
+    setPdaScanData(cleanedText);
+
+    // ✅ DÉTECTION IMMÉDIATE DES DONNÉES COMPLÈTES
+    if (cleanedText.length >= 50 && (cleanedText.startsWith('M1') || cleanedText.startsWith('M2'))) {
+      console.log('[PDA INPUT - BOARDING] ✅ Détection IMMÉDIATE de données valides:', cleanedText.length, 'chars');
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+
+    if (text.includes('\n') || text.includes('\r')) {
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+
+    // ⏱️ Attendre seulement 100ms pour les données incomplètes
+    pdaScanTimeoutRef.current = setTimeout(() => {
+      handlePdaScanComplete(cleanedText);
+    }, 100);
+  }, [handlePdaScanComplete]);
+
+  // Re-focus le TextInput quand l'écran de scan est affiché
+  useEffect(() => {
+    focusPdaInput();
+  }, [showScanner, focusPdaInput]);
 
   // MODIFICATION 1: États pour le boarding confirmation
 
@@ -99,6 +159,8 @@ export default function BoardingScreen({ navigation }: Props) {
         await playErrorSound();
 
         Alert.alert('Erreur', 'Utilisateur non connecté');
+
+        isProcessingRef.current = false;
 
         setProcessing(false);
 
@@ -257,9 +319,7 @@ export default function BoardingScreen({ navigation }: Props) {
 
 
       // ✅ ÉTAPE 5: Chercher dans raw_scans par raw_data
-
-      const { rawScanService } = await import('../services');
-
+      // ✅ OPTIMISATION: Import statique au lieu de dynamique
       const existingScan = await rawScanService.findByRawData(data);
 
       
@@ -298,6 +358,8 @@ export default function BoardingScreen({ navigation }: Props) {
 
         setShowToast(true);
 
+        isProcessingRef.current = false;
+
         setProcessing(false);
 
         setScanned(false);
@@ -329,19 +391,12 @@ export default function BoardingScreen({ navigation }: Props) {
 
 
       // Enregistrer l'action d'audit
-
-      const { logAudit } = await import('../utils/audit.util');
-
+      // ✅ OPTIMISATION: Import statique au lieu de dynamique
       await logAudit(
-
         'BOARD_PASSENGER',
-
         'boarding',
-
         `Embarquement confirmé - Vol: ${flightNumber || 'N/A'} - Scan #${result.scanCount}`,
-
         result.id
-
       );
 
 
@@ -479,6 +534,7 @@ export default function BoardingScreen({ navigation }: Props) {
   const resetScanner = () => {
 
     // Réinitialiser tous les états pour permettre un nouveau scan
+    isProcessingRef.current = false;
 
     setScanned(false);
 
@@ -677,40 +733,6 @@ export default function BoardingScreen({ navigation }: Props) {
     }
 
   };
-
-
-
-  if (!permission) {
-
-    return (
-
-      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
-
-        <ActivityIndicator size="large" />
-
-      </View>
-
-    );
-
-  }
-
-
-
-  if (!permission.granted) {
-
-    return (
-
-      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
-
-        <Text style={styles.message}>Permission caméra requise</Text>
-
-        <Button title="Autoriser la caméra" onPress={requestPermission} />
-
-      </View>
-
-    );
-
-  }
 
 
 
@@ -926,83 +948,57 @@ export default function BoardingScreen({ navigation }: Props) {
 
       ) : showScanner ? (
 
-        <CameraView
-
-          style={styles.camera}
-
-          facing="back"
-
-          enableTorch={torchEnabled}
-
-          onBarcodeScanned={(event) => {
-            if (scanned || processing || !showScanner || lastPassenger) return;
-            // IMPORTANT: Ignorer les scans trop courts (< 40 chars)
-            if (event.data.length < 40) {
-              console.log('[BoardingScreen] Scan ignoré - données trop courtes:', event.data.length);
-              return;
-            }
-            handleBarCodeScanned({ data: event.data });
-          }}
-          barcodeScannerSettings={{
-            // Accepter tous les formats pour trouver le bon code-barres
-            barcodeTypes: ['pdf417', 'qr', 'aztec', 'datamatrix', 'code128', 'code39'],
-          }}
-
-          onCameraReady={() => {}}
-
-          onMountError={(error) => {
-
-            console.error('Erreur de montage de la caméra:', error);
-
-          }}>
-
-          <View style={styles.overlay}>
-
-            <View style={styles.scanArea}>
-
-              <View style={[styles.corner, { borderColor: colors.primary.main }]} />
-
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary.main }]} />
-
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary.main }]} />
-
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
-
+        <View style={[styles.pdaScanContainer, { backgroundColor: colors.background.default }]}>
+          {/* TextInput invisible pour recevoir les données du scanner PDA */}
+          <TextInput
+            ref={pdaInputRef}
+            style={styles.pdaInput}
+            value={pdaScanData}
+            onChangeText={handlePdaInput}
+            autoFocus={true}
+            showSoftInputOnFocus={false}
+            caretHidden={true}
+            blurOnSubmit={false}
+            onSubmitEditing={() => {
+              if (pdaScanData.length > 0) {
+                handlePdaScanComplete(pdaScanData);
+              }
+            }}
+          />
+          
+          {/* Interface visuelle pour le scan PDA */}
+          <View style={styles.pdaScanContent}>
+            <View style={[styles.pdaIconContainer, { backgroundColor: colors.primary.light }]}>
+              <Ionicons name="airplane" size={80} color={colors.primary.main} />
             </View>
+            
+            <Text style={[styles.pdaScanTitle, { color: colors.text.primary }]}>
+              Scanner PDA Prêt
+            </Text>
+            
+            <Text style={[styles.pdaScanSubtitle, { color: colors.text.secondary }]}>
+              Appuyez sur le bouton de scan du PDA{'\n'}pour valider l'embarquement
+            </Text>
 
-            <Card style={styles.instructionCard}>
-
-              <Text style={styles.instruction}>
-
-                Scannez le boarding pass pour valider l&apos;embarquement
-
-              </Text>
-
+            <Card style={styles.pdaInfoCard}>
+              <View style={styles.pdaInfoRow}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.success.main} />
+                <Text style={[styles.pdaInfoText, { color: colors.text.secondary }]}>
+                  Embarquement passagers
+                </Text>
+              </View>
             </Card>
 
-            <TouchableOpacity
-
-              style={styles.torchButton}
-
-              onPress={() => setTorchEnabled(!torchEnabled)}
-
-              activeOpacity={0.7}>
-
-              <Ionicons
-
-                name={torchEnabled ? 'flashlight' : 'flashlight-outline'}
-
-                size={32}
-
-                color={torchEnabled ? colors.primary.main : '#fff'}
-
-              />
-
-            </TouchableOpacity>
-
+            {processing && (
+              <View style={styles.pdaProcessingContainer}>
+                <ActivityIndicator size="large" color={colors.primary.main} />
+                <Text style={[styles.pdaProcessingText, { color: colors.text.secondary }]}>
+                  Validation en cours...
+                </Text>
+              </View>
+            )}
           </View>
-
-        </CameraView>
+        </View>
 
       ) : null}
 
@@ -1020,6 +1016,68 @@ const styles = StyleSheet.create({
 
     flex: 1,
 
+  },
+
+  // TextInput invisible pour le scanner PDA
+  pdaInput: {
+    position: 'absolute',
+    top: -100,
+    left: 0,
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  // Styles pour l'interface de scan PDA
+  pdaScanContainer: {
+    flex: 1,
+  },
+  pdaScanContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  pdaIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  pdaScanTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  pdaScanSubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  pdaInfoCard: {
+    width: '100%',
+    maxWidth: 300,
+    padding: Spacing.lg,
+  },
+  pdaInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  pdaInfoText: {
+    fontSize: FontSizes.sm,
+  },
+  pdaProcessingContainer: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  pdaProcessingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.md,
   },
 
   headerCard: {

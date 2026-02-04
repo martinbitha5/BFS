@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Button, Card, Toast } from '../components';
+import { Badge, Card, Toast } from '../components';
 import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance } from '../services';
+// ✅ OPTIMISATION: Imports statiques pour réduire la latence
+import { authServiceInstance, databaseServiceInstance, rawScanService } from '../services';
 import { birsDatabaseService } from '../services/birs-database.service';
 import { parserService } from '../services/parser.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Passenger } from '../types/passenger.types';
+import { logAudit } from '../utils/audit.util';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
@@ -22,20 +23,74 @@ export default function BaggageScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { currentFlight } = useFlightContext();
-  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showScanner, setShowScanner] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
-  const [torchEnabled, setTorchEnabled] = useState(false);
   const [lastScannedTagNumber, setLastScannedTagNumber] = useState<string | null>(null);
   const [scannedTagInfo, setScannedTagInfo] = useState<any>(null);
   const [foundPassenger, setFoundPassenger] = useState<Passenger | null>(null);
   
   // Ref pour bloquer les scans multiples (mise à jour synchrone)
   const isProcessingRef = useRef(false);
+
+  // ========== PDA LASER SCANNER SUPPORT ==========
+  const pdaInputRef = useRef<TextInput>(null);
+  const [pdaScanData, setPdaScanData] = useState('');
+  const pdaScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const focusPdaInput = useCallback(() => {
+    if (showScanner && !processing && !scannedTagInfo) {
+      setTimeout(() => {
+        pdaInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showScanner, processing, scannedTagInfo]);
+
+  const handlePdaScanComplete = useCallback((data: string) => {
+    // Ignorer si traitement en cours ou scanner non affiché
+    if (isProcessingRef.current || !showScanner) {
+      console.log('[PDA SCAN - BAGGAGE] ⏳ Scan ignoré (traitement en cours)');
+      setPdaScanData('');
+      return;
+    }
+
+    if (data.length >= 6) {
+      console.log('[PDA SCAN - BAGGAGE] ✅ Tag bagage reçu:', data.length, 'chars');
+      isProcessingRef.current = true;
+      setPdaScanData('');
+      if (pdaScanTimeoutRef.current) {
+        clearTimeout(pdaScanTimeoutRef.current);
+        pdaScanTimeoutRef.current = null;
+      }
+      handleRfidScanned({ data });
+    } else if (data.length > 0) {
+      console.log('[PDA SCAN - BAGGAGE] ⚠️ Données ignorées:', data.length, 'chars');
+      setPdaScanData('');
+      focusPdaInput();
+    }
+  }, [showScanner]);
+
+  const handlePdaInput = useCallback((text: string) => {
+    if (pdaScanTimeoutRef.current) {
+      clearTimeout(pdaScanTimeoutRef.current);
+    }
+    const cleanedText = text.replace(/[\r\n]/g, '');
+    setPdaScanData(cleanedText);
+    if (text.includes('\n') || text.includes('\r')) {
+      handlePdaScanComplete(cleanedText);
+      return;
+    }
+    pdaScanTimeoutRef.current = setTimeout(() => {
+      handlePdaScanComplete(cleanedText);
+    }, 300);
+  }, [handlePdaScanComplete]);
+
+  useEffect(() => {
+    focusPdaInput();
+  }, [showScanner, focusPdaInput]);
 
   /**
    * Scan du tag RFID du bagage
@@ -44,12 +99,12 @@ export default function BaggageScreen({ navigation }: Props) {
    * - Enregistre le bagage associé au passager
    */
   const handleRfidScanned = async ({ data }: { data: string }) => {
-    if (scanned || processing || isProcessingRef.current) {
+    // Note: isProcessingRef.current est déjà vérifié et mis à true dans handlePdaScanComplete
+    if (scanned || processing) {
       return;
     }
 
-    // Bloquer immédiatement les scans multiples AVANT toute opération async
-    isProcessingRef.current = true;
+    // Bloquer les scans multiples via les états React
     setScanned(true);
     setProcessing(true);
 
@@ -104,7 +159,7 @@ export default function BaggageScreen({ navigation }: Props) {
       setScannedTagInfo(baggageTagData);
 
       // ✅ Vérifier si ce bagage a déjà été scanné dans raw_scans
-      const { rawScanService } = await import('../services');
+      // ✅ OPTIMISATION: Import statique
       const existingScan = await rawScanService.findByRawData(data);
       if (existingScan && existingScan.statusBaggage) {
         await playErrorSound();
@@ -181,7 +236,7 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
       const baggageCount = existingBaggages?.length || 0;
       
       // Récupérer le nombre de bagages attendus depuis les données du passager
-      const expectedBaggageCount = passenger.baggageCount || passenger.expectedTags?.length || 1;
+      const expectedBaggageCount = passenger.baggageCount || 1;
       
       // Si le passager a déjà atteint ou dépassé son quota de bagages
       if (baggageCount >= expectedBaggageCount) {
@@ -190,7 +245,11 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
         
         Alert.alert(
           'QUOTA DE BAGAGES DÉPASSÉ',
-          `Le passager ${passenger.fullName} a déjà ${baggageCount} bagage(s) enregistré(s).\n\nNombre de bagages autorisés: ${expectedBaggageCount}\n\nCe bagage supplémentaire ne peut pas être accepté.`,
+          `Le passager ${passenger.fullName} a déjà ${baggageCount} bagage(s) enregistré(s).
+
+Nombre de bagages autorisés: ${expectedBaggageCount}
+
+Ce bagage supplémentaire ne peut pas être accepté.`,
           [
             {
               text: 'Nouveau scan',
@@ -220,7 +279,7 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
       });
 
       // Enregistrer l'action d'audit
-      const { logAudit } = await import('../utils/audit.util');
+      // ✅ OPTIMISATION: Import statique
       await logAudit(
         'REGISTER_BAGGAGE',
         'baggage',
@@ -282,23 +341,6 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
     setFoundPassenger(null);
     setShowScanner(true);
   };
-
-  if (!permission) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>Permission caméra requise</Text>
-        <Button title="Autoriser la caméra" onPress={requestPermission} />
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -465,63 +507,65 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
           </Card>
         </ScrollView>
       ) : showScanner ? (
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          enableTorch={torchEnabled}
-          onBarcodeScanned={(event) => {
-            if (isProcessingRef.current || !event || !event.data) {
-              return;
-            }
-            handleRfidScanned(event);
-          }}
-          barcodeScannerSettings={{
-            // Formats de tags RFID / étiquettes bagages
-            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'codabar', 'itf14', 'interleaved2of5', 'upc_a', 'upc_e', 'datamatrix', 'aztec', 'pdf417'],
-            interval: 1000,
-          }}
-          onCameraReady={() => {}}
-          onMountError={(error) => {
-            console.error('[BAGGAGE SCAN] Erreur de montage de la caméra:', error);
-            setToastMessage('Erreur de caméra: ' + (error?.message || 'Inconnue'));
-            setToastType('error');
-            setShowToast(true);
-          }}>
-          <View style={styles.overlay}>
-            <View style={styles.scanArea}>
-              <View style={[styles.corner, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary.main }]} />
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary.main }]} />
+        <View style={[styles.pdaScanContainer, { backgroundColor: colors.background.default }]}>
+          {/* TextInput invisible pour recevoir les données du scanner PDA */}
+          <TextInput
+            ref={pdaInputRef}
+            style={styles.pdaInput}
+            value={pdaScanData}
+            onChangeText={handlePdaInput}
+            autoFocus={true}
+            showSoftInputOnFocus={false}
+            caretHidden={true}
+            blurOnSubmit={false}
+            onSubmitEditing={() => {
+              if (pdaScanData.length > 0) {
+                handlePdaScanComplete(pdaScanData);
+              }
+            }}
+          />
+          
+          {/* Interface visuelle pour le scan PDA */}
+          <View style={styles.pdaScanContent}>
+            <View style={[styles.pdaIconContainer, { backgroundColor: colors.warning.light }]}>
+              <Ionicons name="briefcase" size={80} color={colors.warning.main} />
             </View>
-            <Card style={styles.instructionCard}>
-              {currentFlight && (
-                <View style={styles.flightInfoBanner}>
-                  <Ionicons name="airplane" size={20} color="#fff" />
-                  <Text style={styles.flightInfoText}>
-                    Vol: {currentFlight.flightNumber} | {currentFlight.departure} → {currentFlight.arrival}
+            
+            <Text style={[styles.pdaScanTitle, { color: colors.text.primary }]}>
+              Scanner PDA Prêt
+            </Text>
+            
+            <Text style={[styles.pdaScanSubtitle, { color: colors.text.secondary }]}>
+              Appuyez sur le bouton de scan du PDA{'\n'}pour scanner le tag bagage
+            </Text>
+
+            {currentFlight && (
+              <Card style={styles.pdaInfoCard}>
+                <View style={styles.pdaInfoRow}>
+                  <Ionicons name="airplane" size={20} color={colors.primary.main} />
+                  <Text style={[styles.pdaInfoText, { color: colors.text.secondary }]}>
+                    Vol: {currentFlight.flightNumber}
                   </Text>
                 </View>
-              )}
-              <Text style={styles.instruction}>
-                Scannez le tag RFID du bagage
-              </Text>
-              <Text style={[styles.subInstruction, { color: 'rgba(255,255,255,0.7)' }]}>
-                Le passager sera identifié automatiquement
-              </Text>
-            </Card>
-            <TouchableOpacity
-              style={styles.torchButton}
-              onPress={() => setTorchEnabled(!torchEnabled)}
-              activeOpacity={0.7}>
-              <Ionicons
-                name={torchEnabled ? 'flashlight' : 'flashlight-outline'}
-                size={32}
-                color={torchEnabled ? colors.primary.main : '#fff'}
-              />
-            </TouchableOpacity>
+                <View style={styles.pdaInfoRow}>
+                  <Ionicons name="navigate" size={20} color={colors.primary.main} />
+                  <Text style={[styles.pdaInfoText, { color: colors.text.secondary }]}>
+                    {currentFlight.departure} → {currentFlight.arrival}
+                  </Text>
+                </View>
+              </Card>
+            )}
+
+            {processing && (
+              <View style={styles.pdaProcessingContainer}>
+                <ActivityIndicator size="large" color={colors.primary.main} />
+                <Text style={[styles.pdaProcessingText, { color: colors.text.secondary }]}>
+                  Traitement en cours...
+                </Text>
+              </View>
+            )}
           </View>
-        </CameraView>
+        </View>
       ) : null}
     </View>
   );
@@ -530,6 +574,66 @@ passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  // Styles pour l'interface de scan PDA
+  pdaInput: {
+    position: 'absolute',
+    top: -100,
+    left: 0,
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  pdaScanContainer: {
+    flex: 1,
+  },
+  pdaScanContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  pdaIconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  pdaScanTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  pdaScanSubtitle: {
+    fontSize: FontSizes.md,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  pdaInfoCard: {
+    width: '100%',
+    maxWidth: 300,
+    padding: Spacing.lg,
+  },
+  pdaInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  pdaInfoText: {
+    fontSize: FontSizes.sm,
+  },
+  pdaProcessingContainer: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  pdaProcessingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.md,
   },
   message: {
     fontSize: FontSizes.md,
