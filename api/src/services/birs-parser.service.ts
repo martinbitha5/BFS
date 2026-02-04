@@ -161,110 +161,99 @@ class BirsParserService {
 
   /**
    * Parser spécifique pour le format SITA BagManager
-   * Format: 0XX123456 Class Origin Dest Surname PNR ... Status
-   * Ex: 0DT352712 Prio JNB* BZV MAHOUASSA 88VXQ4 Expected
+   * GÈRE LE FORMAT CONCATÉNÉ (pdf-parse supprime souvent les espaces)
+   * Ex: 0DT352712PrioJNB* BZVMAHOUASSA88VXQ4Expected
    */
   private parseSitaBagManagerText(text: string): BirsItem[] {
     const items: BirsItem[] = [];
     
     // Pattern pour les tags SITA: 0 + 2 lettres + 5-7 chiffres
-    // Plus flexible: peut être suivi de n'importe quoi
-    const tagPattern = /\b(0[A-Z]{2}\d{5,7})\b/gi;
+    const tagPattern = /(0[A-Z]{2}\d{5,7})/gi;
     
     // Trouver tous les tags dans le texte
-    const matches = text.matchAll(tagPattern);
+    const allMatches = [...text.matchAll(tagPattern)];
     const foundTags = new Set<string>();
     
-    for (const match of matches) {
-      const tag = match[0].toUpperCase();
+    console.log(`[BIRS Parser SITA] Found ${allMatches.length} potential tags`);
+    
+    for (let m = 0; m < allMatches.length; m++) {
+      const match = allMatches[m];
+      const tag = match[1].toUpperCase();
       
       // Éviter les doublons
       if (foundTags.has(tag)) continue;
-      foundTags.add(tag);
       
-      // Extraire le contexte autour du tag (200 caractères après)
-      const startIndex = match.index || 0;
-      const context = text.substring(startIndex, startIndex + 300);
+      const startIndex = (match.index || 0) + tag.length;
       
-      // Extraire les informations du contexte
-      const parts = context.split(/[\s\t\n]+/).filter(p => p.length > 0);
+      // Trouver la fin du contexte (jusqu'au prochain tag ou 150 chars)
+      let endIndex = startIndex + 150;
+      if (m + 1 < allMatches.length && allMatches[m + 1].index) {
+        endIndex = Math.min(endIndex, allMatches[m + 1].index);
+      }
+      
+      // Extraire le contexte après le tag
+      const afterTag = text.substring(startIndex, endIndex);
       
       let passengerName = '';
       let flightClass = '';
       let origin = '';
       let destination = '';
       let pnr = '';
-      let loaded = false;
-      let received = false;
       
-      // Parcourir les parties après le tag
-      for (let i = 1; i < Math.min(parts.length, 15); i++) {
-        const part = parts[i];
+      // PATTERN CONCATÉNÉ: PrioJNB* BZVMAHOUASSA88VXQ4Expected
+      // Format: [Class][Origin*][ ][Dest][Surname][PNR][Status]
+      // Exemple: "PrioJNB* BZVMAHOUASSA88VXQ4Expected"
+      const concatPattern = /^(Prio|Priority|Econ|Economy|First|Business)?([A-Z]{3}\*?)[\s]*([A-Z]{3})([A-Z]{3,})([A-Z0-9]{5,8})?(Expected|Loaded|Not-Loaded|NotLoaded|Received|Y|N)?/i;
+      const concatMatch = afterTag.match(concatPattern);
+      
+      if (concatMatch) {
+        flightClass = concatMatch[1] || '';
+        origin = (concatMatch[2] || '').replace('*', '');
+        destination = concatMatch[3] || '';
         
-        // Ignorer les parties trop courtes
-        if (part.length < 2) continue;
+        // Le groupe 4 contient le nom + potentiellement le PNR collé
+        let nameAndMaybePnr = concatMatch[4] || '';
         
-        // Classe de vol
-        if (/^(Prio|Priority|Econ|Economy|First|Business|J|C|Y|F)$/i.test(part) && !flightClass) {
-          flightClass = part;
-          continue;
-        }
-        
-        // Code aéroport (3 lettres, peut avoir *)
-        if (/^[A-Z]{3}\*?$/i.test(part)) {
-          if (!origin) {
-            origin = part.replace('*', '');
-            continue;
-          } else if (!destination) {
-            destination = part;
-            continue;
+        // Vérifier si un PNR est collé à la fin du nom
+        // Un PNR contient des chiffres, un nom non
+        const pnrInName = nameAndMaybePnr.match(/^([A-Z]+?)([A-Z0-9]*\d[A-Z0-9]*)$/i);
+        if (pnrInName && pnrInName[1].length >= 3) {
+          passengerName = pnrInName[1];
+          // Le PNR peut être dans group 2 ou dans concatMatch[5]
+          if (pnrInName[2] && pnrInName[2].length >= 5) {
+            pnr = pnrInName[2];
+          } else if (concatMatch[5]) {
+            pnr = concatMatch[5];
+          }
+        } else if (nameAndMaybePnr.length >= 3) {
+          passengerName = nameAndMaybePnr;
+          if (concatMatch[5]) {
+            pnr = concatMatch[5];
           }
         }
         
-        // Nom du passager (lettres majuscules, 3+ caractères, pas un code aéroport)
-        if (/^[A-Z]{3,}$/i.test(part) && !passengerName && destination) {
-          // Vérifier que ce n'est pas un mot-clé
-          const keywords = ['EXPECTED', 'LOADED', 'RECEIVED', 'OFFLOAD', 'RELABEL', 'REFLIGHT', 'ROUTE', 'CAR'];
-          if (!keywords.some(kw => part.toUpperCase().includes(kw))) {
-            passengerName = part;
-            continue;
+        // Nettoyer le nom: enlever les suffixes de statut
+        const statusSuffixes = ['EXPECTED', 'LOADED', 'RECEIVED', 'NOTLOADED'];
+        for (const suffix of statusSuffixes) {
+          if (passengerName.toUpperCase().endsWith(suffix)) {
+            passengerName = passengerName.slice(0, -suffix.length);
           }
         }
         
-        // PNR (5-7 caractères alphanumériques)
-        if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
-          // Vérifier que ce n'est pas un mot-clé ou un code commençant par CAR
-          if (!part.toUpperCase().startsWith('CAR') && !/^[A-Z]{5,7}$/.test(part)) {
-            pnr = part;
-          }
-          continue;
-        }
-        
-        // Statut
-        if (part.toUpperCase() === 'LOADED') {
-          loaded = true;
-        }
-        if (part.toUpperCase() === 'RECEIVED') {
-          received = true;
-        }
-        
-        // Si on a trouvé un autre tag, arrêter
-        if (/^0[A-Z]{2}\d{5,7}$/i.test(part)) {
-          break;
+        // Nettoyer le PNR: enlever s'il commence par CAR (c'est un numéro de container)
+        if (pnr && pnr.toUpperCase().startsWith('CAR')) {
+          pnr = '';
         }
       }
       
-      // Vérifier les statuts dans le contexte complet
-      const upperContext = context.toUpperCase();
-      if (upperContext.includes('LOADED') && !upperContext.includes('NOT-LOADED') && !upperContext.includes('NOT LOADED')) {
-        loaded = true;
-      }
-      if (upperContext.includes('RECEIVED')) {
-        received = true;
-      }
+      // Vérifier les statuts
+      const upperContext = afterTag.toUpperCase();
+      const loaded = (upperContext.includes('LOADED') || upperContext.includes('Y')) && 
+                     !upperContext.includes('NOT-LOADED') && !upperContext.includes('NOTLOADED');
       
-      // Ajouter l'item si on a au moins un nom de passager
-      if (passengerName && passengerName.length >= 2) {
+      // Ajouter l'item si on a un nom valide
+      if (passengerName && passengerName.length >= 3) {
+        foundTags.add(tag);
         items.push({
           bagId: tag,
           passengerName: passengerName,
@@ -272,24 +261,15 @@ class BirsParserService {
           route: origin && destination ? `${origin}-${destination}` : undefined,
           pnr: pnr || undefined,
           loaded: loaded,
-          received: received || loaded
+          received: loaded
         });
+        console.log(`[BIRS Parser SITA] Added: ${tag} - ${passengerName} (${origin}-${destination})`);
       } else {
-        // Même sans nom, créer un item basique avec le tag
-        // Essayer de trouver un nom dans le contexte
-        const nameMatch = context.match(/(?:Prio|Econ|First|Business|J|C|Y|F)\s+[A-Z]{3}\*?\s+[A-Z]{3}\s+([A-Z]{3,})/i);
-        if (nameMatch) {
-          items.push({
-            bagId: tag,
-            passengerName: nameMatch[1],
-            loaded: loaded,
-            received: received || loaded
-          });
-        }
+        console.log(`[BIRS Parser SITA] Skipped ${tag}: name="${passengerName}" from "${afterTag.substring(0, 40)}..."`);
       }
     }
     
-    console.log(`[BIRS Parser] SITA parser extracted ${items.length} unique tags`);
+    console.log(`[BIRS Parser] SITA parser extracted ${items.length} unique bags`);
     return items;
   }
 
@@ -435,14 +415,15 @@ class BirsParserService {
 
       // =====================================================
       // FORMAT SITA BagManager (TAAG Angola, etc.)
-      // Ex: "0DT357756 Prio NBJ FIH MARQUES CAR0044DT 22 Loaded Y"
-      // Ex: "0DT356221 Econ CPT* FIH BOKOSO XHYWKW CAR0044DT 1 Loaded	Y"
-      // Format: TAG CLASS ORIGIN DEST SURNAME PNR LOCATION SEQ STATUS OK
+      // ATTENTION: pdf-parse peut concaténer les colonnes sans espaces!
+      // Ex: "0DT357756PrioNBJ FIHMARQUESCAR0044DT22LoadedY"
+      // Ex: "0DT356221EconCPT* FIHBOKOSOXHYWKWCAR0044DT1LoadedY"
+      // Format: TAG+CLASS+ORIGIN DEST+SURNAME+PNR+LOCATION+SEQ+STATUS+OK
       // =====================================================
       
-      // Pattern plus flexible: Tag commence par 0 + 2 lettres + 5-7 chiffres
-      // Peut être au début de la ligne ou après des espaces
-      const sitaTagMatch = line.match(/^[\s]*(0[A-Z]{2}\d{5,7})[\s\t]+/i);
+      // Pattern flexible: Tag commence par 0 + 2 lettres + 5-7 chiffres
+      // SANS exiger d'espace après (car pdf-parse les supprime souvent)
+      const sitaTagMatch = line.match(/^[\s]*(0[A-Z]{2}\d{5,7})/i);
       
       if (sitaTagMatch) {
         const bagId = sitaTagMatch[1].toUpperCase();
@@ -453,74 +434,180 @@ class BirsParserService {
           continue;
         }
         
+        // Le reste de la ligne après le tag (peut être collé ou avec espace)
         const restOfLine = line.substring(sitaTagMatch[0].length);
         
-        // Extraire les parties: Class Route Surname...
-        const parts = restOfLine.split(/[\s\t]+/).filter(p => p.length > 0);
+        console.log(`[BIRS Parser] Found SITA tag: ${bagId}, rest: "${restOfLine.substring(0, 60)}..."`);
         
-        console.log(`[BIRS Parser] Found SITA tag: ${bagId}, parts: ${parts.slice(0, 8).join(', ')}`);
-        
-        // Chercher la classe (Prio, Econ, First, Business)
+        // Parser le format concaténé SITA
+        // Pattern: (Prio|Econ)(ORIGIN*? DEST)(SURNAME)(PNR)(reste...)
         let flightClass = '';
         let passengerName = '';
         let origin = '';
         let destination = '';
         let pnr = '';
         
-        // Mots-clés à ignorer pour le nom de passager
-        const keywords = ['EXPECTED', 'LOADED', 'RECEIVED', 'OFFLOAD', 'RELABEL', 'REFLIGHT', 'ROUTE', 'CAR', 'NOT', 'ON', 'TO', 'DEST'];
+        // Parser le format SITA BagManager concaténé étape par étape
+        // Format: [CLASS][ORIGIN*?] [DEST][SURNAME][PNR/CAR][STATUS]
+        // Ex: "PrioJNB* BZVMAHOUASSA88VXQ4Expected"
+        // Ex: "EconNBJ FIHMARQUESCAR0044DT22LoadedY"
         
-        for (let p = 0; p < parts.length; p++) {
-          const part = parts[p];
+        let remaining = restOfLine;
+        
+        // 1. Extraire la classe (optionnel, 4-8 caractères au début)
+        const classMatch = remaining.match(/^(Prio|Priority|Econ|Economy|First|Business)/i);
+        if (classMatch) {
+          flightClass = classMatch[1];
+          remaining = remaining.substring(classMatch[0].length);
+        }
+        
+        // 2. Extraire l'origine (3 lettres + optionnel *) suivie d'un ESPACE puis destination (3 lettres)
+        // Pattern: "JNB* BZV" ou "NBJ FIH" ou "CPT* FIH"
+        const routeMatch = remaining.match(/^([A-Z]{3}\*?)\s+([A-Z]{3})/i);
+        
+        if (routeMatch) {
+          origin = routeMatch[1].replace('*', '');
+          destination = routeMatch[2];
+          remaining = remaining.substring(routeMatch[0].length);
           
-          // Ignorer les parties vides ou très courtes
-          if (!part || part.length < 1) continue;
+          // 3. Extraire le nom du passager
+          // Le nom est collé juste après la destination
+          // Ex: "MAHOUASSA88VXQ4Expected" -> MAHOUASSA + PNR: 88VXQ4
+          // Ex: "LODIBRE2OTExpected" -> LODI + PNR: BRE2OT (attention: le PNR peut commencer par des lettres!)
+          // Ex: "MARQUESCAR0044DT22LoadedY" -> MARQUES + CAR0044DT
           
-          // Classe
-          if (/^(Prio|Priority|Econ|Economy|First|Business|J|C|Y|F)$/i.test(part) && !flightClass) {
-            flightClass = part;
-            continue;
-          }
+          // Stratégie: le nom est la partie qui ne contient QUE des lettres avant:
+          // 1. Un chiffre (début du PNR ou numéro)
+          // 2. "CAR" (début du numéro de container)
+          // 3. Un mot de statut
           
-          // Route (3 lettres, peut avoir *)
-          if (/^[A-Z]{3}\*?$/i.test(part) && !origin) {
-            origin = part.replace('*', '');
-            continue;
-          }
-          if (/^[A-Z]{3}$/i.test(part) && origin && !destination) {
-            destination = part;
-            continue;
-          }
+          // D'abord, extraire tout ce qui est lettres
+          const allLettersMatch = remaining.match(/^([A-Z]+)/i);
           
-          // Nom passager (lettres majuscules, au moins 3 caractères)
-          // Doit venir après la destination et ne pas être un mot-clé
-          if (/^[A-Z]{3,}$/i.test(part) && destination && !passengerName) {
-            const upperPart = part.toUpperCase();
-            if (!keywords.some(kw => upperPart === kw || upperPart.startsWith(kw))) {
-              passengerName = part;
-              continue;
+          if (allLettersMatch) {
+            let allLetters = allLettersMatch[1];
+            let candidateName = allLetters;
+            
+            // Couper au premier CAR (numéro de container)
+            const carIndex = allLetters.toUpperCase().indexOf('CAR');
+            if (carIndex > 2) {
+              candidateName = allLetters.substring(0, carIndex);
+              // Le PNR serait juste avant CAR si présent
+              // Dans "MARQUESCAR0044", MARQUES est le nom, pas de PNR séparé
+            } else {
+              // Pas de CAR dans les lettres, le nom se termine avant le premier pattern PNR
+              // Le PNR est un code de 5-7 chars alphanumérique AVEC au moins un chiffre
+              // Il peut être collé à la fin du nom
+              
+              // Chercher le point où le PNR commence dans remaining
+              // Ex: "LODIBRE2OT..." -> on cherche où "BRE2OT" commence
+              // Le PNR a un chiffre, donc on cherche la position du premier chiffre
+              const afterDest = remaining; // "LODIBRE2OTExpected..."
+              const firstDigitMatch = afterDest.match(/\d/);
+              
+              if (firstDigitMatch && firstDigitMatch.index !== undefined) {
+                const digitPos = firstDigitMatch.index;
+                
+                // Le PNR commence quelques caractères AVANT le premier chiffre
+                // Car le format PNR est comme "BRE2OT" où les lettres viennent avant le chiffre
+                // On essaie de trouver où le nom se termine et le PNR commence
+                
+                // Heuristique: un nom de passager fait généralement 4-15 caractères
+                // Un PNR fait 5-7 caractères et contient au moins un chiffre
+                
+                // Si le premier chiffre est à la position 4+, le nom est probablement avant le pattern PNR
+                // Le PNR est de forme: 2-3 lettres + chiffres + lettres (ex: BRE2OT, ZG3F69, 88VXQ4)
+                
+                if (digitPos >= 3) {
+                  // Chercher le début du PNR (peut être quelques lettres avant le chiffre)
+                  // Pattern PNR typique: lettre(s) + chiffre(s) + lettre(s) ou tout chiffres avec lettres
+                  
+                  // On va chercher 6-7 chars qui contiennent un chiffre, en reculant depuis digitPos
+                  const potentialPnrStart = Math.max(0, digitPos - 3); // Le PNR peut avoir jusqu'à 3 lettres avant le chiffre
+                  
+                  // Essayer différentes positions de début pour trouver un PNR valide
+                  for (let pnrStartOffset = 0; pnrStartOffset <= 3 && potentialPnrStart + pnrStartOffset < digitPos; pnrStartOffset++) {
+                    const pnrStart = potentialPnrStart + pnrStartOffset;
+                    const potentialPnr = afterDest.substring(pnrStart, pnrStart + 7).match(/^[A-Z0-9]{5,7}/i);
+                    
+                    if (potentialPnr && /\d/.test(potentialPnr[0]) && /[A-Z]/i.test(potentialPnr[0])) {
+                      // Trouvé un PNR valide
+                      pnr = potentialPnr[0];
+                      candidateName = afterDest.substring(0, pnrStart);
+                      break;
+                    }
+                  }
+                  
+                  // Si on n'a pas trouvé de PNR mais le nom est trop long, couper au premier chiffre
+                  if (!pnr && candidateName.length > 12) {
+                    candidateName = allLetters.substring(0, digitPos);
+                  }
+                }
+              }
+            }
+            
+            // Enlever les suffixes de statut qui auraient pu être collés
+            const statusSuffixes = ['EXPECTED', 'LOADED', 'RECEIVED', 'NOTLOADED', 'NOT', 'TOREFLIGHTY', 'TOREFLIGHT'];
+            for (const suffix of statusSuffixes) {
+              if (candidateName.toUpperCase().endsWith(suffix)) {
+                candidateName = candidateName.slice(0, -suffix.length);
+              }
+            }
+            
+            if (candidateName.length >= 3) {
+              passengerName = candidateName;
             }
           }
+        }
+        
+        // Si le format concaténé n'a pas marché, essayer avec des espaces
+        if (!passengerName) {
+          const parts = restOfLine.split(/[\s\t]+/).filter(p => p.length > 0);
           
-          // PNR (5-7 caractères alphanumériques, mélange lettres/chiffres)
-          if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
-            // Vérifier que ce n'est pas juste des lettres (mot-clé) ou commence par CAR
-            const upperPart = part.toUpperCase();
-            if (!upperPart.startsWith('CAR') && !/^[A-Z]{5,7}$/.test(part)) {
-              pnr = part;
+          const keywords = ['EXPECTED', 'LOADED', 'RECEIVED', 'OFFLOAD', 'RELABEL', 'REFLIGHT', 'ROUTE', 'CAR', 'NOT', 'ON', 'TO', 'DEST'];
+          
+          for (let p = 0; p < parts.length; p++) {
+            const part = parts[p];
+            if (!part || part.length < 1) continue;
+            
+            // Classe
+            if (/^(Prio|Priority|Econ|Economy|First|Business|J|C|Y|F)$/i.test(part) && !flightClass) {
+              flightClass = part;
               continue;
             }
-          }
-          
-          // Si on trouve un autre tag SITA, arrêter
-          if (/^0[A-Z]{2}\d{5,7}$/i.test(part)) {
-            break;
+            
+            // Route (3 lettres, peut avoir *)
+            if (/^[A-Z]{3}\*?$/i.test(part) && !origin) {
+              origin = part.replace('*', '');
+              continue;
+            }
+            if (/^[A-Z]{3}$/i.test(part) && origin && !destination) {
+              destination = part;
+              continue;
+            }
+            
+            // Nom passager
+            if (/^[A-Z]{3,}$/i.test(part) && destination && !passengerName) {
+              const upperPart = part.toUpperCase();
+              if (!keywords.some(kw => upperPart === kw || upperPart.startsWith(kw))) {
+                passengerName = part;
+                continue;
+              }
+            }
+            
+            // PNR
+            if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
+              const upperPart = part.toUpperCase();
+              if (!upperPart.startsWith('CAR') && !/^[A-Z]{5,7}$/.test(part)) {
+                pnr = part;
+                continue;
+              }
+            }
           }
         }
         
         // Si on a au moins un tag et un nom de passager
         if (passengerName && passengerName.length >= 2) {
-          // Extraire le statut
           const upperLine = line.toUpperCase();
           const loaded = upperLine.includes('LOADED') && !upperLine.includes('NOT-LOADED') && !upperLine.includes('NOT LOADED');
           
@@ -536,11 +623,11 @@ class BirsParserService {
           });
           parsed++;
           processed.add(i);
-          console.log(`[BIRS Parser] Added bag: ${bagId} - ${passengerName} (loaded: ${loaded})`);
+          console.log(`[BIRS Parser] Added bag: ${bagId} - ${passengerName} (${origin}-${destination}) loaded: ${loaded}`);
           i++;
           continue;
         } else {
-          console.log(`[BIRS Parser] Tag ${bagId} skipped: no passenger name found (parts: ${parts.join(', ')})`);
+          console.log(`[BIRS Parser] Tag ${bagId} skipped: could not extract passenger name from "${restOfLine.substring(0, 50)}"`);
         }
       }
 
