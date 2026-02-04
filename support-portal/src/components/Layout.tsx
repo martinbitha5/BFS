@@ -1,18 +1,11 @@
-import { LayoutDashboard, LogOut, Menu, Package, Plane, Users, X } from 'lucide-react';
+import { Building2, LogOut, Menu, Settings, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import Footer from './Footer';
 import Logo from './Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
-}
-
-interface NavItem {
-  path: string;
-  label: string;
-  icon: React.ElementType;
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -20,12 +13,10 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Navigation pour les superviseurs uniquement
-  const navItems: NavItem[] = [
-    { path: '/dashboard', label: "Dashboard", icon: LayoutDashboard },
-    { path: '/flights', label: 'Gestion Vols', icon: Plane },
-    { path: '/passengers', label: 'Passagers', icon: Users },
-    { path: '/brs', label: 'BRS International', icon: Package },
+  const navItems = [
+    { path: '/dashboard', label: 'Tableau de bord', icon: Settings },
+    { path: '/users', label: 'Utilisateurs', icon: Users },
+    { path: '/airlines', label: 'Compagnies', icon: Building2 },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -60,10 +51,10 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex items-center space-x-3 mb-3">
               <Logo width={70} height={35} />
             </div>
-            <h1 className="text-lg font-bold text-white">OPS Dashboard</h1>
+            <h1 className="text-lg font-bold text-white">Support Admin</h1>
             {user && (
               <p className="text-xs text-white/70 mt-1">
-                Aéroport {user.airport_code}
+                Administration système
               </p>
             )}
           </div>
@@ -82,7 +73,7 @@ export default function Layout({ children }: LayoutProps) {
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all ${
                       active
-                        ? 'bg-white/20 text-white'
+                        ? 'bg-indigo-500/30 text-white border border-indigo-400/30'
                         : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -126,7 +117,6 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex-1 container mx-auto py-6 px-4 sm:px-6 mt-16 md:mt-0">
           {children}
         </div>
-        <Footer />
       </main>
     </div>
   );

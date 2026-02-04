@@ -173,9 +173,11 @@ class BirsParserService {
     }
     /**
      * Parse les lignes de texte pour extraire les bagages
-     * Gère deux formats:
-     * 1. Multi-lignes: Tag seul, puis nom sur ligne suivante
-     * 2. Single-line: "235345230EZANDOMPANGI0 LOADED Received"
+     * Gère plusieurs formats:
+     * 1. SITA BagManager: "0DT357756 Prio NBJ FIH MARQUES CAR0044DT 22 Loaded Y" (TAAG Angola, etc.)
+     * 2. Format tabulation: "235345230\tEZANDOMPANGI\t0 LOADED Received" (Turkish Airlines, etc.)
+     * 3. Single-line: "235345230EZANDOMPANGI0 LOADED Received"
+     * 4. Multi-lignes: Tag seul, puis nom sur ligne suivante
      */
     parseTextLines(content) {
         const items = [];
@@ -190,12 +192,95 @@ class BirsParserService {
             }
             const line = lines[i].trim();
             // Ignorer les lignes vides et très courtes
-            if (!line || line.length < 11) {
+            if (!line || line.length < 5) {
                 i++;
                 continue;
             }
-            // Essayer d'abord le format single-line (TAG + NAME ensemble)
-            // Format: 9 digits + letters (name) + digit (weight) + status words
+            // Ignorer les en-têtes de page et lignes de métadonnées
+            if (this.isHeaderLine(line) || line.startsWith('Page ') || line.includes('-- ') || line.includes('Manifeste') || line.includes('Escale') || line.includes('SITA BagManager') || line.startsWith('Departure Flight') || line.startsWith('Bag Information') || line.startsWith('Class Route')) {
+                i++;
+                continue;
+            }
+            // =====================================================
+            // FORMAT SITA BagManager (TAAG Angola, etc.)
+            // Ex: "0DT357756 Prio NBJ FIH MARQUES CAR0044DT 22 Loaded Y"
+            // Ex: "0DT356221 Econ CPT* FIH BOKOSO XHYWKW CAR0044DT 1 Loaded	Y"
+            // Format: TAG CLASS ORIGIN DEST SURNAME PNR LOCATION SEQ STATUS OK
+            // =====================================================
+            const sitaMatch = line.match(/^(0[A-Z]{2}\d{6})\s+(Prio|Econ|First|Business)\s+([A-Z]{3}\*?)\s+([A-Z]{3})\s+([A-Z]+)\s+/i);
+            if (sitaMatch) {
+                const bagId = sitaMatch[1];
+                const flightClass = sitaMatch[2];
+                const origin = sitaMatch[3].replace('*', '');
+                const destination = sitaMatch[4];
+                const passengerName = sitaMatch[5];
+                // Extraire le statut
+                const loaded = line.toUpperCase().includes('LOADED');
+                const notLoaded = line.toUpperCase().includes('NOT-LOADED') || line.toUpperCase().includes('NOT LOADED');
+                const expected = line.toUpperCase().includes('EXPECTED');
+                // Extraire le PNR (6 caractères alphanumériques après le nom)
+                const pnrMatch = line.match(/[A-Z]+\s+([A-Z0-9]{5,7})\s+/i);
+                const pnr = pnrMatch ? pnrMatch[1] : undefined;
+                items.push({
+                    bagId: bagId,
+                    passengerName: passengerName,
+                    class: flightClass,
+                    route: `${origin}-${destination}`,
+                    pnr: pnr,
+                    loaded: loaded && !notLoaded,
+                    received: loaded && !notLoaded
+                });
+                parsed++;
+                processed.add(i);
+                i++;
+                continue;
+            }
+            // =====================================================
+            // FORMAT 2: Colonnes séparées par tabulation ou espaces multiples
+            // Ex: "235345230\tEZANDOMPANGI\t0 LOADED Received"
+            // Ex: "235345230    EZANDOMPANGI    0 LOADED Received"
+            // =====================================================
+            const columns = line.split(/\t+|\s{2,}/);
+            if (columns.length >= 2) {
+                const firstCol = columns[0].trim();
+                const secondCol = columns[1]?.trim() || '';
+                const restOfLine = columns.slice(2).join(' ').trim();
+                // Vérifier si la première colonne est un tag valide (6-13 chiffres)
+                if (/^\d{6,13}$/.test(firstCol) && secondCol.length >= 2 && /^[A-Z]/i.test(secondCol)) {
+                    // Ignorer les entrées ZZZZZZ (bagages inconnus)
+                    if (secondCol.toUpperCase() === 'ZZZZZZ' || secondCol.toUpperCase() === 'UNKNOWN') {
+                        i++;
+                        continue;
+                    }
+                    const bagId = firstCol;
+                    const passengerName = secondCol.replace(/\s+/g, ' ');
+                    // Extraire le poids et les statuts du reste de la ligne
+                    let weight = 0;
+                    let loaded = false;
+                    let received = false;
+                    const weightMatch = restOfLine.match(/^(\d+)/);
+                    if (weightMatch) {
+                        weight = parseInt(weightMatch[1]);
+                    }
+                    loaded = restOfLine.toUpperCase().includes('LOADED');
+                    received = restOfLine.toUpperCase().includes('RECEIVED');
+                    items.push({
+                        bagId: bagId,
+                        passengerName: passengerName,
+                        weight: weight || undefined,
+                        loaded: loaded,
+                        received: received
+                    });
+                    parsed++;
+                    processed.add(i);
+                    i++;
+                    continue;
+                }
+            }
+            // =====================================================
+            // FORMAT 2: Single-line sans séparateur (TAG + NAME collés)
+            // Ex: "235345230EZANDOMPANGI0 LOADED Received"
+            // =====================================================
             let match = line.match(/^(\d{9})([A-Z]+?)(\d+)\s+(LOADED|RECEIVED|UNLOADED|ACCEPTED|REJECTED)(.*)$/i);
             if (match && match[2].length >= 2) {
                 const bagId = match[1];
@@ -214,7 +299,9 @@ class BirsParserService {
                 i++;
                 continue;
             }
-            // Format multi-lignes: chercher un Tag seul sur une ligne
+            // =====================================================
+            // FORMAT 3: Multi-lignes (Tag seul sur une ligne)
+            // =====================================================
             match = line.match(/^(\d{9,13})\s*$/);
             if (match) {
                 const bagId = match[1];

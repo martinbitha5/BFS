@@ -58,6 +58,8 @@ const requireAirportCode = async (req, res, next) => {
                     .single();
                 if (!userError && userData) {
                     userAirportCode = userData.airport_code?.toUpperCase();
+                    // Stocker le rôle dans la requête
+                    req.userRole = userData.role;
                     // L'utilisateur a accès total si son airport_code est 'ALL' 
                     // OU si son rôle est 'support' ou 'baggage_dispute' (accès global)
                     hasFullAccess = userAirportCode === 'ALL' || userData.role === 'support' || userData.role === 'baggage_dispute';
@@ -84,6 +86,8 @@ const requireAirportCode = async (req, res, next) => {
                     .single();
                 if (!error && user) {
                     userAirportCode = user.airport_code?.toUpperCase();
+                    // Stocker le rôle dans la requête
+                    req.userRole = user.role;
                     // L'utilisateur a accès total si son airport_code est 'ALL' 
                     // OU si son rôle est 'support' ou 'baggage_dispute'
                     hasFullAccess = userAirportCode === 'ALL' || user.role === 'support' || user.role === 'baggage_dispute';
