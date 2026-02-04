@@ -59,7 +59,56 @@ interface RushBaggage {
 
 type Tab = 'overview' | 'all-baggages' | 'rush' | 'disputes';
 type StatusFilter = 'all' | 'checked' | 'loaded' | 'in_transit' | 'arrived' | 'delivered' | 'rush' | 'unmatched';
-type DateFilter = 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+type DateFilter = 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'specific' | 'custom';
+
+// Fonction helper pour formater une date en YYYY-MM-DD
+const formatDateForAPI = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+// Fonction helper pour obtenir les dates de filtrage selon le filtre sélectionné
+const getDateRangeFromFilter = (
+  filter: DateFilter,
+  specificDate: string,
+  customStart: string,
+  customEnd: string
+): { date_from?: string; date_to?: string } => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  switch (filter) {
+    case 'today':
+      return { date_from: formatDateForAPI(today), date_to: formatDateForAPI(today) };
+    case 'yesterday': {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return { date_from: formatDateForAPI(yesterday), date_to: formatDateForAPI(yesterday) };
+    }
+    case 'week': {
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return { date_from: formatDateForAPI(weekAgo), date_to: formatDateForAPI(today) };
+    }
+    case 'month': {
+      const monthAgo = new Date(today);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return { date_from: formatDateForAPI(monthAgo), date_to: formatDateForAPI(today) };
+    }
+    case 'specific':
+      if (specificDate) {
+        return { date_from: specificDate, date_to: specificDate };
+      }
+      return {};
+    case 'custom': {
+      const result: { date_from?: string; date_to?: string } = {};
+      if (customStart) result.date_from = customStart;
+      if (customEnd) result.date_to = customEnd;
+      return result;
+    }
+    default:
+      return {};
+  }
+};
 
 export default function BaggageDispute() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -74,6 +123,7 @@ export default function BaggageDispute() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [airportFilter, setAirportFilter] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [specificDate, setSpecificDate] = useState('');
   const [customDateStart, setCustomDateStart] = useState('');
   const [customDateEnd, setCustomDateEnd] = useState('');
 
@@ -93,6 +143,9 @@ export default function BaggageDispute() {
       // Note: L'intercepteur ajoute automatiquement airport=ALL pour les utilisateurs baggage_dispute
       const errors: string[] = [];
       
+      // Calculer les paramètres de date
+      const dateParams = getDateRangeFromFilter(dateFilter, specificDate, customDateStart, customDateEnd);
+      
       const [statsRes, baggagesRes, rushRes] = await Promise.all([
         api.get('/api/v1/stats/global').catch((err) => {
           const msg = err?.response?.data?.error || err.message;
@@ -100,7 +153,7 @@ export default function BaggageDispute() {
           errors.push(`Stats: ${msg}`);
           return { data: { data: { totalBaggages: 0, arrivedBaggages: 0, inTransitBaggages: 0, todayBaggages: 0 } } };
         }),
-        api.get('/api/v1/baggage').catch((err) => {
+        api.get('/api/v1/baggage', { params: dateParams }).catch((err) => {
           const msg = err?.response?.data?.error || err.message;
           console.warn('Erreur bagages:', msg);
           errors.push(`Bagages: ${msg}`);
@@ -136,55 +189,22 @@ export default function BaggageDispute() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateFilter, specificDate, customDateStart, customDateEnd]);
 
+  // Recharger les données quand les filtres de date changent
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  // Rafraîchissement automatique toutes les 30 secondes
+  useEffect(() => {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Fonction pour filtrer par date
-  const isInDateRange = (dateStr: string | null) => {
-    if (!dateStr) return dateFilter === 'all';
-    
-    const date = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-
-    switch (dateFilter) {
-      case 'today':
-        return date >= today;
-      case 'yesterday':
-        return date >= yesterday && date < today;
-      case 'week':
-        return date >= weekAgo;
-      case 'month':
-        return date >= monthAgo;
-      case 'custom':
-        const start = customDateStart ? new Date(customDateStart) : null;
-        const end = customDateEnd ? new Date(customDateEnd + 'T23:59:59') : null;
-        if (start && end) return date >= start && date <= end;
-        if (start) return date >= start;
-        if (end) return date <= end;
-        return true;
-      default:
-        return true;
-    }
-  };
-
-  // Filtrer les bagages
+  // Filtrer les bagages (le filtrage par date se fait côté serveur)
   const filteredBaggages = baggages.filter(b => {
-    const matchSearch = 
+    const matchSearch = !searchTerm || 
       b.tag_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.passengers?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.passengers?.pnr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,9 +212,8 @@ export default function BaggageDispute() {
     
     const matchStatus = statusFilter === 'all' || b.status === statusFilter;
     const matchAirport = !airportFilter || b.airport_code === airportFilter;
-    const matchDate = isInDateRange(b.created_at);
     
-    return matchSearch && matchStatus && matchAirport && matchDate;
+    return matchSearch && matchStatus && matchAirport;
   });
 
   // Obtenir les aéroports uniques
@@ -619,6 +638,7 @@ export default function BaggageDispute() {
                   <option value="yesterday">Hier</option>
                   <option value="week">7 derniers jours</option>
                   <option value="month">30 derniers jours</option>
+                  <option value="specific">Jour spécifique</option>
                   <option value="custom">Période personnalisée</option>
                 </select>
               </div>
@@ -630,6 +650,7 @@ export default function BaggageDispute() {
                   setStatusFilter('all');
                   setAirportFilter('');
                   setDateFilter('all');
+                  setSpecificDate('');
                   setCustomDateStart('');
                   setCustomDateEnd('');
                 }}
@@ -639,6 +660,26 @@ export default function BaggageDispute() {
                 Réinitialiser
               </button>
             </div>
+
+            {/* Sélection jour spécifique */}
+            {dateFilter === 'specific' && (
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-white/10">
+                <div className="flex-1">
+                  <label className="block text-xs text-white/50 mb-1">Sélectionner une date</label>
+                  <input
+                    type="date"
+                    value={specificDate}
+                    onChange={(e) => setSpecificDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
+                <div className="flex-1 flex items-end">
+                  <p className="text-sm text-white/50 pb-2">
+                    {specificDate ? `Bagages du ${new Date(specificDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` : 'Choisissez une date pour voir les bagages de ce jour'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Dates personnalisées */}
             {dateFilter === 'custom' && (
@@ -689,7 +730,9 @@ export default function BaggageDispute() {
                       {dateFilter === 'today' ? "Aujourd'hui" : 
                        dateFilter === 'yesterday' ? 'Hier' : 
                        dateFilter === 'week' ? '7 jours' : 
-                       dateFilter === 'month' ? '30 jours' : 'Personnalisé'}
+                       dateFilter === 'month' ? '30 jours' : 
+                       dateFilter === 'specific' ? (specificDate ? new Date(specificDate).toLocaleDateString('fr-FR') : 'Jour spécifique') :
+                       'Personnalisé'}
                     </span>
                   )}
                 </div>

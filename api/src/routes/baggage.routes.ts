@@ -10,10 +10,18 @@ const router = Router();
  * GET /api/v1/baggage
  * Liste de tous les bagages avec filtres optionnels
  * RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+ * 
+ * Query params:
+ * - airport: code aéroport (ou ALL pour tous)
+ * - status: filtre par statut
+ * - flight: filtre par numéro de vol
+ * - date_from: date de début (format YYYY-MM-DD)
+ * - date_to: date de fin (format YYYY-MM-DD)
+ * - limit: nombre max de résultats (défaut: 1000)
  */
 router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { flight, status, airport } = req.query;
+    const { flight, status, airport, date_from, date_to, limit } = req.query;
     const hasFullAccess = req.hasFullAccess;
     
     // Normaliser le paramètre airport (peut être string, array, ou undefined)
@@ -54,6 +62,24 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
     if (flight) {
       baggageQuery = baggageQuery.eq('flight_number', flight);
     }
+    
+    // Filtrer par date de début (created_at >= date_from)
+    if (date_from && typeof date_from === 'string') {
+      // Ajouter le début de la journée
+      const startDate = `${date_from}T00:00:00.000Z`;
+      baggageQuery = baggageQuery.gte('created_at', startDate);
+    }
+    
+    // Filtrer par date de fin (created_at <= date_to)
+    if (date_to && typeof date_to === 'string') {
+      // Ajouter la fin de la journée
+      const endDate = `${date_to}T23:59:59.999Z`;
+      baggageQuery = baggageQuery.lte('created_at', endDate);
+    }
+    
+    // Limiter le nombre de résultats
+    const maxResults = limit ? parseInt(limit as string, 10) : 1000;
+    baggageQuery = baggageQuery.limit(maxResults);
     
     const { data: baggages, error: baggageError } = await baggageQuery;
     
