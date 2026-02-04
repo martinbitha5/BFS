@@ -90,16 +90,17 @@ export default function BaggageDispute() {
       }
 
       // Récupérer toutes les données en parallèle (accès à tous les aéroports)
+      // Note: L'intercepteur ajoute automatiquement airport=ALL pour les utilisateurs baggage_dispute
       const [statsRes, baggagesRes, rushRes] = await Promise.all([
-        api.get('/api/v1/stats/global?airport=ALL').catch((err) => {
+        api.get('/api/v1/stats/global').catch((err) => {
           console.warn('Erreur stats:', err?.response?.data?.error || err.message);
           return { data: { data: { totalBaggages: 0, arrivedBaggages: 0, inTransitBaggages: 0, todayBaggages: 0 } } };
         }),
-        api.get('/api/v1/baggage?airport=ALL').catch((err) => {
+        api.get('/api/v1/baggage').catch((err) => {
           console.warn('Erreur bagages:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         }),
-        api.get('/api/v1/rush/recent?airport=ALL').catch((err) => {
+        api.get('/api/v1/rush/recent').catch((err) => {
           console.warn('Erreur rush:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         })

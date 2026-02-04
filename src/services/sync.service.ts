@@ -171,8 +171,23 @@ class SyncService {
                 // Utiliser /sync pour éviter la validation du vol
                 endpoint = `${apiUrl}/api/v1/passengers/sync`;
                 method = 'POST';
+                // Nettoyer et mapper les colonnes du passager pour l'API
+                const cleanPassenger = {
+                    pnr: data.pnr,
+                    full_name: data.full_name || data.fullName,
+                    flight_number: data.flight_number || data.flightNumber,
+                    seat_number: data.seat_number || data.seatNumber || null,
+                    departure: data.departure,
+                    arrival: data.arrival,
+                    airport_code: data.airport_code || data.airportCode,
+                    baggage_count: data.baggage_count ?? data.baggageCount ?? 0,
+                    baggage_base_number: data.baggage_base_number || data.baggageBaseNumber || null,
+                    checked_in_at: data.checked_in_at || data.checkedInAt || new Date().toISOString(),
+                    airline_code: data.airline_code || data.airlineCode || null,
+                    airline: data.airline || null,
+                };
                 // Wrapper les données dans un tableau pour /sync
-                data = { passengers: [data] };
+                data = { passengers: [cleanPassenger] };
                 break;
             case 'baggages':
                 endpoint = `${apiUrl}/api/v1/baggage/sync`;
@@ -236,7 +251,19 @@ class SyncService {
             }
 
             const result = await response.json();
-            console.log(`[Sync] ✅ Réponse API:`, result);
+            console.log(`[Sync] ✅ Réponse API:`, JSON.stringify(result));
+            
+            // Vérifier si l'API a retourné des erreurs
+            if (result.errors && result.errors.length > 0) {
+                console.error(`[Sync] ⚠️ Erreurs retournées par l'API:`, result.errors);
+                throw new Error(`Erreurs API: ${JSON.stringify(result.errors)}`);
+            }
+            
+            // Vérifier que des données ont été insérées/mises à jour
+            if (result.count === 0 && item.tableName === 'passengers') {
+                console.warn(`[Sync] ⚠️ Aucun passager inséré/mis à jour`);
+            }
+            
             console.log(`[Sync] ✓ ${item.tableName}/${item.recordId} synchronisé`);
         } catch (fetchError: any) {
             console.error(`[Sync] 🌐 Erreur réseau/fetch:`, fetchError.message);

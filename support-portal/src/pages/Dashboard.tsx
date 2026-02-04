@@ -64,23 +64,22 @@ export default function Dashboard() {
         return;
       }
 
-      const headers = { 'Authorization': `Bearer ${token}` };
-
+      // Note: L'intercepteur ajoute automatiquement le token et les headers nécessaires
       // Fetch stats - utiliser les routes appropriées
       const [passengersRes, usersRes, airlinesRes, pendingRes] = await Promise.all([
-        api.get('/api/v1/passengers/all', { headers }).catch((err) => {
+        api.get('/api/v1/passengers/all').catch((err) => {
           console.warn('Erreur passagers:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         }),
-        api.get('/api/v1/support/users/all', { headers }).catch((err) => {
+        api.get('/api/v1/support/users/all').catch((err) => {
           console.warn('Erreur utilisateurs:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         }),
-        api.get('/api/v1/airlines', { headers }).catch((err) => {
+        api.get('/api/v1/airlines').catch((err) => {
           console.warn('Erreur airlines:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         }),
-        api.get('/api/v1/airline-approval/requests?status=pending', { headers }).catch((err) => {
+        api.get('/api/v1/airline-approval/requests', { params: { status: 'pending' } }).catch((err) => {
           console.warn('Erreur demandes:', err?.response?.data?.error || err.message);
           return { data: { data: [] } };
         })

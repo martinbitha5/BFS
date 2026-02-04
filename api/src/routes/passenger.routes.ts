@@ -323,50 +323,86 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     const results: any[] = [];
+    const errors: any[] = [];
 
     // Traiter chaque passager individuellement
     for (const passenger of passengers) {
       try {
+        // Nettoyer les données du passager - ne garder que les colonnes valides
+        const cleanPassenger: any = {
+          pnr: passenger.pnr,
+          full_name: passenger.full_name,
+          flight_number: passenger.flight_number,
+          seat_number: passenger.seat_number,
+          departure: passenger.departure,
+          arrival: passenger.arrival,
+          airport_code: passenger.airport_code,
+          baggage_count: passenger.baggage_count || 0,
+          baggage_base_number: passenger.baggage_base_number,
+          checked_in_at: passenger.checked_in_at || new Date().toISOString()
+        };
+        
+        // Ajouter airline_code si présent
+        if (passenger.airline_code) {
+          cleanPassenger.airline_code = passenger.airline_code;
+        }
+        
+        // Ajouter airline si présent
+        if (passenger.airline) {
+          cleanPassenger.airline = passenger.airline;
+        }
+
         // Chercher d'abord si le passager existe
         const { data: existing, error: searchError } = await supabase
           .from('passengers')
           .select('id')
-          .eq('pnr', passenger.pnr)
-          .eq('airport_code', passenger.airport_code)
+          .eq('pnr', cleanPassenger.pnr)
+          .eq('airport_code', cleanPassenger.airport_code)
           .single();
 
         if (existing && !searchError) {
           // Passager existe, le mettre à jour
           const { data: updated, error: updateError } = await supabase
             .from('passengers')
-            .update(passenger)
+            .update(cleanPassenger)
             .eq('id', existing.id)
             .select()
             .single();
 
-          if (updateError) throw updateError;
-          results.push(updated);
+          if (updateError) {
+            console.error(`[Passengers/Sync] Erreur UPDATE pour ${cleanPassenger.pnr}:`, updateError);
+            errors.push({ pnr: cleanPassenger.pnr, error: updateError.message, action: 'update' });
+          } else {
+            results.push(updated);
+            console.log(`[Passengers/Sync] ✅ Passager mis à jour: ${cleanPassenger.pnr}`);
+          }
         } else {
           // Passager n'existe pas, l'insérer
           const { data: inserted, error: insertError } = await supabase
             .from('passengers')
-            .insert([passenger])
+            .insert([cleanPassenger])
             .select()
             .single();
 
-          if (insertError) throw insertError;
-          results.push(inserted);
+          if (insertError) {
+            console.error(`[Passengers/Sync] Erreur INSERT pour ${cleanPassenger.pnr}:`, insertError);
+            errors.push({ pnr: cleanPassenger.pnr, error: insertError.message, action: 'insert' });
+          } else {
+            results.push(inserted);
+            console.log(`[Passengers/Sync] ✅ Passager inséré: ${cleanPassenger.pnr}`);
+          }
         }
-      } catch (passengerError) {
-        console.error(`[Passengers/Sync] Erreur pour ${passenger.pnr}:`, passengerError);
-        // Continuer avec le passager suivant, mais logger l'erreur
+      } catch (passengerError: any) {
+        console.error(`[Passengers/Sync] Erreur inattendue pour ${passenger.pnr}:`, passengerError);
+        errors.push({ pnr: passenger.pnr, error: passengerError.message || 'Erreur inconnue', action: 'unknown' });
       }
     }
 
     res.json({
-      success: true,
+      success: results.length > 0 || errors.length === 0,
       count: results.length,
-      data: results
+      data: results,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     next(error);

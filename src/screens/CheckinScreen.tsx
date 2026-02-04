@@ -360,14 +360,14 @@ export default function CheckinScreen({ navigation }: Props) {
                   full_name: parsedData.fullName,
                   flight_number: parsedData.flightNumber,
                   seat_number: parsedData.seatNumber || null,
-                  class: null,
                   departure: parsedData.departure,
                   arrival: parsedData.arrival,
                   airport_code: user.airportCode,
                   baggage_count: parsedData.baggageInfo?.count ?? 0,
                   baggage_base_number: parsedData.baggageInfo?.baseNumber || null,
-                  checked_in: true,
                   checked_in_at: new Date().toISOString(),
+                  airline_code: parsedData.companyCode || null,
+                  airline: parsedData.airline || null,
                 }]
               }),
               signal: controller.signal,
@@ -375,7 +375,12 @@ export default function CheckinScreen({ navigation }: Props) {
             clearTimeout(timeoutId);
             
             if (syncResponse.ok) {
-              console.log('[CHECKIN] ✅ Passager synchronisé au serveur:', parsedData.pnr);
+              const syncResult = await syncResponse.json();
+              if (syncResult.count > 0) {
+                console.log('[CHECKIN] ✅ Passager synchronisé au serveur:', parsedData.pnr);
+              } else {
+                console.warn('[CHECKIN] ⚠️ Passager non inséré:', syncResult.errors || 'Raison inconnue');
+              }
             } else {
               const errorText = await syncResponse.text();
               console.warn('[CHECKIN] ⚠️ Erreur sync passager serveur:', syncResponse.status, errorText);
