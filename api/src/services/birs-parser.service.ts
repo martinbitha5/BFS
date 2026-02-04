@@ -93,26 +93,204 @@ class BirsParserService {
       
       console.log('[BIRS Parser] PDF buffer size:', pdfBuffer.length);
       
+      // Vérifier si c'est bien un PDF (signature %PDF)
+      const pdfSignature = pdfBuffer.slice(0, 5).toString('ascii');
+      console.log('[BIRS Parser] PDF signature:', pdfSignature);
+      
+      if (!pdfSignature.startsWith('%PDF')) {
+        console.warn('[BIRS Parser] Invalid PDF signature, trying as text...');
+        // Essayer de décoder comme UTF-8 et parser comme texte
+        const textContent = pdfBuffer.toString('utf-8');
+        if (textContent.includes('0') && textContent.length > 100) {
+          return this.parseTextLines(textContent);
+        }
+        return [];
+      }
+      
       // Extraire le texte du PDF
       const data = await pdf(pdfBuffer);
       const text = data.text;
       
       console.log('[BIRS Parser] Extracted text length:', text.length);
-      console.log('[BIRS Parser] Text preview:', text.substring(0, 300));
+      console.log('[BIRS Parser] Text preview (first 500 chars):', text.substring(0, 500));
+      console.log('[BIRS Parser] Text preview (sample lines):', text.split('\n').slice(0, 10).join(' | '));
       
       // Parser le texte extrait
-      return this.parseTextLines(text);
-    } catch (error) {
-      console.error('[BIRS Parser] PDF parsing error:', error);
+      const items = this.parseTextLines(text);
       
-      // Fallback: essayer de parser comme texte si le contenu ressemble à du texte
-      if (content.includes('\n') || content.includes('Bag') || content.includes('TAG')) {
-        console.log('[BIRS Parser] Fallback to text parsing');
-        return this.parseTextLines(content);
+      // Si aucun item trouvé, essayer avec des patterns alternatifs
+      if (items.length === 0) {
+        console.log('[BIRS Parser] No items found with primary parser, trying SITA-specific parser...');
+        const sitaItems = this.parseSitaBagManagerText(text);
+        if (sitaItems.length > 0) {
+          console.log(`[BIRS Parser] SITA parser found ${sitaItems.length} items`);
+          return sitaItems;
+        }
+      }
+      
+      return items;
+    } catch (error: any) {
+      console.error('[BIRS Parser] PDF parsing error:', error?.message || error);
+      console.error('[BIRS Parser] Error stack:', error?.stack);
+      
+      // Fallback: essayer de décoder le base64 et parser comme texte brut
+      try {
+        console.log('[BIRS Parser] Trying fallback: decode base64 and parse as text...');
+        let textContent = '';
+        
+        if (content.startsWith('data:application/pdf;base64,')) {
+          const base64 = content.split(',')[1];
+          textContent = Buffer.from(base64, 'base64').toString('utf-8');
+        } else {
+          textContent = Buffer.from(content, 'base64').toString('utf-8');
+        }
+        
+        // Chercher des patterns de tags bagages dans le contenu brut
+        const items = this.parseSitaBagManagerText(textContent);
+        if (items.length > 0) {
+          console.log(`[BIRS Parser] Fallback found ${items.length} items`);
+          return items;
+        }
+      } catch (fallbackError) {
+        console.error('[BIRS Parser] Fallback also failed:', fallbackError);
       }
       
       return [];
     }
+  }
+
+  /**
+   * Parser spécifique pour le format SITA BagManager
+   * Format: 0XX123456 Class Origin Dest Surname PNR ... Status
+   * Ex: 0DT352712 Prio JNB* BZV MAHOUASSA 88VXQ4 Expected
+   */
+  private parseSitaBagManagerText(text: string): BirsItem[] {
+    const items: BirsItem[] = [];
+    
+    // Pattern pour les tags SITA: 0 + 2 lettres + 5-7 chiffres
+    // Plus flexible: peut être suivi de n'importe quoi
+    const tagPattern = /\b(0[A-Z]{2}\d{5,7})\b/gi;
+    
+    // Trouver tous les tags dans le texte
+    const matches = text.matchAll(tagPattern);
+    const foundTags = new Set<string>();
+    
+    for (const match of matches) {
+      const tag = match[0].toUpperCase();
+      
+      // Éviter les doublons
+      if (foundTags.has(tag)) continue;
+      foundTags.add(tag);
+      
+      // Extraire le contexte autour du tag (200 caractères après)
+      const startIndex = match.index || 0;
+      const context = text.substring(startIndex, startIndex + 300);
+      
+      // Extraire les informations du contexte
+      const parts = context.split(/[\s\t\n]+/).filter(p => p.length > 0);
+      
+      let passengerName = '';
+      let flightClass = '';
+      let origin = '';
+      let destination = '';
+      let pnr = '';
+      let loaded = false;
+      let received = false;
+      
+      // Parcourir les parties après le tag
+      for (let i = 1; i < Math.min(parts.length, 15); i++) {
+        const part = parts[i];
+        
+        // Ignorer les parties trop courtes
+        if (part.length < 2) continue;
+        
+        // Classe de vol
+        if (/^(Prio|Priority|Econ|Economy|First|Business|J|C|Y|F)$/i.test(part) && !flightClass) {
+          flightClass = part;
+          continue;
+        }
+        
+        // Code aéroport (3 lettres, peut avoir *)
+        if (/^[A-Z]{3}\*?$/i.test(part)) {
+          if (!origin) {
+            origin = part.replace('*', '');
+            continue;
+          } else if (!destination) {
+            destination = part;
+            continue;
+          }
+        }
+        
+        // Nom du passager (lettres majuscules, 3+ caractères, pas un code aéroport)
+        if (/^[A-Z]{3,}$/i.test(part) && !passengerName && destination) {
+          // Vérifier que ce n'est pas un mot-clé
+          const keywords = ['EXPECTED', 'LOADED', 'RECEIVED', 'OFFLOAD', 'RELABEL', 'REFLIGHT', 'ROUTE', 'CAR'];
+          if (!keywords.some(kw => part.toUpperCase().includes(kw))) {
+            passengerName = part;
+            continue;
+          }
+        }
+        
+        // PNR (5-7 caractères alphanumériques)
+        if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
+          // Vérifier que ce n'est pas un mot-clé ou un code commençant par CAR
+          if (!part.toUpperCase().startsWith('CAR') && !/^[A-Z]{5,7}$/.test(part)) {
+            pnr = part;
+          }
+          continue;
+        }
+        
+        // Statut
+        if (part.toUpperCase() === 'LOADED') {
+          loaded = true;
+        }
+        if (part.toUpperCase() === 'RECEIVED') {
+          received = true;
+        }
+        
+        // Si on a trouvé un autre tag, arrêter
+        if (/^0[A-Z]{2}\d{5,7}$/i.test(part)) {
+          break;
+        }
+      }
+      
+      // Vérifier les statuts dans le contexte complet
+      const upperContext = context.toUpperCase();
+      if (upperContext.includes('LOADED') && !upperContext.includes('NOT-LOADED') && !upperContext.includes('NOT LOADED')) {
+        loaded = true;
+      }
+      if (upperContext.includes('RECEIVED')) {
+        received = true;
+      }
+      
+      // Ajouter l'item si on a au moins un nom de passager
+      if (passengerName && passengerName.length >= 2) {
+        items.push({
+          bagId: tag,
+          passengerName: passengerName,
+          class: flightClass || undefined,
+          route: origin && destination ? `${origin}-${destination}` : undefined,
+          pnr: pnr || undefined,
+          loaded: loaded,
+          received: received || loaded
+        });
+      } else {
+        // Même sans nom, créer un item basique avec le tag
+        // Essayer de trouver un nom dans le contexte
+        const nameMatch = context.match(/(?:Prio|Econ|First|Business|J|C|Y|F)\s+[A-Z]{3}\*?\s+[A-Z]{3}\s+([A-Z]{3,})/i);
+        if (nameMatch) {
+          items.push({
+            bagId: tag,
+            passengerName: nameMatch[1],
+            loaded: loaded,
+            received: received || loaded
+          });
+        }
+      }
+    }
+    
+    console.log(`[BIRS Parser] SITA parser extracted ${items.length} unique tags`);
+    return items;
   }
 
   /**
@@ -227,9 +405,13 @@ class BirsParserService {
     const items: BirsItem[] = [];
     const lines = content.split(/\r?\n/);
     
+    console.log(`[BIRS Parser] parseTextLines - Processing ${lines.length} lines`);
+    console.log(`[BIRS Parser] First 5 lines:`, lines.slice(0, 5).map(l => l.substring(0, 80)));
+    
     let parsed = 0;
     let i = 0;
     const processed = new Set<number>(); // Track processed lines
+    const foundTags = new Set<string>(); // Éviter les doublons
 
     while (i < lines.length) {
       if (processed.has(i)) {
@@ -259,14 +441,24 @@ class BirsParserService {
       // =====================================================
       
       // Pattern plus flexible: Tag commence par 0 + 2 lettres + 5-7 chiffres
-      const sitaTagMatch = line.match(/^(0[A-Z]{2}\d{5,7})\s+/i);
+      // Peut être au début de la ligne ou après des espaces
+      const sitaTagMatch = line.match(/^[\s]*(0[A-Z]{2}\d{5,7})[\s\t]+/i);
       
       if (sitaTagMatch) {
-        const bagId = sitaTagMatch[1];
+        const bagId = sitaTagMatch[1].toUpperCase();
+        
+        // Éviter les doublons
+        if (foundTags.has(bagId)) {
+          i++;
+          continue;
+        }
+        
         const restOfLine = line.substring(sitaTagMatch[0].length);
         
         // Extraire les parties: Class Route Surname...
-        const parts = restOfLine.split(/\s+/);
+        const parts = restOfLine.split(/[\s\t]+/).filter(p => p.length > 0);
+        
+        console.log(`[BIRS Parser] Found SITA tag: ${bagId}, parts: ${parts.slice(0, 8).join(', ')}`);
         
         // Chercher la classe (Prio, Econ, First, Business)
         let flightClass = '';
@@ -275,11 +467,17 @@ class BirsParserService {
         let destination = '';
         let pnr = '';
         
+        // Mots-clés à ignorer pour le nom de passager
+        const keywords = ['EXPECTED', 'LOADED', 'RECEIVED', 'OFFLOAD', 'RELABEL', 'REFLIGHT', 'ROUTE', 'CAR', 'NOT', 'ON', 'TO', 'DEST'];
+        
         for (let p = 0; p < parts.length; p++) {
           const part = parts[p];
           
+          // Ignorer les parties vides ou très courtes
+          if (!part || part.length < 1) continue;
+          
           // Classe
-          if (/^(Prio|Econ|First|Business)$/i.test(part)) {
+          if (/^(Prio|Priority|Econ|Economy|First|Business|J|C|Y|F)$/i.test(part) && !flightClass) {
             flightClass = part;
             continue;
           }
@@ -295,25 +493,38 @@ class BirsParserService {
           }
           
           // Nom passager (lettres majuscules, au moins 3 caractères)
+          // Doit venir après la destination et ne pas être un mot-clé
           if (/^[A-Z]{3,}$/i.test(part) && destination && !passengerName) {
-            passengerName = part;
-            continue;
+            const upperPart = part.toUpperCase();
+            if (!keywords.some(kw => upperPart === kw || upperPart.startsWith(kw))) {
+              passengerName = part;
+              continue;
+            }
           }
           
-          // PNR (5-7 caractères alphanumériques)
+          // PNR (5-7 caractères alphanumériques, mélange lettres/chiffres)
           if (/^[A-Z0-9]{5,7}$/i.test(part) && passengerName && !pnr) {
-            pnr = part;
-            break; // On a tout ce qu'il faut
+            // Vérifier que ce n'est pas juste des lettres (mot-clé) ou commence par CAR
+            const upperPart = part.toUpperCase();
+            if (!upperPart.startsWith('CAR') && !/^[A-Z]{5,7}$/.test(part)) {
+              pnr = part;
+              continue;
+            }
+          }
+          
+          // Si on trouve un autre tag SITA, arrêter
+          if (/^0[A-Z]{2}\d{5,7}$/i.test(part)) {
+            break;
           }
         }
         
         // Si on a au moins un tag et un nom de passager
         if (passengerName && passengerName.length >= 2) {
           // Extraire le statut
-          const loaded = line.toUpperCase().includes('LOADED') && !line.toUpperCase().includes('NOT-LOADED');
-          const notLoaded = line.toUpperCase().includes('NOT-LOADED') || line.toUpperCase().includes('NOT LOADED');
-          const expected = line.toUpperCase().includes('EXPECTED');
+          const upperLine = line.toUpperCase();
+          const loaded = upperLine.includes('LOADED') && !upperLine.includes('NOT-LOADED') && !upperLine.includes('NOT LOADED');
           
+          foundTags.add(bagId);
           items.push({
             bagId: bagId,
             passengerName: passengerName,
@@ -325,8 +536,11 @@ class BirsParserService {
           });
           parsed++;
           processed.add(i);
+          console.log(`[BIRS Parser] Added bag: ${bagId} - ${passengerName} (loaded: ${loaded})`);
           i++;
           continue;
+        } else {
+          console.log(`[BIRS Parser] Tag ${bagId} skipped: no passenger name found (parts: ${parts.join(', ')})`);
         }
       }
 
@@ -474,7 +688,19 @@ class BirsParserService {
       }
     }
 
-    console.log(`[BIRS Parser] Parse complete - Total lines: ${lines.length}, Parsed bags: ${parsed}`);
+    console.log(`[BIRS Parser] Parse complete - Total lines: ${lines.length}, Parsed bags: ${parsed}, Unique tags: ${foundTags.size}`);
+    
+    // Si aucun item trouvé, log pour debug
+    if (items.length === 0) {
+      console.log('[BIRS Parser] WARNING: No items parsed! Checking content...');
+      // Chercher des patterns de tags dans tout le contenu
+      const allTagMatches = content.match(/0[A-Z]{2}\d{5,7}/gi);
+      if (allTagMatches) {
+        console.log(`[BIRS Parser] Found ${allTagMatches.length} potential tags in raw content: ${allTagMatches.slice(0, 5).join(', ')}...`);
+      } else {
+        console.log('[BIRS Parser] No SITA tag patterns found in content');
+      }
+    }
 
     return items;
   }
