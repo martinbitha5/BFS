@@ -235,8 +235,10 @@ export default function BaggageScreen({ navigation }: Props) {
               // Extraire firstName/lastName du full_name si non fournis
               const fullName = result.data.full_name || '';
               const nameParts = fullName.trim().split(/\s+/);
-              const firstName = result.data.first_name || nameParts[0] || 'UNKNOWN';
-              const lastName = result.data.last_name || nameParts.slice(1).join(' ') || nameParts[0] || 'UNKNOWN';
+              const firstName = result.data.first_name || nameParts[0] || '';
+              const lastName = result.data.last_name || nameParts.slice(1).join(' ') || '';
+              const departure = result.data.departure || user.airportCode;
+              const arrival = result.data.arrival || '';
               
               // Creer le passager localement pour les futurs scans et pour lier le bagage
               const passengerId = await databaseServiceInstance.createPassenger({
@@ -245,13 +247,16 @@ export default function BaggageScreen({ navigation }: Props) {
                 firstName: firstName,
                 lastName: lastName,
                 flightNumber: result.data.flight_number,
-                airline: result.data.airline,
-                airlineCode: result.data.airline_code,
-                departure: result.data.departure,
-                arrival: result.data.arrival,
+                airline: result.data.airline || '',
+                airlineCode: result.data.airline_code || '',
+                departure: departure,
+                arrival: arrival,
+                route: result.data.route || `${departure}-${arrival}`,
                 baggageCount: result.data.baggage_count || 1,
                 baggageBaseNumber: result.data.baggage_base_number,
                 airportCode: user.airportCode,
+                checkedInAt: result.data.checked_in_at || new Date().toISOString(),
+                checkedInBy: result.data.checked_in_by || user.id,
                 synced: true,
               });
               
