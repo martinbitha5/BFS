@@ -151,6 +151,70 @@ router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (r
     }
 });
 /**
+ * GET /api/v1/passengers/by-baggage-tag
+ * Chercher un passager par son numero de tag bagage
+ * Utilise pour lier les bagages aux passagers quand le passager n'est pas en cache local
+ */
+router.get('/by-baggage-tag', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { tag, airport } = req.query;
+        const airportCode = airport?.toString() || req.userAirportCode;
+        if (!tag) {
+            return res.status(400).json({
+                success: false,
+                error: 'Le parametre tag est requis'
+            });
+        }
+        const tagBase = tag.toString().replace(/\D/g, '').substring(0, 10);
+        console.log(`[PASSENGER API] Recherche passager par tag: ${tagBase}, airport: ${airportCode}`);
+        // Chercher un passager dont le baggage_base_number correspond
+        let query = database_1.supabase
+            .from('passengers')
+            .select('*')
+            .not('baggage_base_number', 'is', null);
+        if (airportCode) {
+            query = query.eq('airport_code', airportCode);
+        }
+        const { data: passengers, error } = await query;
+        if (error)
+            throw error;
+        // Trouver le passager dont le tag correspond
+        const tagBaseNum = parseInt(tagBase, 10);
+        let foundPassenger = null;
+        for (const passenger of passengers || []) {
+            const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
+            const baggageCount = passenger.baggage_count || 1;
+            if (isNaN(passengerBaseNum))
+                continue;
+            // Verifier si le tag scanne correspond a un des bagages attendus
+            for (let i = 0; i < baggageCount; i++) {
+                const expectedBaseNum = passengerBaseNum + i;
+                if (tagBaseNum === expectedBaseNum) {
+                    foundPassenger = passenger;
+                    break;
+                }
+            }
+            if (foundPassenger)
+                break;
+        }
+        if (!foundPassenger) {
+            return res.status(404).json({
+                success: false,
+                error: 'Aucun passager trouve pour ce tag'
+            });
+        }
+        console.log(`[PASSENGER API] Passager trouve: ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr})`);
+        res.json({
+            success: true,
+            data: foundPassenger
+        });
+    }
+    catch (error) {
+        console.error('[PASSENGER API] Erreur recherche par tag:', error);
+        next(error);
+    }
+});
+/**
  * GET /api/v1/passengers/:id
  * Récupérer un passager spécifique
  * RESTRICTION: Vérifie que le passager appartient à l'aéroport de l'utilisateur
