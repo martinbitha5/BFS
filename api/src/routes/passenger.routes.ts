@@ -77,17 +77,17 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
 
 /**
  * GET /api/v1/passengers/all
- * SUPPORT ONLY: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
+ * SUPPORT & LITIGE: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
  * ⭐ MUST BE BEFORE /:id route to avoid UUID parsing conflict
  */
 router.get('/all', requireAirportCode, async (req: Request & { userAirportCode?: string; userRole?: string }, res: Response, next: NextFunction) => {
   try {
-    // Vérifier que c'est un support
+    // Vérifier que c'est un support ou baggage_dispute (litige)
     const userRole = (req as any).userRole || req.headers['x-user-role'];
-    if (userRole !== 'support') {
+    if (userRole !== 'support' && userRole !== 'baggage_dispute') {
       return res.status(403).json({
         success: false,
-        error: 'Accès refusé. Cette route est réservée au support.'
+        error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
       });
     }
 

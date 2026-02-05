@@ -104,17 +104,17 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
 });
 /**
  * GET /api/v1/passengers/all
- * SUPPORT ONLY: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
+ * SUPPORT & LITIGE: Récupérer TOUS les passagers de TOUS les aéroports (pas de filtrage)
  * ⭐ MUST BE BEFORE /:id route to avoid UUID parsing conflict
  */
 router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        // Vérifier que c'est un support
+        // Vérifier que c'est un support ou baggage_dispute (litige)
         const userRole = req.userRole || req.headers['x-user-role'];
-        if (userRole !== 'support') {
+        if (userRole !== 'support' && userRole !== 'baggage_dispute') {
             return res.status(403).json({
                 success: false,
-                error: 'Accès refusé. Cette route est réservée au support.'
+                error: 'Accès refusé. Cette route est réservée au support et aux agents litiges.'
             });
         }
         let query = database_1.supabase
@@ -135,7 +135,7 @@ router.get('/all', airport_restriction_middleware_1.requireAirportCode, async (r
             departure: passenger.departure,
             arrival: passenger.arrival,
             seatNumber: passenger.seat_number,
-            baggageCount: passenger.baggages?.length || 0,
+            baggageCount: passenger.baggage_count || 0, // Nombre de bagages DÉCLARÉS
             checkedInAt: passenger.checked_in_at,
             airportCode: passenger.airport_code,
             baggages: passenger.baggages || [],
@@ -326,49 +326,75 @@ router.post('/sync', async (req, res, next) => {
             });
         }
         const results = [];
+        const errors = [];
         // Traiter chaque passager individuellement
         for (const passenger of passengers) {
             try {
+                // Nettoyer les données du passager - ne garder que les colonnes valides
+                // Note: airline et airline_code n'existent pas dans la table passengers
+                const cleanPassenger = {
+                    pnr: passenger.pnr,
+                    full_name: passenger.full_name,
+                    flight_number: passenger.flight_number,
+                    seat_number: passenger.seat_number,
+                    departure: passenger.departure,
+                    arrival: passenger.arrival,
+                    airport_code: passenger.airport_code,
+                    baggage_count: passenger.baggage_count || 0,
+                    baggage_base_number: passenger.baggage_base_number,
+                    checked_in_at: passenger.checked_in_at || new Date().toISOString()
+                };
                 // Chercher d'abord si le passager existe
                 const { data: existing, error: searchError } = await database_1.supabase
                     .from('passengers')
                     .select('id')
-                    .eq('pnr', passenger.pnr)
-                    .eq('airport_code', passenger.airport_code)
+                    .eq('pnr', cleanPassenger.pnr)
+                    .eq('airport_code', cleanPassenger.airport_code)
                     .single();
                 if (existing && !searchError) {
                     // Passager existe, le mettre à jour
                     const { data: updated, error: updateError } = await database_1.supabase
                         .from('passengers')
-                        .update(passenger)
+                        .update(cleanPassenger)
                         .eq('id', existing.id)
                         .select()
                         .single();
-                    if (updateError)
-                        throw updateError;
-                    results.push(updated);
+                    if (updateError) {
+                        console.error(`[Passengers/Sync] Erreur UPDATE pour ${cleanPassenger.pnr}:`, updateError);
+                        errors.push({ pnr: cleanPassenger.pnr, error: updateError.message, action: 'update' });
+                    }
+                    else {
+                        results.push(updated);
+                        console.log(`[Passengers/Sync] ✅ Passager mis à jour: ${cleanPassenger.pnr}`);
+                    }
                 }
                 else {
                     // Passager n'existe pas, l'insérer
                     const { data: inserted, error: insertError } = await database_1.supabase
                         .from('passengers')
-                        .insert([passenger])
+                        .insert([cleanPassenger])
                         .select()
                         .single();
-                    if (insertError)
-                        throw insertError;
-                    results.push(inserted);
+                    if (insertError) {
+                        console.error(`[Passengers/Sync] Erreur INSERT pour ${cleanPassenger.pnr}:`, insertError);
+                        errors.push({ pnr: cleanPassenger.pnr, error: insertError.message, action: 'insert' });
+                    }
+                    else {
+                        results.push(inserted);
+                        console.log(`[Passengers/Sync] ✅ Passager inséré: ${cleanPassenger.pnr}`);
+                    }
                 }
             }
             catch (passengerError) {
-                console.error(`[Passengers/Sync] Erreur pour ${passenger.pnr}:`, passengerError);
-                // Continuer avec le passager suivant, mais logger l'erreur
+                console.error(`[Passengers/Sync] Erreur inattendue pour ${passenger.pnr}:`, passengerError);
+                errors.push({ pnr: passenger.pnr, error: passengerError.message || 'Erreur inconnue', action: 'unknown' });
             }
         }
         res.json({
-            success: true,
+            success: results.length > 0 || errors.length === 0,
             count: results.length,
-            data: results
+            data: results,
+            errors: errors.length > 0 ? errors : undefined
         });
     }
     catch (error) {
@@ -378,6 +404,7 @@ router.post('/sync', async (req, res, next) => {
 /**
  * POST /api/v1/baggages/create
  * Créer un nouveau bagage pour un passager
+ * Met à jour automatiquement baggage_count si nécessaire
  */
 router.post('/baggages/create', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
@@ -386,6 +413,18 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
             return res.status(400).json({
                 success: false,
                 error: 'passengerId et tag_number sont requis'
+            });
+        }
+        // Récupérer le passager avec ses bagages actuels
+        const { data: passenger, error: passengerError } = await database_1.supabase
+            .from('passengers')
+            .select('id, baggage_count, baggages(id)')
+            .eq('id', passengerId)
+            .single();
+        if (passengerError || !passenger) {
+            return res.status(404).json({
+                success: false,
+                error: 'Passager non trouvé'
             });
         }
         // Insérer le bagage
@@ -402,6 +441,16 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
             .single();
         if (error)
             throw error;
+        // Mettre à jour baggage_count si nécessaire
+        const currentBaggageCount = Array.isArray(passenger.baggages) ? passenger.baggages.length : 0;
+        const newBaggageCount = currentBaggageCount + 1;
+        const declaredCount = passenger.baggage_count || 0;
+        if (newBaggageCount > declaredCount) {
+            await database_1.supabase
+                .from('passengers')
+                .update({ baggage_count: newBaggageCount })
+                .eq('id', passengerId);
+        }
         res.json({
             success: true,
             data: {
