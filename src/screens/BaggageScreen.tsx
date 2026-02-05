@@ -193,69 +193,81 @@ export default function BaggageScreen({ navigation }: Props) {
         return;
       }
 
-      // ✅ Chercher le passager - PRIORITÉ: par numéro de tag attendu (expectedTags)
+      // ✅ Chercher le passager - PRIORITÉ: API Supabase (serveur) puis local en fallback
       let passenger: Passenger | null = null;
       
-      // 1. D'abord chercher localement par tag attendu (le plus fiable pour les tags numériques)
-      passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
-
-      // 2. Si pas trouvé, chercher par PNR (si le tag contient un PNR)
-      if (!passenger && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
-        passenger = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
-      }
-
-      // 3. Si toujours pas trouvé, chercher par nom
-      if (!passenger && baggageTagData.passengerName && baggageTagData.passengerName !== 'UNKNOWN') {
-        passenger = await databaseServiceInstance.getPassengerByName(baggageTagData.passengerName);
-      }
-
-      // 4. ✅ FIX: Si pas trouvé localement, chercher via l'API Supabase
-      if (!passenger) {
-        console.log('[BAGGAGE] Passager non trouve localement, recherche via API...');
-        try {
-          const apiUrl = await AsyncStorage.getItem('@bfs:api_url');
-          const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+      // 1. ✅ Chercher via l'API Supabase (source de vérité)
+      console.log('[BAGGAGE] Recherche passager via API Supabase...');
+      try {
+        const apiUrl = await AsyncStorage.getItem('@bfs:api_url');
+        const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+        
+        if (apiUrl && apiKey) {
+          // Extraire la base du tag (10 premiers chiffres)
+          const tagBase = tagNumber.replace(/\D/g, '').substring(0, 10);
           
-          if (apiUrl && apiKey) {
-            // Extraire la base du tag (10 premiers chiffres)
-            const tagBase = tagNumber.replace(/\D/g, '').substring(0, 10);
-            
-            const response = await fetch(`${apiUrl}/api/v1/passengers/by-baggage-tag?tag=${tagBase}&airport=${user.airportCode}`, {
+          // D'abord chercher par tag
+          let response = await fetch(`${apiUrl}/api/v1/passengers/by-baggage-tag?tag=${tagBase}&airport=${user.airportCode}`, {
+            headers: {
+              'x-api-key': apiKey,
+              'x-airport-code': user.airportCode,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          // Si pas trouve par tag, chercher par PNR
+          if (!response.ok && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
+            console.log('[BAGGAGE] Recherche par PNR via API:', baggageTagData.pnr);
+            response = await fetch(`${apiUrl}/api/v1/passengers/pnr/${baggageTagData.pnr}`, {
               headers: {
                 'x-api-key': apiKey,
                 'x-airport-code': user.airportCode,
                 'Content-Type': 'application/json',
               },
             });
-            
-            if (response.ok) {
-              const result = await response.json();
-              if (result.data) {
-                console.log('[BAGGAGE] Passager trouve via API:', result.data.full_name);
-                
-                // Créer le passager localement pour les futurs scans
-                const passengerId = await databaseServiceInstance.createPassenger({
-                  pnr: result.data.pnr,
-                  fullName: result.data.full_name,
-                  firstName: result.data.first_name,
-                  lastName: result.data.last_name,
-                  flightNumber: result.data.flight_number,
-                  airline: result.data.airline,
-                  airlineCode: result.data.airline_code,
-                  departure: result.data.departure,
-                  arrival: result.data.arrival,
-                  baggageCount: result.data.baggage_count || 1,
-                  baggageBaseNumber: result.data.baggage_base_number,
-                  airportCode: user.airportCode,
-                  synced: true,
-                });
-                
-                passenger = await databaseServiceInstance.getPassengerById(passengerId);
-              }
+          }
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data) {
+              console.log('[BAGGAGE] Passager trouve via API:', result.data.full_name);
+              
+              // Creer le passager localement pour les futurs scans et pour lier le bagage
+              const passengerId = await databaseServiceInstance.createPassenger({
+                pnr: result.data.pnr,
+                fullName: result.data.full_name,
+                firstName: result.data.first_name,
+                lastName: result.data.last_name,
+                flightNumber: result.data.flight_number,
+                airline: result.data.airline,
+                airlineCode: result.data.airline_code,
+                departure: result.data.departure,
+                arrival: result.data.arrival,
+                baggageCount: result.data.baggage_count || 1,
+                baggageBaseNumber: result.data.baggage_base_number,
+                airportCode: user.airportCode,
+                synced: true,
+              });
+              
+              passenger = await databaseServiceInstance.getPassengerById(passengerId);
             }
           }
-        } catch (apiError) {
-          console.error('[BAGGAGE] Erreur recherche API:', apiError);
+        }
+      } catch (apiError) {
+        console.error('[BAGGAGE] Erreur recherche API:', apiError);
+      }
+      
+      // 2. Fallback: chercher localement si API echoue
+      if (!passenger) {
+        console.log('[BAGGAGE] Fallback: recherche locale...');
+        passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
+        
+        if (!passenger && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
+          passenger = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
+        }
+        
+        if (!passenger && baggageTagData.passengerName && baggageTagData.passengerName !== 'UNKNOWN') {
+          passenger = await databaseServiceInstance.getPassengerByName(baggageTagData.passengerName);
         }
       }
 
