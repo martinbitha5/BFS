@@ -232,12 +232,18 @@ export default function BaggageScreen({ navigation }: Props) {
             if (result.data) {
               console.log('[BAGGAGE] Passager trouve via API:', result.data.full_name);
               
+              // Extraire firstName/lastName du full_name si non fournis
+              const fullName = result.data.full_name || '';
+              const nameParts = fullName.trim().split(/\s+/);
+              const firstName = result.data.first_name || nameParts[0] || 'UNKNOWN';
+              const lastName = result.data.last_name || nameParts.slice(1).join(' ') || nameParts[0] || 'UNKNOWN';
+              
               // Creer le passager localement pour les futurs scans et pour lier le bagage
               const passengerId = await databaseServiceInstance.createPassenger({
                 pnr: result.data.pnr,
-                fullName: result.data.full_name,
-                firstName: result.data.first_name,
-                lastName: result.data.last_name,
+                fullName: fullName,
+                firstName: firstName,
+                lastName: lastName,
                 flightNumber: result.data.flight_number,
                 airline: result.data.airline,
                 airlineCode: result.data.airline_code,
