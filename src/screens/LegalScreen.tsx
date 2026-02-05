@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { Spacing, FontSizes, FontWeights } from '../theme';
-import { useTheme } from '../contexts/ThemeContext';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
+import { useTheme } from '../contexts/ThemeContext';
+import { RootStackParamList } from '../navigation/RootStack';
+import { FontSizes, FontWeights, Spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Legal'>;
 
@@ -36,8 +36,8 @@ export default function LegalScreen({ navigation }: Props) {
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Téléphone : +243 819 929 881{'\n'}
-            Email : contact@ats-handling-rdc.com{'\n'}
-            Site web : https://www.ats-handling-rdc.com
+            Email : support@brsats.com{'\n'}
+            Site web : https://brsats.com
           </Text>
         </Card>
 
@@ -84,7 +84,7 @@ export default function LegalScreen({ navigation }: Props) {
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Pour exercer ces droits, vous pouvez nous contacter à l&apos;adresse suivante : 
-            contact@ats-handling-rdc.com
+            support@brsats.com
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             Les données collectées dans le cadre de l&apos;utilisation de l&apos;application sont traitées 
@@ -141,7 +141,7 @@ export default function LegalScreen({ navigation }: Props) {
             Pour toute question concernant les présentes mentions légales, vous pouvez nous contacter :
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            <Text style={[styles.bold, { color: colors.text.primary }]}>Par email :</Text> contact@ats-handling-rdc.com{'\n'}
+            <Text style={[styles.bold, { color: colors.text.primary }]}>Par email :</Text> support@brsats.com{'\n'}
             <Text style={[styles.bold, { color: colors.text.primary }]}>Par téléphone :</Text> +243 819 929 881{'\n'}
             <Text style={[styles.bold, { color: colors.text.primary }]}>Par courrier :</Text>{'\n'}
             AFRICAN TRANSPORT SYSTEMS{'\n'}

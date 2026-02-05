@@ -9,41 +9,59 @@ const router = (0, express_1.Router)();
  * GET /api/v1/stats/airport/:airport
  * Statistiques pour un aéroport spécifique
  * RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport
+ * Paramètre optionnel: ?date=YYYY-MM-DD pour filtrer par date (défaut: aujourd'hui)
+ * Paramètre optionnel: ?all=true pour récupérer TOUTES les données sans filtre de date
  */
 router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { airport } = req.params;
+        const { date, all } = req.query;
         const hasFullAccess = req.hasFullAccess;
         // Si l'aéroport demandé est ALL, ne pas filtrer par aéroport
-        const today = new Date().toISOString().split('T')[0];
-        const filterAirport = airport.toUpperCase() === 'ALL' && hasFullAccess;
+        const filterAirport = !(airport.toUpperCase() === 'ALL' && hasFullAccess);
+        // Utiliser la date fournie ou aujourd'hui (UTC+1 pour Afrique Centrale)
+        const now = new Date();
+        // Ajuster pour le fuseau horaire Afrique Centrale (UTC+1)
+        now.setHours(now.getHours() + 1);
+        const today = date ? String(date) : now.toISOString().split('T')[0];
+        // Si all=true, ne pas filtrer par date
+        const filterByDate = all !== 'true';
         // ✅ AUTO-SYNC: Synchroniser automatiquement les raw_scans non traités
         (0, auto_sync_service_1.autoSyncIfNeeded)(airport.toUpperCase()).catch(err => console.warn('[AUTO-SYNC] Erreur:', err));
-        // Récupérer les passagers D'AUJOURD'HUI SEULEMENT
-        let passQuery = database_1.supabase.from('passengers').select('*')
-            .gte('checked_in_at', `${today}T00:00:00`)
-            .lt('checked_in_at', `${today}T23:59:59`);
-        if (!filterAirport) {
+        // Récupérer les passagers
+        let passQuery = database_1.supabase.from('passengers').select('*');
+        if (filterByDate) {
+            passQuery = passQuery
+                .gte('checked_in_at', `${today}T00:00:00`)
+                .lt('checked_in_at', `${today}T23:59:59`);
+        }
+        if (filterAirport) {
             passQuery = passQuery.eq('airport_code', airport.toUpperCase());
         }
         const { data: passengers, error: passError } = await passQuery;
         if (passError)
             throw passError;
-        // Récupérer les bagages D'AUJOURD'HUI SEULEMENT
-        let bagQuery = database_1.supabase.from('baggages').select('*')
-            .gte('created_at', `${today}T00:00:00`)
-            .lt('created_at', `${today}T23:59:59`);
-        if (!filterAirport) {
+        // Récupérer les bagages
+        let bagQuery = database_1.supabase.from('baggages').select('*');
+        if (filterByDate) {
+            bagQuery = bagQuery
+                .gte('created_at', `${today}T00:00:00`)
+                .lt('created_at', `${today}T23:59:59`);
+        }
+        if (filterAirport) {
             bagQuery = bagQuery.eq('airport_code', airport.toUpperCase());
         }
         const { data: baggages, error: bagError } = await bagQuery;
         if (bagError)
             throw bagError;
-        // Récupérer les statuts d'embarquement D'AUJOURD'HUI (via jointure avec passengers)
-        let boardQuery = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, checked_in_at)')
-            .gte('passengers.checked_in_at', `${today}T00:00:00`)
-            .lt('passengers.checked_in_at', `${today}T23:59:59`);
-        if (!filterAirport) {
+        // Récupérer les statuts d'embarquement
+        let boardQuery = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, checked_in_at)');
+        if (filterByDate) {
+            boardQuery = boardQuery
+                .gte('passengers.checked_in_at', `${today}T00:00:00`)
+                .lt('passengers.checked_in_at', `${today}T23:59:59`);
+        }
+        if (filterAirport) {
             boardQuery = boardQuery.eq('passengers.airport_code', airport.toUpperCase());
         }
         const { data: boardingStatuses, error: boardError } = await boardQuery;

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStack';
-import { Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import { useTheme } from '../contexts/ThemeContext';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
+import { useTheme } from '../contexts/ThemeContext';
+import { RootStackParamList } from '../navigation/RootStack';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FAQ'>;
 
@@ -50,7 +50,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: '7',
     question: 'Comment signaler un problème technique ?',
-    answer: 'Pour signaler un problème technique, vous pouvez contacter le support ATS via l\'écran Paramètres > Contact support ou directement par email à contact@ats-handling-rdc.com ou par téléphone au +243 819 929 881. Veuillez inclure une description détaillée du problème et, si possible, une capture d\'écran.',
+    answer: 'Pour signaler un problème technique, vous pouvez contacter le support via l\'écran Paramètres > Contact support ou directement par email à support@brsats.com. Veuillez inclure une description détaillée du problème et, si possible, une capture d\'écran.',
   },
   {
     id: '8',
@@ -60,7 +60,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: '9',
     question: 'Comment réinitialiser mon mot de passe ?',
-    answer: 'Pour réinitialiser votre mot de passe, contactez votre administrateur système ou le support ATS à contact@ats-handling-rdc.com. Les mots de passe sont gérés de manière centralisée pour garantir la sécurité des données sensibles liées aux opérations aéroportuaires.',
+    answer: 'Pour réinitialiser votre mot de passe, contactez votre administrateur système ou le support à support@brsats.com. Les mots de passe sont gérés de manière centralisée pour garantir la sécurité des données sensibles liées aux opérations aéroportuaires.',
   },
   {
     id: '10',
@@ -150,7 +150,7 @@ export default function FAQScreen({ navigation }: Props) {
             </Text>
             <View style={styles.contactInfo}>
               <Text style={[styles.contactText, { color: colors.text.secondary }]}>
-                <Text style={[styles.contactLabel, { color: colors.text.primary }]}>Email :</Text> contact@ats-handling-rdc.com
+                <Text style={[styles.contactLabel, { color: colors.text.primary }]}>Email :</Text> support@brsats.com
               </Text>
               <Text style={[styles.contactText, { color: colors.text.secondary }]}>
                 <Text style={[styles.contactLabel, { color: colors.text.primary }]}>Téléphone :</Text> +243 819 929 881

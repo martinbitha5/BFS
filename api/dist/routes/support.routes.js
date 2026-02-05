@@ -15,6 +15,7 @@ const checkSupportAccess = (req) => {
 /**
  * POST /api/v1/support/baggages/create
  * SUPPORT/LITIGE: Créer un bagage supplémentaire pour un passager
+ * Met à jour automatiquement baggage_count si nécessaire
  */
 router.post('/baggages/create', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
@@ -32,10 +33,10 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
                 error: 'passengerId et tag_number sont requis'
             });
         }
-        // Vérifier que le passager existe
+        // Vérifier que le passager existe et récupérer ses infos + nombre de bagages actuels
         const { data: passenger, error: passengerError } = await database_1.supabase
             .from('passengers')
-            .select('id, full_name, airport_code')
+            .select('id, full_name, airport_code, baggage_count, baggages(id)')
             .eq('id', passengerId)
             .single();
         if (passengerError || !passenger) {
@@ -59,6 +60,18 @@ router.post('/baggages/create', airport_restriction_middleware_1.requireAirportC
             .single();
         if (baggageError) {
             throw baggageError;
+        }
+        // Calculer le nouveau nombre de bagages (après ajout)
+        const currentBaggageCount = Array.isArray(passenger.baggages) ? passenger.baggages.length : 0;
+        const newBaggageCount = currentBaggageCount + 1;
+        const declaredCount = passenger.baggage_count || 0;
+        // Si le nombre de bagages réels dépasse le nombre déclaré, mettre à jour baggage_count
+        if (newBaggageCount > declaredCount) {
+            await database_1.supabase
+                .from('passengers')
+                .update({ baggage_count: newBaggageCount })
+                .eq('id', passengerId);
+            console.log(`[Support] baggage_count mis à jour: ${declaredCount} → ${newBaggageCount} pour ${passenger.full_name}`);
         }
         console.log(`[Support] Bagage créé pour ${passenger.full_name}: ${tag_number}`);
         res.json({

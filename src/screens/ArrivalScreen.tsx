@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, Toast } from '../components';
-import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 // ✅ OPTIMISATION: Imports statiques pour réduire la latence
@@ -23,7 +22,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Arrival'>;
 export default function ArrivalScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { currentFlight } = useFlightContext();
   const [baggage, setBaggage] = useState<Baggage | null>(null);
   const [passenger, setPassenger] = useState<Passenger | null>(null);
   const [internationalBaggage, setInternationalBaggage] = useState<InternationalBaggage | null>(null);
@@ -630,15 +628,6 @@ export default function ArrivalScreen({ navigation }: Props) {
             </View>
             
             <Card style={styles.pdaInfoCard}>
-              {currentFlight && (
-                <View style={[styles.flightInfoBanner, { backgroundColor: colors.primary.main + '20' }]}>
-                  <Ionicons name="airplane" size={20} color={colors.primary.main} />
-                  <Text style={[styles.flightInfoText, { color: colors.primary.main }]}>
-                    Vol: {currentFlight.flightNumber} | {currentFlight.departure} → {currentFlight.arrival}
-                  </Text>
-                </View>
-              )}
-              
               <Text style={[styles.pdaTitle, { color: colors.text.primary }]}>
                 Scanner Laser PDA - Arrivée
               </Text>
@@ -737,22 +726,6 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-  },
-  flightInfoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 8,
-    marginBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  flightInfoText: {
-    color: '#fff',
-    fontSize: FontSizes.sm,
-    fontWeight: FontWeights.bold,
   },
   instruction: {
     color: '#fff',

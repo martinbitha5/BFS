@@ -49,11 +49,11 @@ export default function CreditsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   const handleWebsitePress = () => {
-    Linking.openURL('http://ats-handling-rdc.com');
+    Linking.openURL('https://brsats.com');
   };
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:contact@ats-handling-rdc.com');
+    Linking.openURL('mailto:support@brsats.com');
   };
 
   return (
@@ -129,14 +129,14 @@ export default function CreditsScreen({ navigation }: Props) {
                 onPress={handleWebsitePress}
                 activeOpacity={0.7}>
                 <Ionicons name="globe" size={20} color={colors.primary.main} />
-                <Text style={[styles.contactButtonText, { color: colors.primary.main }]}>ats-handling-rdc.com</Text>
+                <Text style={[styles.contactButtonText, { color: colors.primary.main }]}>brsats.com</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.contactButton, { backgroundColor: colors.primary.light + '15' }]}
                 onPress={handleEmailPress}
                 activeOpacity={0.7}>
                 <Ionicons name="mail" size={20} color={colors.primary.main} />
-                <Text style={[styles.contactButtonText, { color: colors.primary.main }]}>contact@ats-handling-rdc.com</Text>
+                <Text style={[styles.contactButtonText, { color: colors.primary.main }]}>support@brsats.com</Text>
               </TouchableOpacity>
             </View>
           </View>

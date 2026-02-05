@@ -233,32 +233,34 @@ export const exportToExcel = async (
   }
 
   // ===== FEUILLE 3: BAGAGES =====
+  // Toujours créer la feuille Bagages (même si vide)
+  const bagSheet = workbook.addWorksheet('Bagages', {
+    properties: { tabColor: { argb: 'FFF59E0B' } }
+  });
+
+  const bagHeaders = [
+    'Tag',
+    'PNR',
+    'Nom Complet',
+    'Vol',
+    'Poids (kg)',
+    'Statut',
+    'Arrivé le',
+    'Localisation'
+  ];
+  bagSheet.addRow(bagHeaders);
+
+  const bagHeaderRow = bagSheet.getRow(1);
+  bagHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+  bagHeaderRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF2563EB' }
+  };
+  bagHeaderRow.height = 25;
+  bagHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
   if (filteredBaggages.length > 0) {
-    const bagSheet = workbook.addWorksheet('Bagages', {
-      properties: { tabColor: { argb: 'FFF59E0B' } }
-    });
-
-    const bagHeaders = [
-      'Tag',
-      'Nom Complet',
-      'Vol',
-      'Poids (kg)',
-      'Statut',
-      'Arrivé le',
-      'Localisation'
-    ];
-    bagSheet.addRow(bagHeaders);
-
-    const bagHeaderRow = bagSheet.getRow(1);
-    bagHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
-    bagHeaderRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF2563EB' }
-    };
-    bagHeaderRow.height = 25;
-    bagHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
     filteredBaggages.forEach((b: any) => {
       const statusLabel = b.status === 'arrived' ? 'Arrivé'
         : b.status === 'rush' ? 'RUSH'
@@ -268,55 +270,74 @@ export const exportToExcel = async (
 
       // Chercher le passager correspondant - essayer plusieurs approches
       let passengerName = '-';
+      let passengerPnr = '-';
       
+      // Si le bagage a un champ passengers (objet imbriqué de l'API)
+      if (b.passengers?.full_name) {
+        passengerName = b.passengers.full_name;
+        passengerPnr = b.passengers.pnr || '-';
+      }
       // Si le bagage a un champ passenger_name directement, l'utiliser
-      if (b.passenger_name && b.passenger_name !== b.passenger_id) {
+      else if (b.passenger_name && b.passenger_name !== b.passenger_id) {
         passengerName = b.passenger_name;
-      } else if (b.passenger_id) {
-        // Sinon chercher dans les passagers
+      }
+      
+      // Sinon chercher dans la liste des passagers
+      if (passengerName === '-' && b.passenger_id) {
         const passenger = filteredPassengers.find((p: any) => 
           p.pnr === b.passenger_id || 
           p.id === b.passenger_id ||
           p.full_name?.toLowerCase() === (b.passenger_id || '').toLowerCase()
         );
-        passengerName = passenger?.full_name || b.passenger_id || '-';
+        if (passenger) {
+          passengerName = passenger.full_name || '-';
+          passengerPnr = passenger.pnr || '-';
+        } else {
+          passengerName = b.passenger_id || '-';
+        }
       }
 
       bagSheet.addRow([
         b.tag_number,
+        passengerPnr,
         passengerName,
         b.flight_number,
-        b.weight,
+        b.weight || 0,
         statusLabel,
         b.arrived_at ? new Date(b.arrived_at).toLocaleString('fr-FR') : '-',
         b.current_location || '-'
       ]);
     });
-
-    // Largeurs de colonnes
-    bagSheet.getColumn(1).width = 15;  // Tag
-    bagSheet.getColumn(2).width = 25;  // Nom Complet
-    bagSheet.getColumn(3).width = 12;  // Vol
-    bagSheet.getColumn(4).width = 10;  // Poids
-    bagSheet.getColumn(5).width = 12;  // Statut
-    bagSheet.getColumn(6).width = 20;  // Arrivé le
-    bagSheet.getColumn(7).width = 15;  // Localisation
-
-    // Bordures et alignement
-    bagSheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        });
-      }
-    });
+  } else {
+    // Si pas de bagages, ajouter un message
+    bagSheet.addRow(['Aucun bagage pour cette période', '', '', '', '', '', '', '']);
+    bagSheet.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
   }
+
+  // Largeurs de colonnes
+  bagSheet.getColumn(1).width = 15;  // Tag
+  bagSheet.getColumn(2).width = 12;  // PNR
+  bagSheet.getColumn(3).width = 25;  // Nom Complet
+  bagSheet.getColumn(4).width = 12;  // Vol
+  bagSheet.getColumn(5).width = 10;  // Poids
+  bagSheet.getColumn(6).width = 12;  // Statut
+  bagSheet.getColumn(7).width = 20;  // Arrivé le
+  bagSheet.getColumn(8).width = 15;  // Localisation
+
+  // Bordures et alignement
+  bagSheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+    }
+  });
 
   // ===== FEUILLE 4: BRS INTERNATIONAL =====
   // Cette section est gérée plus bas dans le code

@@ -166,17 +166,22 @@ export default function Dashboard() {
       }));
 
       // Formater les bagages selon ce qui s'affiche dans le dashboard
+      // Inclure l'objet passengers de l'API pour avoir le nom et PNR du passager
       const formattedBaggages = allBaggages.map((b: any) => ({
         tag_number: b.tag_number || b.tagNumber || b.tag || '',
         passenger_id: b.passenger_id || b.passengerId || b.passengerID || '',
-        passenger_name: b.passenger_name || b.passengerName || b.full_name || '',
-        flight_number: b.flight_number || b.flightNumber || b.flight || '',
+        passenger_name: b.passenger_name || b.passengerName || b.passengers?.full_name || b.full_name || '',
+        // Inclure l'objet passengers complet pour l'export Excel
+        passengers: b.passengers || null,
+        flight_number: b.flight_number || b.flightNumber || b.passengers?.flight_number || b.flight || '',
         weight: b.weight || 0,
         status: b.status || 'unknown',
-        checked_at: b.checked_at || b.checkedAt || b.registeredAt || new Date().toISOString(),
+        checked_at: b.checked_at || b.checkedAt || b.registeredAt || b.created_at || new Date().toISOString(),
         arrived_at: b.arrived_at || b.arrivedAt || null,
         current_location: b.current_location || b.currentLocation || b.location || '-'
       }));
+      
+      console.log(`[EXPORT] Passagers trouvés: ${formattedPassengers.length}, Bagages trouvés: ${formattedBaggages.length}`);
 
       // Préparer les données pour l'export
       const exportData = {
