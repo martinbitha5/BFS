@@ -155,7 +155,7 @@ export default function HomeScreen({ navigation }: Props) {
           {user.role === 'baggage' && (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('FlightSelection', { targetScreen: 'Baggage' })}>
+              onPress={() => navigation.navigate('Baggage')}>
               <Card style={styles.menuCard} elevated>
                 <View style={styles.menuCardContent}>
                   <View style={[styles.iconContainer, { backgroundColor: colors.success.light + '15' }]}>
