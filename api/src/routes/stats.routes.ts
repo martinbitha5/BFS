@@ -85,7 +85,7 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
       .eq('scheduled_date', today)
       .in('status', ['scheduled', 'boarding', 'departed']);
     
-    if (!filterAirport) {
+    if (filterAirport) {
       scheduledFlightsQuery = scheduledFlightsQuery.eq('airport_code', airport.toUpperCase());
     }
     
@@ -136,7 +136,10 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
   try {
     const { airport } = req.params;
     const limit = parseInt(req.query.limit as string) || 10;
-    const today = new Date().toISOString().split('T')[0];
+    // Utiliser le même fuseau horaire que /stats/airport (UTC+1 pour Afrique Centrale)
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    const today = now.toISOString().split('T')[0];
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
     // 1. Passagers récents (tous, pas seulement aujourd'hui) avec infos parsées
@@ -265,7 +268,10 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
 router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.params;
-    const today = new Date().toISOString().split('T')[0];
+    // Utiliser le même fuseau horaire que /stats/airport (UTC+1 pour Afrique Centrale)
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    const today = now.toISOString().split('T')[0];
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
     // Récupérer les vols programmés SEULEMENT POUR AUJOURD'HUI (pas demain)
