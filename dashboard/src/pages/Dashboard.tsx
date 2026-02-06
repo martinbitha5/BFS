@@ -21,6 +21,8 @@ interface FlightStats {
   airline: string;
   departure: string;
   arrival: string;
+  stops?: string[]; // Escales intermédiaires
+  routeDisplay?: string; // Route complète formatée
   scheduledTime: string;
   status: string;
   stats: {
@@ -84,9 +86,13 @@ export default function Dashboard() {
     try {
       setError('');
 
+      // Utiliser la date locale du client pour cohérence avec la page Passagers
+      const now = new Date();
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
       const [statsRes, flightsRes, recentRes, arrivedRes] = await Promise.all([
-        api.get(`/api/v1/stats/airport/${user.airport_code}`),
-        api.get(`/api/v1/stats/flights/${user.airport_code}`),
+        api.get(`/api/v1/stats/airport/${user.airport_code}?date=${localToday}`),
+        api.get(`/api/v1/stats/flights/${user.airport_code}?date=${localToday}`),
         api.get(`/api/v1/stats/recent/${user.airport_code}?limit=5`),
         api.get(`/api/v1/baggage?status=arrived&airport=${user.airport_code}`)
       ]);
@@ -388,7 +394,12 @@ export default function Dashboard() {
                   </div>
                   
                   <p className="text-sm text-white/70 mb-3">
-                    {flight.departure} → {flight.arrival}
+                    {flight.routeDisplay || `${flight.departure} → ${flight.arrival}`}
+                    {flight.stops && flight.stops.length > 0 && (
+                      <span className="ml-2 text-xs text-yellow-400/70">
+                        ({flight.stops.length + 1} dest.)
+                      </span>
+                    )}
                   </p>
 
                   <div className="grid grid-cols-3 gap-2 text-center">

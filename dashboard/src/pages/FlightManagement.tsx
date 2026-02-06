@@ -1,4 +1,4 @@
-import { Edit, Plane, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Edit, MapPin, Plane, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -11,6 +11,7 @@ interface Flight {
   airlineCode: string;
   departure: string;
   arrival: string;
+  stops: string[]; // Escales intermédiaires
   scheduledDate: string;
   scheduledTime: string;
   status: 'scheduled' | 'boarding' | 'departed' | 'cancelled';
@@ -23,6 +24,7 @@ interface FlightForm {
   airlineCode: string;
   departure: string;
   arrival: string;
+  stops: string[]; // Escales intermédiaires
   scheduledDate: string;
   scheduledTime: string;
   flightType: 'departure' | 'arrival';
@@ -34,6 +36,7 @@ const initialForm: FlightForm = {
   airlineCode: '',
   departure: '',
   arrival: '',
+  stops: [],
   scheduledDate: new Date().toISOString().split('T')[0],
   scheduledTime: '',
   flightType: 'departure',
@@ -83,6 +86,7 @@ export default function FlightManagement() {
     setForm({
       ...initialForm,
       departure: user?.airport_code || '',
+      stops: [],
       scheduledDate: new Date().toISOString().split('T')[0],
     });
     setShowModal(true);
@@ -96,11 +100,28 @@ export default function FlightManagement() {
       airlineCode: flight.airlineCode,
       departure: flight.departure,
       arrival: flight.arrival,
+      stops: flight.stops || [],
       scheduledDate: flight.scheduledDate,
       scheduledTime: flight.scheduledTime || '',
       flightType: flight.flightType,
     });
     setShowModal(true);
+  };
+
+  // Gestion des escales
+  const addStop = () => {
+    setForm({ ...form, stops: [...form.stops, ''] });
+  };
+
+  const removeStop = (index: number) => {
+    const newStops = form.stops.filter((_, i) => i !== index);
+    setForm({ ...form, stops: newStops });
+  };
+
+  const updateStop = (index: number, value: string) => {
+    const newStops = [...form.stops];
+    newStops[index] = value.toUpperCase();
+    setForm({ ...form, stops: newStops });
   };
 
   const closeModal = () => {
@@ -266,8 +287,23 @@ export default function FlightManagement() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-white/80">{flight.departure}</span>
+                    {flight.stops && flight.stops.length > 0 && (
+                      <>
+                        {flight.stops.map((stop, idx) => (
+                          <span key={idx}>
+                            <span className="text-yellow-400/60 mx-1">→</span>
+                            <span className="text-yellow-400" title="Escale">{stop}</span>
+                          </span>
+                        ))}
+                      </>
+                    )}
                     <span className="text-white/40 mx-2">→</span>
                     <span className="text-white/80">{flight.arrival}</span>
+                    {flight.stops && flight.stops.length > 0 && (
+                      <span className="ml-2 text-xs text-yellow-400/70" title="Vol multi-escales">
+                        ({flight.stops.length + 1} dest.)
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-white/60">
                     {flight.scheduledTime || '-'}
@@ -385,7 +421,7 @@ export default function FlightManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">
-                    Arrivée *
+                    Destination finale *
                   </label>
                   <input
                     type="text"
@@ -397,6 +433,59 @@ export default function FlightManagement() {
                     className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white focus:outline-none focus:border-primary-500"
                   />
                 </div>
+              </div>
+
+              {/* Escales intermédiaires */}
+              <div className="border border-white/10 rounded-lg p-3 bg-black/20">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-white/70 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-yellow-400" />
+                    Escales intermédiaires
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addStop}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Ajouter escale
+                  </button>
+                </div>
+                
+                {form.stops.length === 0 ? (
+                  <p className="text-xs text-white/40 italic">
+                    Aucune escale. Vol direct {form.departure || '...'} → {form.arrival || '...'}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {form.stops.map((stop, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-xs text-white/40 w-16">Escale {index + 1}:</span>
+                        <input
+                          type="text"
+                          value={stop}
+                          onChange={(e) => updateStop(index, e.target.value)}
+                          placeholder="MJM"
+                          maxLength={3}
+                          className="flex-1 px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-yellow-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeStop(index)}
+                          className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                          title="Supprimer cette escale"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-400" />
+                        </button>
+                      </div>
+                    ))}
+                    <p className="text-xs text-white/50 mt-2">
+                      Route: {form.departure || '...'} 
+                      {form.stops.map((s, i) => ` → ${s || '...'}`).join('')} 
+                      → {form.arrival || '...'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

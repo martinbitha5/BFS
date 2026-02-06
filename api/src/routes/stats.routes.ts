@@ -268,10 +268,17 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
 router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { airport } = req.params;
-    // Utiliser le même fuseau horaire que /stats/airport (UTC+1 pour Afrique Centrale)
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    const today = now.toISOString().split('T')[0];
+    const { date } = req.query;
+    
+    // Utiliser la date fournie par le client, sinon utiliser UTC+1 comme fallback
+    let today: string;
+    if (date) {
+      today = String(date);
+    } else {
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      today = now.toISOString().split('T')[0];
+    }
     const filterByAirport = airport.toUpperCase() !== 'ALL';
 
     // Récupérer les vols programmés SEULEMENT POUR AUJOURD'HUI (pas demain)
@@ -303,11 +310,18 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         // Pattern pour matcher avec ou sans zéros: ET64, ET064, ET0064
         const flightPattern = `${companyCode}%${numericPart}`;
 
+        // ✅ Construire la liste de toutes les destinations (escales + destination finale)
+        const stops = flight.stops || [];
+        const allDestinations = [...stops, flight.arrival];
+
         // Compter les passagers de ce vol POUR AUJOURD'HUI UNIQUEMENT
+        // ✅ FIX: Filtrer par TOUTES les destinations possibles (escales + finale)
+        // Les passagers peuvent descendre à n'importe quelle escale ou à la destination finale
         let passCountQuery = supabase
           .from('passengers')
           .select('*', { count: 'exact', head: true })
           .ilike('flight_number', flightPattern)
+          .in('arrival', allDestinations)
           .gte('checked_in_at', `${today}T00:00:00`)
           .lt('checked_in_at', `${today}T23:59:59`);
         
@@ -319,10 +333,12 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
 
         // Compter les passagers embarqués POUR AUJOURD'HUI
         // D'abord récupérer les IDs des passagers de ce vol enregistrés aujourd'hui
+        // ✅ FIX: Filtrer par TOUTES les destinations possibles
         let passengersQuery = supabase
           .from('passengers')
           .select('id')
           .ilike('flight_number', flightPattern)
+          .in('arrival', allDestinations)
           .gte('checked_in_at', `${today}T00:00:00`)
           .lt('checked_in_at', `${today}T23:59:59`);
         
@@ -357,6 +373,11 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         
         const { count: baggageCount } = await bagCountQuery;
 
+        // Construire la route complète pour l'affichage
+        const routeDisplay = stops.length > 0 
+          ? `${flight.departure} → ${stops.join(' → ')} → ${flight.arrival}`
+          : `${flight.departure} → ${flight.arrival}`;
+
         return {
           id: flight.id,
           flightNumber: flight.flight_number,
@@ -364,6 +385,8 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
           airlineCode: flight.airline_code,
           departure: flight.departure,
           arrival: flight.arrival,
+          stops: stops, // Escales intermédiaires
+          routeDisplay: routeDisplay, // Route complète formatée
           scheduledTime: flight.scheduled_time,
           status: flight.status,
           flightType: flight.flight_type || 'departure',

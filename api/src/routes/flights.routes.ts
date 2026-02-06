@@ -15,6 +15,7 @@ function toCamelCase(data: any) {
     airlineCode: data.airline_code,
     departure: data.departure,
     arrival: data.arrival,
+    stops: data.stops || [], // Escales intermédiaires
     scheduledDate: data.scheduled_date,
     scheduledTime: data.scheduled_time,
     airportCode: data.airport_code,
@@ -126,6 +127,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       airline_code: flightData.airlineCode,
       departure: flightData.departure,
       arrival: flightData.arrival,
+      stops: flightData.stops || [], // Escales intermédiaires
       scheduled_date: flightData.scheduledDate,
       scheduled_time: flightData.scheduledTime || null,
       airport_code: flightData.airportCode || 'FIH',
@@ -172,6 +174,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (updates.airlineCode) dbUpdates.airline_code = updates.airlineCode;
     if (updates.departure) dbUpdates.departure = updates.departure;
     if (updates.arrival) dbUpdates.arrival = updates.arrival;
+    if (updates.stops !== undefined) dbUpdates.stops = updates.stops; // Escales intermédiaires
     if (updates.scheduledDate) dbUpdates.scheduled_date = updates.scheduledDate;
     if (updates.scheduledTime !== undefined) dbUpdates.scheduled_time = updates.scheduledTime;
     if (updates.status) dbUpdates.status = updates.status;
