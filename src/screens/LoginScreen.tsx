@@ -84,7 +84,7 @@ export default function LoginScreen({ navigation }: Props) {
               <Ionicons name="bag" size={16} color={Colors.primary.main} style={styles.decorationIcon} />
             </View>
           </View>
-          <Text style={styles.title}>Baggage Found Solution</Text>
+          <Text style={styles.title}>Police Bagages</Text>
           <Text style={styles.subtitle}>Système de gestion des bagages aéroportuaires</Text>
         </View>
 
