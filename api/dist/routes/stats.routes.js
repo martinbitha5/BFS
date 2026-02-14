@@ -29,19 +29,40 @@ router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportC
         // ✅ AUTO-SYNC: Synchroniser automatiquement les raw_scans non traités
         (0, auto_sync_service_1.autoSyncIfNeeded)(airport.toUpperCase()).catch(err => console.warn('[AUTO-SYNC] Erreur:', err));
         // Récupérer les passagers
-        let passQuery = database_1.supabase.from('passengers').select('*');
-        if (filterByDate) {
-            passQuery = passQuery
-                .gte('checked_in_at', `${today}T00:00:00`)
-                .lt('checked_in_at', `${today}T23:59:59`);
-        }
-        if (filterAirport) {
-            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-            passQuery = passQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
-        }
-        const { data: passengers, error: passError } = await passQuery;
-        if (passError)
-            throw passError;
+        const queryPassengers = async () => {
+            let passQuery1 = database_1.supabase.from('passengers').select('*');
+            if (filterByDate) {
+                passQuery1 = passQuery1
+                    .gte('checked_in_at', `${today}T00:00:00`)
+                    .lt('checked_in_at', `${today}T23:59:59`);
+            }
+            if (filterAirport) {
+                // Faire deux requêtes séparées pour chaque condition du OR
+                let passQuery2 = database_1.supabase.from('passengers').select('*');
+                if (filterByDate) {
+                    passQuery2 = passQuery2
+                        .gte('checked_in_at', `${today}T00:00:00`)
+                        .lt('checked_in_at', `${today}T23:59:59`);
+                }
+                passQuery1 = passQuery1.eq('airport_code', airport.toUpperCase());
+                passQuery2 = passQuery2.eq('arrival', airport.toUpperCase());
+                const [result1, result2] = await Promise.all([passQuery1, passQuery2]);
+                if (result1.error || result2.error)
+                    throw result1.error || result2.error;
+                // Combiner et éliminer les doublons
+                const resultMap = new Map();
+                result1.data?.forEach(item => resultMap.set(item.id, item));
+                result2.data?.forEach(item => resultMap.set(item.id, item));
+                return Array.from(resultMap.values());
+            }
+            else {
+                const result = await passQuery1;
+                if (result.error)
+                    throw result.error;
+                return result.data || [];
+            }
+        };
+        const passengers = await queryPassengers();
         // Récupérer les bagages
         let bagQuery = database_1.supabase.from('baggages').select('*');
         if (filterByDate) {
@@ -56,19 +77,48 @@ router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportC
         if (bagError)
             throw bagError;
         // Récupérer les statuts d'embarquement
-        let boardQuery = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, arrival, checked_in_at)');
-        if (filterByDate) {
-            boardQuery = boardQuery
-                .gte('passengers.checked_in_at', `${today}T00:00:00`)
-                .lt('passengers.checked_in_at', `${today}T23:59:59`);
-        }
-        if (filterAirport) {
-            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-            boardQuery = boardQuery.or(`passengers.airport_code.eq.${airport.toUpperCase()},passengers.arrival.eq.${airport.toUpperCase()}`);
-        }
-        const { data: boardingStatuses, error: boardError } = await boardQuery;
-        if (boardError)
-            throw boardError;
+        // Pour filtrer avec OR sur une relation imbriquée, faire deux requêtes séparées et les combiner
+        const queryBoardingStatus = async () => {
+            let boardQuery1 = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, arrival, checked_in_at)');
+            let boardQuery2 = null;
+            if (filterByDate) {
+                boardQuery1 = boardQuery1
+                    .gte('passengers.checked_in_at', `${today}T00:00:00`)
+                    .lt('passengers.checked_in_at', `${today}T23:59:59`);
+            }
+            let allResults = [];
+            if (filterAirport) {
+                // Créer une deuxième requête pour le OR
+                boardQuery2 = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, arrival, checked_in_at)');
+                if (filterByDate) {
+                    boardQuery2 = boardQuery2
+                        .gte('passengers.checked_in_at', `${today}T00:00:00`)
+                        .lt('passengers.checked_in_at', `${today}T23:59:59`);
+                }
+                // Query 1: airport_code match
+                boardQuery1 = boardQuery1.eq('passengers.airport_code', airport.toUpperCase());
+                // Query 2: arrival match
+                boardQuery2 = boardQuery2.eq('passengers.arrival', airport.toUpperCase());
+                const [result1, result2] = await Promise.all([boardQuery1, boardQuery2]);
+                if (result1.error || result2.error) {
+                    throw result1.error || result2.error;
+                }
+                // Combiner et éliminer les doublons
+                const resultMap = new Map();
+                result1.data?.forEach(item => resultMap.set(item.id, item));
+                result2.data?.forEach(item => resultMap.set(item.id, item));
+                allResults = Array.from(resultMap.values());
+            }
+            else {
+                // Pas de filtre airport, juste exécuter la première requête
+                const result = await boardQuery1;
+                if (result.error)
+                    throw result.error;
+                allResults = result.data || [];
+            }
+            return allResults;
+        };
+        const boardingStatuses = await queryBoardingStatus();
         // Récupérer les vols programmés aujourd'hui depuis flight_schedule
         let scheduledFlightsQuery = database_1.supabase
             .from('flight_schedule')
@@ -128,27 +178,59 @@ router.get('/recent/:airport', airport_restriction_middleware_1.requireAirportCo
         const today = now.toISOString().split('T')[0];
         const filterByAirport = airport.toUpperCase() !== 'ALL';
         // 1. Passagers récents (tous, pas seulement aujourd'hui) avec infos parsées
-        let passQuery = database_1.supabase
-            .from('passengers')
-            .select(`
-        id, 
-        pnr, 
-        full_name, 
-        flight_number, 
-        departure, 
-        arrival, 
-        baggage_count,
-        checked_in_at
-      `)
-            .order('checked_in_at', { ascending: false })
-            .limit(limit);
-        if (filterByAirport) {
-            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-            passQuery = passQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
-        }
-        const { data: recentPassengers, error: passError } = await passQuery;
-        if (passError)
-            throw passError;
+        const queryRecentPassengers = async () => {
+            let passQuery1 = database_1.supabase
+                .from('passengers')
+                .select(`
+          id, 
+          pnr, 
+          full_name, 
+          flight_number, 
+          departure, 
+          arrival, 
+          baggage_count,
+          checked_in_at
+        `)
+                .order('checked_in_at', { ascending: false })
+                .limit(limit);
+            if (filterByAirport) {
+                // Faire deux requêtes séparées pour chaque condition du OR
+                let passQuery2 = database_1.supabase
+                    .from('passengers')
+                    .select(`
+            id, 
+            pnr, 
+            full_name, 
+            flight_number, 
+            departure, 
+            arrival, 
+            baggage_count,
+            checked_in_at
+          `)
+                    .order('checked_in_at', { ascending: false })
+                    .limit(limit);
+                passQuery1 = passQuery1.eq('airport_code', airport.toUpperCase());
+                passQuery2 = passQuery2.eq('arrival', airport.toUpperCase());
+                const [result1, result2] = await Promise.all([passQuery1, passQuery2]);
+                if (result1.error || result2.error)
+                    throw result1.error || result2.error;
+                // Combiner et éliminer les doublons (garder les plus récents)
+                const resultMap = new Map();
+                const allResults = [...(result2.data || []), ...(result1.data || [])];
+                allResults.forEach(item => {
+                    if (!resultMap.has(item.id))
+                        resultMap.set(item.id, item);
+                });
+                return Array.from(resultMap.values());
+            }
+            else {
+                const result = await passQuery1;
+                if (result.error)
+                    throw result.error;
+                return result.data || [];
+            }
+        };
+        const recentPassengers = await queryRecentPassengers();
         // 2. Bagages récents - inclure les infos passagers
         let bagQuery = database_1.supabase
             .from('baggages')
@@ -282,34 +364,73 @@ router.get('/flights/:airport', airport_restriction_middleware_1.requireAirportC
             // Compter les passagers de ce vol POUR AUJOURD'HUI UNIQUEMENT
             // ✅ FIX: Filtrer par TOUTES les destinations possibles (escales + finale)
             // Les passagers peuvent descendre à n'importe quelle escale ou à la destination finale
-            let passCountQuery = database_1.supabase
+            let passCountQuery1 = database_1.supabase
                 .from('passengers')
                 .select('*', { count: 'exact', head: true })
                 .ilike('flight_number', flightPattern)
                 .in('arrival', allDestinations)
                 .gte('checked_in_at', `${today}T00:00:00`)
                 .lt('checked_in_at', `${today}T23:59:59`);
+            let passengerCount = 0;
             if (filterByAirport) {
-                // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-                passCountQuery = passCountQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
+                // Faire deux requêtes séparées pour chaque condition du OR
+                let passCountQuery2 = database_1.supabase
+                    .from('passengers')
+                    .select('*', { count: 'exact', head: true })
+                    .ilike('flight_number', flightPattern)
+                    .in('arrival', allDestinations)
+                    .gte('checked_in_at', `${today}T00:00:00`)
+                    .lt('checked_in_at', `${today}T23:59:59`);
+                passCountQuery1 = passCountQuery1.eq('airport_code', airport.toUpperCase());
+                passCountQuery2 = passCountQuery2.eq('arrival', airport.toUpperCase());
+                const [result1, result2] = await Promise.all([passCountQuery1, passCountQuery2]);
+                if (result1.error || result2.error)
+                    throw result1.error || result2.error;
+                passengerCount = (result1.count || 0) + (result2.count || 0);
             }
-            const { count: passengerCount } = await passCountQuery;
+            else {
+                const result = await passCountQuery1;
+                if (result.error)
+                    throw result.error;
+                passengerCount = result.count || 0;
+            }
             // Compter les passagers embarqués POUR AUJOURD'HUI
             // D'abord récupérer les IDs des passagers de ce vol enregistrés aujourd'hui
             // ✅ FIX: Filtrer par TOUTES les destinations possibles
-            let passengersQuery = database_1.supabase
+            let passengersQuery1 = database_1.supabase
                 .from('passengers')
                 .select('id')
                 .ilike('flight_number', flightPattern)
                 .in('arrival', allDestinations)
                 .gte('checked_in_at', `${today}T00:00:00`)
                 .lt('checked_in_at', `${today}T23:59:59`);
+            let passengerIds = [];
             if (filterByAirport) {
-                // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-                passengersQuery = passengersQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
+                // Faire deux requêtes séparées pour chaque condition du OR
+                let passengersQuery2 = database_1.supabase
+                    .from('passengers')
+                    .select('id')
+                    .ilike('flight_number', flightPattern)
+                    .in('arrival', allDestinations)
+                    .gte('checked_in_at', `${today}T00:00:00`)
+                    .lt('checked_in_at', `${today}T23:59:59`);
+                passengersQuery1 = passengersQuery1.eq('airport_code', airport.toUpperCase());
+                passengersQuery2 = passengersQuery2.eq('arrival', airport.toUpperCase());
+                const [result1, result2] = await Promise.all([passengersQuery1, passengersQuery2]);
+                if (result1.error || result2.error)
+                    throw result1.error || result2.error;
+                // Combiner les IDs et éliminer les doublons
+                const idSet = new Set();
+                result1.data?.forEach(p => idSet.add(p.id));
+                result2.data?.forEach(p => idSet.add(p.id));
+                passengerIds = Array.from(idSet);
             }
-            const { data: flightPassengers } = await passengersQuery;
-            const passengerIds = flightPassengers?.map(p => p.id) || [];
+            else {
+                const result = await passengersQuery1;
+                if (result.error)
+                    throw result.error;
+                passengerIds = result.data?.map(p => p.id) || [];
+            }
             let boardedCount = 0;
             if (passengerIds.length > 0) {
                 const { count } = await database_1.supabase
