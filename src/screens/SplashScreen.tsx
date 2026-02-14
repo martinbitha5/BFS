@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -249,7 +249,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         ]}>
         <View style={styles.logoCircle}>
           <View style={styles.logoInnerGlow} />
-          <Text style={styles.logoText}>BFS</Text>
+          <Text style={styles.logoText}>PB</Text>
         </View>
       </Animated.View>
 
@@ -262,7 +262,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             transform: [{ translateY: titleTranslateY }],
           },
         ]}>
-        <Text style={styles.title}>Baggage Found Solution</Text>
+        <Text style={styles.title}>Police Bagages</Text>
         <Animated.View style={{ opacity: subtitleOpacity }}>
           <Text style={styles.subtitle}>Gestion intelligente des bagages aéroportuaires</Text>
         </Animated.View>

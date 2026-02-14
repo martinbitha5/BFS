@@ -121,7 +121,7 @@ export default function HomeScreen({ navigation }: Props) {
         <Card style={styles.welcomeCard}>
           <View style={styles.welcomeHeader}>
             <View style={styles.welcomeTextContainer}>
-              <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Bienvenue sur BFS</Text>
+              <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>Bienvenue sur Police Bagages</Text>
               <Text style={[styles.welcomeText, { color: colors.text.secondary }]}>
                 Système de gestion des bagages aéroportuaires
               </Text>
