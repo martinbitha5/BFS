@@ -1,4 +1,4 @@
-export type UserRole = 'checkin' | 'baggage' | 'boarding' | 'arrival' | 'supervisor' | 'baggage_dispute' | 'support' | 'rush';
+export type UserRole = 'checkin' | 'baggage' | 'boarding' | 'arrival' | 'supervisor' | 'baggage_dispute' | 'support' | 'rush' | 'delivery';
 
 export interface User {
   id: string;

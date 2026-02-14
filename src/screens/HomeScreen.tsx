@@ -21,6 +21,7 @@ const ROLE_LABELS: Record<string, string> = {
   arrival: 'Arrivée',
   supervisor: 'Superviseur',
   rush: 'Agent RUSH',
+  delivery: 'Livraison',
 };
 
 const ROLE_COLORS: Record<string, 'primary' | 'success' | 'info' | 'warning' | 'secondary' | 'error'> = {
@@ -30,6 +31,7 @@ const ROLE_COLORS: Record<string, 'primary' | 'success' | 'info' | 'warning' | '
   arrival: 'warning',
   supervisor: 'secondary',
   rush: 'error',
+  delivery: 'success',
 };
 
 export default function HomeScreen({ navigation }: Props) {
@@ -209,10 +211,29 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
 
+          {user.role === 'delivery' && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Delivery' as any)}>
+              <Card style={styles.menuCard} elevated>
+                <View style={styles.menuCardContent}>
+                  <View style={[styles.iconContainer, { backgroundColor: colors.success.light + '15' }]}>
+                    <Ionicons name="checkmark-done" size={28} color={colors.success.main} />
+                  </View>
+                  <View style={styles.menuCardText}>
+                    <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Livraison des Bagages</Text>
+                    <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Confirmer la récupération des bagages</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
+                </View>
+              </Card>
+            </TouchableOpacity>
+          )}
+
           {user.role === 'arrival' && (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('FlightSelection', { targetScreen: 'Arrival' })}>
+              onPress={() => navigation.navigate('Arrival')}>
               <Card style={styles.menuCard} elevated>
                 <View style={styles.menuCardContent}>
                   <View style={[styles.iconContainer, { backgroundColor: colors.warning.light + '15' }]}>

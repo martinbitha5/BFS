@@ -1,6 +1,6 @@
 export type ScanType = 'boarding_pass' | 'baggage_tag';
 
-export type ScanStatusField = 'checkin' | 'baggage' | 'boarding' | 'arrival';
+export type ScanStatusField = 'checkin' | 'baggage' | 'boarding' | 'arrival' | 'delivery';
 
 export interface RawScan {
     id: string;

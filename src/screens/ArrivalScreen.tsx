@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 // ✅ OPTIMISATION: Imports statiques pour réduire la latence
 import { authServiceInstance, databaseServiceInstance, rawScanService } from '../services';
+import { apiService } from '../services/api.service';
 import { birsDatabaseService } from '../services/birs-database.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Baggage } from '../types/baggage.types';
@@ -121,127 +122,196 @@ export default function ArrivalScreen({ navigation }: Props) {
 
       const tagNumber = data.trim();
       
-      // 1️⃣ Chercher dans les BAGAGES LOCAUX (enregistrés au check-in local)
-      let found = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
-      
-      if (found) {
+      // 1️⃣ Chercher dans la BASE DE DONNÉES VIA API
+      try {
+        const response = await apiService.get(`/api/v1/baggage/${tagNumber}`);
         
-        // Récupérer le passager propriétaire
-        const passengerData = await databaseServiceInstance.getPassengerById(found.passengerId);
-        if (!passengerData) {
-          await playErrorSound();
-          setToastMessage('Passager non trouvé');
-          setToastType('error');
-          setShowToast(true);
-          resetScanner();
-          return;
-        }
-        
-        // VÉRIFICATION D'AÉROPORT (seulement en production)
-        if (!__DEV__) {
-          if (passengerData.arrival !== user.airportCode) {
+        if (response.data?.success && response.data?.data) {
+          const baggageData = response.data.data;
+          const passengerData = baggageData.passengers;
+          
+          if (!passengerData) {
             await playErrorSound();
-            const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
-            setToastMessage(errorMsg.message);
-            setToastType(errorMsg.type);
+            setToastMessage('Passager non trouvé');
+            setToastType('error');
             setShowToast(true);
             resetScanner();
             return;
           }
-        }
-
-        // Continuer avec le flux normal pour bagage local
-        setPassenger(passengerData);
-        setBaggage(found);
-        setBirsItem(null);
-        setInternationalBaggage(null);
-        setShowScanner(false);
-        
-        await playSuccessSound();
-        return; // Sortir ici, le traitement est terminé
-      } else {
-        // 2️⃣ Chercher dans les BAGAGES INTERNATIONAUX ATTENDUS (fichier BIRS uploadé)
-        
-        try {
-          // Vérifier si birsDatabaseService est initialisé
-          if (birsDatabaseService.isInitialized()) {
-            const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(tagNumber);
-            
-            if (birsItemFound) {
-              // Marquer l'item BIRS comme reçu
-              await birsDatabaseService.updateBirsReportItem(birsItemFound.id, {
-                received: true,
-                reconciledAt: new Date().toISOString()
-              });
-              
-              setBirsItem(birsItemFound);
-              setPassenger(null);
-              setBaggage(null);
-              setInternationalBaggage(null);
-              setShowScanner(false);
-              
-              await playSuccessSound();
-              setToastMessage(
-                `✅ BAGAGE INTERNATIONAL REÇU !\n\n` +
-                `Tag: ${tagNumber}\n` +
-                `Passager: ${birsItemFound.passengerName}\n` +
-                `${birsItemFound.pnr ? `PNR: ${birsItemFound.pnr}` : ''}`
-              );
-              setToastType('success');
+          
+          // VÉRIFICATION D'AÉROPORT (seulement en production)
+          if (!__DEV__) {
+            if (passengerData.arrival !== user.airportCode) {
+              await playErrorSound();
+              const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
+              setToastMessage(errorMsg.message);
+              setToastType(errorMsg.type);
               setShowToast(true);
-              
-              // Enregistrer l'action d'audit
-              // ✅ OPTIMISATION: Import statique
-              await logAudit(
-                'INTERNATIONAL_BAGGAGE_RECEIVED',
-                'arrival',
-                `Bagage international reçu: ${tagNumber} - ${birsItemFound.passengerName}`,
-                birsItemFound.id
-              );
-              
+              resetScanner();
               return;
             }
           }
-        } catch (error) {
-          console.warn('[ARRIVAL] Erreur recherche BIRS:', error);
+
+          // Continuer avec le flux normal pour bagage trouvé dans la BD
+          setPassenger(passengerData);
+          setBaggage(baggageData);
+          setBirsItem(null);
+          setInternationalBaggage(null);
+          setShowScanner(false);
+          
+          await playSuccessSound();
+          
+          // ✅ Confirmer automatiquement l'arrivée
+          try {
+            // Mettre à jour le statut du bagage dans la BD locale
+            await databaseServiceInstance.updateBaggageStatus(baggageData.id, 'arrived', user.id);
+
+            // Enregistrer l'action d'audit
+            await logAudit(
+              'CONFIRM_ARRIVAL',
+              'baggage',
+              `Confirmation automatique arrivée bagage: ${baggageData.tag_number} pour passager ${passengerData.full_name} (PNR: ${passengerData.pnr})`,
+              baggageData.id
+            );
+
+            // Ajouter à la file de synchronisation (avec tag_number depuis l'API en snake_case)
+            await databaseServiceInstance.addToSyncQueue({
+              tableName: 'baggages',
+              recordId: baggageData.id,
+              operation: 'UPDATE',
+              data: JSON.stringify({ 
+                tag_number: baggageData.tag_number,  // ✅ API retourne en snake_case
+                status: 'arrived',
+                airport_code: user.airportCode,
+                arrived_at: new Date().toISOString(),
+              }),
+              retryCount: 0,
+              userId: user.id,
+            });
+
+            // ✅ Enregistrer dans raw_scans (avec tag_number depuis l'API)
+            await rawScanService.createOrUpdateRawScan({
+              rawData: baggageData.tag_number,  // ✅ API retourne en snake_case
+              scanType: 'baggage_tag',
+              statusField: 'arrival',
+              userId: user.id,
+              airportCode: user.airportCode,
+              baggageRfidTag: baggageData.tag_number,
+            });
+
+            // Afficher message de succès
+            const successMsg = getScanResultMessage(user.role as any, 'arrival', true, {
+              passengerName: passengerData.full_name,  // ✅ API retourne en snake_case
+            });
+            
+            setToastMessage(successMsg.message);
+            setToastType(successMsg.type);
+            setShowToast(true);
+            
+            // Reset après 2 secondes
+            setTimeout(() => {
+              resetAll();
+            }, 2000);
+          } catch (confirmError) {
+            console.error('[ARRIVAL] Erreur confirmation auto:', confirmError);
+            await playErrorSound();
+            setToastMessage('Erreur lors de la confirmation automatique');
+            setToastType('error');
+            setShowToast(true);
+            resetScanner();
+          }
+          return;
         }
-        
-        // 3️⃣ ❌ BAGAGE NON RECONNU - NI LOCAL, NI INTERNATIONAL → BLOQUER
-        await playErrorSound();
-        
-        // Enregistrer l'action d'audit pour le bagage suspect
-        // ✅ OPTIMISATION: Import statique
-        await logAudit(
-          'BAGGAGE_SUSPECT_DETECTED',
-          'arrival',
-          `Bagage suspect détecté à l'arrivée: ${tagNumber} - Non enregistré (local ou BIRS)`,
-          tagNumber
-        );
-        
-        // Afficher une Alert native qui reste visible
-        setProcessing(false);
-        Alert.alert(
-          'BAGAGE SUSPECT - FRAUDE',
-          `Tag: ${tagNumber}\n\n` +
-          `Ce bagage n'est PAS enregistré dans le système (ni local, ni international/BIRS).\n\n` +
-          `ACTIONS REQUISES:\n` +
-          `• Bloquer le bagage pour investigation\n` +
-          `• OU faire payer le passager (suspicion de fraude)`,
-          [
-            {
-              text: 'Nouveau scan',
-              onPress: () => {
-                setScanned(false);
-                setShowScanner(true);
-                setLastScannedTag(null);
-                setLastScanTime(0);
-              },
-            },
-          ],
-          { cancelable: false }
-        );
-        return;
+      } catch (apiError: any) {
+        // Si l'API retourne 404, continuer avec la recherche BIRS
+        if (apiError.response?.status === 404) {
+          console.log('[ARRIVAL] Bagage non trouvé en BD, recherche BIRS...');
+        } else {
+          console.error('[ARRIVAL] Erreur API:', apiError);
+          // Continuer quand même avec BIRS
+        }
       }
+      
+      // 2️⃣ Chercher dans les BAGAGES INTERNATIONAUX ATTENDUS (fichier BIRS uploadé)
+      try {
+        // Vérifier si birsDatabaseService est initialisé
+        if (birsDatabaseService.isInitialized()) {
+          const birsItemFound = await birsDatabaseService.getBirsReportItemByBagId(tagNumber);
+          
+          if (birsItemFound) {
+            // Marquer l'item BIRS comme reçu
+            await birsDatabaseService.updateBirsReportItem(birsItemFound.id, {
+              received: true,
+              reconciledAt: new Date().toISOString()
+            });
+            
+            setBirsItem(birsItemFound);
+            setPassenger(null);
+            setBaggage(null);
+            setInternationalBaggage(null);
+            setShowScanner(false);
+            
+            await playSuccessSound();
+            setToastMessage(
+              `✅ BAGAGE INTERNATIONAL REÇU !\n\n` +
+              `Tag: ${tagNumber}\n` +
+              `Passager: ${birsItemFound.passengerName}\n` +
+              `${birsItemFound.pnr ? `PNR: ${birsItemFound.pnr}` : ''}`
+            );
+            setToastType('success');
+            setShowToast(true);
+            
+            // Enregistrer l'action d'audit
+            // ✅ OPTIMISATION: Import statique
+            await logAudit(
+              'INTERNATIONAL_BAGGAGE_RECEIVED',
+              'arrival',
+              `Bagage international reçu: ${tagNumber} - ${birsItemFound.passengerName}`,
+              birsItemFound.id
+            );
+            
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('[ARRIVAL] Erreur recherche BIRS:', error);
+      }
+      
+      // 3️⃣ ❌ BAGAGE NON RECONNU - NI LOCAL, NI INTERNATIONAL → BLOQUER
+      await playErrorSound();
+      
+      // Enregistrer l'action d'audit pour le bagage suspect
+      // ✅ OPTIMISATION: Import statique
+      await logAudit(
+        'BAGGAGE_SUSPECT_DETECTED',
+        'arrival',
+        `Bagage suspect détecté à l'arrivée: ${tagNumber} - Non enregistré (local ou BIRS)`,
+        tagNumber
+      );
+      
+      // Afficher une Alert native qui reste visible
+      setProcessing(false);
+      Alert.alert(
+        'BAGAGE SUSPECT - FRAUDE',
+        `Tag: ${tagNumber}\n\n` +
+        `Ce bagage n'est PAS enregistré dans le système (ni local, ni international/BIRS).\n\n` +
+        `ACTIONS REQUISES:\n` +
+        `• Bloquer le bagage pour investigation\n` +
+        `• OU faire payer le passager (suspicion de fraude)`,
+        [
+          {
+            text: 'Nouveau scan',
+            onPress: () => {
+              setScanned(false);
+              setShowScanner(true);
+              setLastScannedTag(null);
+              setLastScanTime(0);
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+      return;
     } catch (error) {
       await playErrorSound();
       const user = await authServiceInstance.getCurrentUser();

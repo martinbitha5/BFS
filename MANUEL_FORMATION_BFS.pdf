@@ -1,0 +1,526 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANUEL DE FORMATION BFS</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 12pt;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #0a7ea4;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0a7ea4;
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0a7ea4;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        h1 {
+            color: #0a7ea4;
+            border-bottom: 2px solid #0a7ea4;
+            padding-bottom: 10px;
+            page-break-before: always;
+            margin-top: 40px;
+        }
+        
+        h2 {
+            color: #0a7ea4;
+            border-left: 4px solid #0a7ea4;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            margin-top: 25px;
+        }
+        
+        .workflow-step {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .step-number {
+            background: #0a7ea4;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .role-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .role-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .process-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .process-step {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+            margin: 5px;
+        }
+        
+        .arrow {
+            font-size: 24px;
+            color: #2196f3;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .no-break {
+            page-break-inside: avoid;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #0a7ea4;
+            color: white;
+        }
+        
+        .screen-example {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">BFS</div>
+        <div class="title">MANUEL DE FORMATION</div>
+        <div class="subtitle">Baggage Found Solution - SystÃ¨me de Gestion Intelligente des Bagages</div>
+        <div class="subtitle">Version 1.0 - FÃ©vrier 2026</div>
+    </div>
+
+    <h1>PRÃ‰SENTATION DU SYSTÃˆME BFS</h1>
+    
+    <div class="info">
+        <strong>BFS - Baggage Found Solution</strong> est une plateforme intÃ©grÃ©e qui optimise la gestion complÃ¨te des bagages aÃ©roportuaires, de l'enregistrement Ã  la livraison finale.
+    </div>
+
+    <h2>Architecture du SystÃ¨me</h2>
+    <ul>
+        <li><strong>Application Mobile</strong> : Interface pour agents au sol (Android/iOS)</li>
+        <li><strong>Dashboard Web</strong> : Supervision et analyses en temps rÃ©el</li>
+        <li><strong>API Backend</strong> : Logique mÃ©tier et synchronisation</li>
+        <li><strong>Base de DonnÃ©es</strong> : Stockage centralisÃ© avec audit trail</li>
+    </ul>
+
+    <h1>LES RÃ”LES ET RESPONSABILITÃ‰S</h1>
+
+    <div class="role-card">
+        <div class="role-title">ðŸŽ« AGENT CHECK-IN</div>
+        <ul>
+            <li>Enregistrement des passagers et vÃ©rification documents</li>
+            <li>Attribution des siÃ¨ges et Ã©mission Ã©tiquettes bagages</li>
+            <li>Validation du nombre de bagages autorisÃ©s</li>
+        </ul>
+    </div>
+
+    <div class="role-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="role-title">ðŸ§³ AGENT BAGAGES</div>
+        <ul>
+            <li>Scan des Ã©tiquettes bagages (camÃ©ra ou PDA)</li>
+            <li>Enregistrement et validation dans le systÃ¨me</li>
+            <li>Gestion des bagages spÃ©ciaux et urgents</li>
+        </ul>
+    </div>
+
+    <div class="role-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <div class="role-title">âœˆï¸ AGENT EMBARQUEMENT</div>
+        <ul>
+            <li>Validation cartes d'embarquement et passeports</li>
+            <li>ContrÃ´le d'accÃ¨s Ã  l'avion</li>
+            <li>Mise Ã  jour statut passagers en temps rÃ©el</li>
+        </ul>
+    </div>
+
+    <div class="role-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="role-title">ðŸ“ AGENT ARRIVÃ‰E</div>
+        <ul>
+            <li>Confirmation arrivÃ©e des bagages</li>
+            <li>Validation livraison et gestion non-rÃ©clamÃ©s</li>
+            <li>Signalement incidents et litiges</li>
+        </ul>
+    </div>
+
+    <div class="role-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <div class="role-title">ðŸš¨ AGENT RUSH</div>
+        <ul>
+            <li>Identification et dÃ©claration bagages urgents</li>
+            <li>Priorisation traitement et communication Ã©quipes</li>
+            <li>Gestion situations exceptionnelles</li>
+        </ul>
+    </div>
+
+    <h1>FLUX DE TRAVAIL COMPLET</h1>
+
+    <h2>ðŸ”„ Processus Standard d'un Bagage</h2>
+
+    <div class="workflow-step no-break">
+        <h3>Ã‰TAPE 1: ENREGISTREMENT CHECK-IN</h3>
+        <ol>
+            <li><strong>Accueil passager</strong> : VÃ©rifier rÃ©servation et identitÃ©</li>
+            <li><strong>Saisie informations</strong> : Confirmer vol, siÃ¨ge, bagages</li>
+            <li><strong>Ã‰tiquetage</strong> : GÃ©nÃ©rer et coller Ã©tiquettes bagages</li>
+            <li><strong>Scan initial</strong> : Enregistrer bagages dans BFS</li>
+        </ol>
+        <div class="screen-example">
+            Ã‰cran Check-in â†’ Recherche PNR â†’ Validation â†’ Attribution bagages â†’ Impression Ã©tiquettes
+        </div>
+    </div>
+
+    <div class="workflow-step no-break">
+        <h3>Ã‰TAPE 2: DÃ‰POSE ET TRAITEMENT BAGAGES</h3>
+        <ol>
+            <li><strong>RÃ©ception bagage</strong> : Passager dÃ©pose au comptoir</li>
+            <li><strong>Scan Ã©tiquette</strong> : VÃ©rifier correspondance vol/destination</li>
+            <li><strong>Validation poids</strong> : Confirmer conformitÃ©</li>
+            <li><strong>Direction tapis</strong> : Acheminement vers zone chargement</li>
+        </ol>
+        <div class="screen-example">
+            Module Bagages â†’ Scanner Ã©tiquette â†’ Affichage infos â†’ Validation â†’ Envoi tapis
+        </div>
+    </div>
+
+    <div class="process-flow">
+        <div class="process-step">Check-in</div>
+        <div class="arrow">â†’</div>
+        <div class="process-step">DÃ©pose</div>
+        <div class="arrow">â†’</div>
+        <div class="process-step">Scan</div>
+        <div class="arrow">â†’</div>
+        <div class="process-step">Tapis</div>
+    </div>
+
+    <div class="workflow-step no-break">
+        <h3>Ã‰TAPE 3: EMBARQUEMENT PASSAGERS</h3>
+        <ol>
+            <li><strong>PrÃ©sentation porte</strong> : Passager se prÃ©sente Ã  l'embarquement</li>
+            <li><strong>Scan documents</strong> : Carte embarquement + passeport</li>
+            <li><strong>Validation systÃ¨me</strong> : VÃ©rifier statut et autorisation</li>
+            <li><strong>AccÃ¨s avion</strong> : Autoriser passage dans l'avion</li>
+        </ol>
+        <div class="screen-example">
+            Module Embarquement â†’ Scan billet â†’ Validation automatique â†’ Mise Ã  jour statut â†’ AccÃ¨s autorisÃ©
+        </div>
+    </div>
+
+    <div class="workflow-step no-break">
+        <h3>Ã‰TAPE 4: VOL ET ARRIVÃ‰E</h3>
+        <ol>
+            <li><strong>DÃ©collage</strong> : Vol dÃ©colle avec passagers et bagages</li>
+            <li><strong>Atterrissage</strong> : ArrivÃ©e Ã  destination</li>
+            <li><strong>DÃ©chargement</strong> : Sortie des bagages de l'avion</li>
+            <li><strong>Scan arrivÃ©e</strong> : Confirmation rÃ©ception bagages</li>
+            <li><strong>Livraison</strong> : Mise Ã  disposition passagers</li>
+        </ol>
+        <div class="screen-example">
+            Module ArrivÃ©e â†’ Scan bagage â†’ Confirmation arrivÃ©e â†’ Validation livraison â†’ Fin processus
+        </div>
+    </div>
+
+    <h2>ðŸš¨ GESTION DES URGENCES RUSH</h2>
+
+    <div class="workflow-step no-break">
+        <h3>Processus RUSH SpÃ©cifique</h3>
+        <ol>
+            <li><strong>Identification</strong> : Scanner bagage urgent</li>
+            <li><strong>DÃ©claration</strong> : SÃ©lectionner motif RUSH</li>
+            <li><strong>Priorisation</strong> : Indiquer destination prioritaire</li>
+            <li><strong>Notification</strong> : Alerter Ã©quipes concernÃ©es</li>
+            <li><strong>Suivi</strong> : Monitorer traitement prioritaire</li>
+        </ol>
+        
+        <div class="warning">
+            <strong>Motifs RUSH possibles :</strong>
+            <ul>
+                <li>Connexion manquÃ©e - Bagage Ã  rÃ©acheminer d'urgence</li>
+                <li>Urgence mÃ©dicale - MatÃ©riel mÃ©dical prioritaire</li>
+                <li>VIP - Passager prioritaire</li>
+                <li>Erreur prÃ©cÃ©dente - Bagage mal traitÃ©</li>
+            </ul>
+        </div>
+    </div>
+
+    <h1>UTILISATION DE L'APPLICATION MOBILE</h1>
+
+    <h2>ðŸ“± PremiÃ¨re Connexion</h2>
+    <div class="workflow-step">
+        <ol>
+            <li>Ouvrir l'application BFS sur votre appareil</li>
+            <li>Entrer votre email professionnel et mot de passe</li>
+            <li>SÃ©lectionner votre aÃ©roport de travail</li>
+            <li>Confirmer votre rÃ´le (vÃ©rification automatique)</li>
+        </ol>
+    </div>
+
+    <h2>ðŸ  Ã‰cran d'Accueil</h2>
+    <ul>
+        <li><strong>Profil utilisateur</strong> : Nom, rÃ´le, aÃ©roport affichÃ©s</li>
+        <li><strong>Statut connexion</strong> : Vert (en ligne) / Rouge (hors ligne)</li>
+        <li><strong>Menu contextuel</strong> : Fonctions disponibles selon votre rÃ´le</li>
+        <li><strong>Synchronisation</strong> : Indicateur de sync automatique</li>
+    </ul>
+
+    <h2>ðŸ“· Utilisation du Scanner</h2>
+    <div class="workflow-step">
+        <h3>Mode Camera (Appareil mobile)</h3>
+        <ol>
+            <li>Cliquez sur "Scanner" dans le module appropriÃ©</li>
+            <li>Pointez la camÃ©ra vers le code-barres/QR code</li>
+            <li>La dÃ©tection est automatique</li>
+            <li>Confirmez les informations affichÃ©es</li>
+        </ol>
+        
+        <h3>Mode PDA (Scanner externe)</h3>
+        <ol>
+            <li>Connecter le scanner PDA via Bluetooth</li>
+            <li>Le champ de saisie s'active automatiquement</li>
+            <li>Scannez avec le PDA</li>
+            <li>Les donnÃ©es s'affichent directement</li>
+        </ol>
+    </div>
+
+    <h1>GESTION DES INCIDENTS</h1>
+
+    <h2>âš ï¸ ScÃ©narios d'Erreur</h2>
+
+    <div class="workflow-step">
+        <h3>Bagage Non TrouvÃ©</h3>
+        <ol>
+            <li>VÃ©rifier l'historique des scans dans le systÃ¨me</li>
+            <li>Confirmer le dernier emplacement connu</li>
+            <li>Notifier immÃ©diatement le superviseur</li>
+            <li>CrÃ©er un rapport d'incident dÃ©taillÃ©</li>
+        </ol>
+    </div>
+
+    <div class="workflow-step">
+        <h3>Passager Non EmbarquÃ©</h3>
+        <ol>
+            <li>VÃ©rifier le statut du passager dans BFS</li>
+            <li>Localiser les bagages associÃ©s (si dÃ©jÃ  chargÃ©s)</li>
+            <li>Retirer les bagages de l'avion si nÃ©cessaire</li>
+            <li>Mettre Ã  jour le statut dans le systÃ¨me</li>
+        </ol>
+    </div>
+
+    <div class="workflow-step">
+        <h3>Bagage EndommagÃ©</h3>
+        <ol>
+            <li>Photographier le dommage avec l'appareil</li>
+            <li>Remplir le formulaire de constat dans BFS</li>
+            <li>Notifier le service client passager</li>
+            <li>Enregistrer l'incident pour suivi</li>
+        </ol>
+    </div>
+
+    <h1>BONNES PRATIQUES</h1>
+
+    <h2>âœ… Avant le Service</h2>
+    <ul>
+        <li>VÃ©rifier la batterie de l'appareil (>50%)</li>
+        <li>Confirmer la connexion internet (WiFi/4G)</li>
+        <li>VÃ©rifier les mises Ã  jour de l'application</li>
+        <li>Confirmer son rÃ´le et aÃ©roport assignÃ©s</li>
+    </ul>
+
+    <h2>âœ… Pendant le Service</h2>
+    <ul>
+        <li>Scanner systÃ©matiquement TOUS les bagages</li>
+        <li>VÃ©rifier les informations affichÃ©es avant validation</li>
+        <li>Confirmer chaque action (son/visuel)</li>
+        <li>Signaler immÃ©diatement toute anomalie</li>
+    </ul>
+
+    <h2>âœ… AprÃ¨s le Service</h2>
+    <ul>
+        <li>Synchroniser toutes les donnÃ©es</li>
+        <li>VÃ©rifier les opÃ©rations en attente</li>
+        <li>Rapporter les incidents rencontrÃ©s</li>
+        <li>PrÃ©parer l'appareil pour le prochain service</li>
+    </ul>
+
+    <h1>DASHBOARD WEB - SUPERVISION</h1>
+
+    <h2>ðŸ“Š AccÃ¨s et FonctionnalitÃ©s</h2>
+    <ul>
+        <li><strong>URL</strong> : https://dashboard.brsats.com</li>
+        <li><strong>Connexion</strong> : MÃªmes identifiants que l'application mobile</li>
+        <li><strong>RÃ´les autorisÃ©s</strong> : Superviseurs uniquement</li>
+    </ul>
+
+    <h2>ðŸ“ˆ Tableaux de Bord</h2>
+    <div class="workflow-step">
+        <h3>Dashboard Principal</h3>
+        <ul>
+            <li>Statistiques globales de l'aÃ©roport</li>
+            <li>Graphiques de progression des vols en temps rÃ©el</li>
+            <li>Alertes et notifications systÃ¨me</li>
+            <li>Actions rapides et raccourcis</li>
+        </ul>
+        
+        <h3>Gestion des Vols</h3>
+        <ul>
+            <li>Liste des vols du jour avec statut</li>
+            <li>DÃ©tails passagers et bagages par vol</li>
+            <li>Modification des informations de vol</li>
+            <li>Export des donnÃ©es de vol</li>
+        </ul>
+    </div>
+
+    <h1>DÃ‰PANNAGE ET SUPPORT</h1>
+
+    <h2>ðŸ”§ ProblÃ¨mes Techniques Courants</h2>
+
+    <table>
+        <tr>
+            <th>ProblÃ¨me</th>
+            <th>Cause probable</th>
+            <th>Solution</th>
+        </tr>
+        <tr>
+            <td>Application ne se connecte pas</td>
+            <td>Pas de connexion internet</td>
+            <td>VÃ©rifier WiFi/4G, redÃ©marrer app</td>
+        </tr>
+        <tr>
+            <td>Scanner ne fonctionne pas</td>
+            <td>CamÃ©ra obstruÃ©e ou mauvais Ã©clairage</td>
+            <td>Nettoyer camÃ©ra, amÃ©liorer Ã©clairage</td>
+        </tr>
+        <tr>
+            <td>Synchronisation Ã©choue</td>
+            <td>Connexion instable ou serveur surchargÃ©</td>
+            <td>Patienter, vÃ©rifier connexion, rÃ©essayer</td>
+        </tr>
+    </table>
+
+    <h2>ðŸ“ž Contacts Support</h2>
+    <ul>
+        <li><strong>Support technique</strong> : +33 1 234 567 890</li>
+        <li><strong>Superviseur local</strong> : Voir annuaire interne</li>
+        <li><strong>Email support</strong> : tech@brsats.com</li>
+        <li><strong>Urgence 24/7</strong> : +33 1 234 567 891</li>
+    </ul>
+
+    <div class="footer">
+        <p><strong>BFS - Baggage Found Solution</strong></p>
+        <p>Manuel de Formation - Version 1.0 - FÃ©vrier 2026</p>
+        <p>Document confidentiel - PropriÃ©tÃ© de BRSATS</p>
+        <p>Prochaine rÃ©vision : AoÃ»t 2026</p>
+    </div>
+</body>
+</html>
+

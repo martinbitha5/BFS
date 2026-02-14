@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANUEL VISUEL BFS</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            font-size: 11pt;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #0a7ea4;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0a7ea4;
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0a7ea4;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        h1 {
+            color: #0a7ea4;
+            border-bottom: 2px solid #0a7ea4;
+            padding-bottom: 10px;
+            page-break-before: always;
+            margin-top: 30px;
+        }
+        
+        h2 {
+            color: #0a7ea4;
+            border-left: 4px solid #0a7ea4;
+            padding-left: 15px;
+            margin-top: 25px;
+        }
+        
+        .phone-container {
+            display: flex;
+            align-items: flex-start;
+            margin: 30px 0;
+            gap: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .phone-frame {
+            width: 280px;
+            height: 500px;
+            background: #1a1a1a;
+            border-radius: 35px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .status-bar {
+            background: #0a7ea4;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-content {
+            padding: 15px;
+            height: calc(100% - 35px);
+            overflow-y: auto;
+        }
+        
+        .instructions {
+            flex: 1;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .step-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0a7ea4;
+            margin-bottom: 15px;
+        }
+        
+        .arrow-step {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .arrow-number {
+            background: #0a7ea4;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .arrow-text {
+            font-size: 14px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .button {
+            background: #0a7ea4;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .input-field {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 8px 0;
+        }
+        
+        .menu-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .menu-icon {
+            width: 40px;
+            height: 40px;
+            background: #0a7ea4;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 15px;
+            font-size: 20px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #155724;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #721c24;
+        }
+        
+        .scanner-area {
+            background: #000;
+            height: 150px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            border: 2px dashed #333;
+        }
+        
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: #0a7ea4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .profile-info h3 {
+            margin: 0;
+            color: #0a7ea4;
+        }
+        
+        .profile-info p {
+            margin: 2px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .flight-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .flight-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .flight-number {
+            font-weight: bold;
+            color: #0a7ea4;
+        }
+        
+        .flight-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        
+        .status-boarding {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .arrow-pointer {
+            color: #ff6b6b;
+            font-size: 24px;
+            margin: 0 5px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            font-size: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">BFS</div>
+        <div class="title">MANUEL VISUEL D'UTILISATION</div>
+        <div class="subtitle">Guide pratique avec captures d'écran mobile</div>
+        <div class="subtitle">Version 1.0 - Février 2026</div>
+    </div>
+
+    <h1>CONNEXION À L'APPLICATION BFS</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:41</span>
+                    <span>BFS</span>
+                    <span>🔋 100%</span>
+                </div>
+                <div class="app-content">
+                    <div style="text-align: center; margin: 40px 0;">
+                        <div style="font-size: 48px; color: #0a7ea4; font-weight: bold;">BFS</div>
+                        <div style="color: #666; font-size: 14px;">Baggage Found Solution</div>
+                    </div>
+                    
+                    <div class="input-field" style="text-align: center; color: #999;">
+                        📧 Email professionnel
+                    </div>
+                    
+                    <div class="input-field" style="text-align: center; color: #999;">
+                        🔒 Mot de passe
+                    </div>
+                    
+                    <div class="button">
+                        SE CONNECTER
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+                        Pas de compte ? Contactez votre superviseur
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">🔑 Étape 1 : Connexion</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text">Ouvrez l'application BFS sur votre appareil</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text">Entrez votre <strong>email professionnel</strong> fourni par BRSATS</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text">Saisissez votre <strong>mot de passe</strong> sécurisé</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text">Cliquez sur <strong>"SE CONNECTER"</strong></div>
+            </div>
+            
+            <div class="highlight">
+                <strong>💡 Conseil :</strong> Gardez vos identifiants confidentiels et ne les partagez jamais !
+            </div>
+        </div>
+    </div>
+
+    <h1>ÉCRAN D'ACCUEIL - DÉCOUVERTE</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:41</span>
+                    <span>Accueil - BFS</span>
+                    <span>🔋 95%</span>
+                </div>
+                <div class="app-content">
+                    <div class="profile-header">
+                        <div class="avatar">JD</div>
+                        <div class="profile-info">
+                            <h3>Jean Dupont</h3>
+                            <p>Agent Bagages <span class="badge">CDG</span></p>
+                            <p>🟢 En ligne</p>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight">
+                        <strong>👋 Bienvenue Jean !</strong><br>
+                        3 bagages en attente de scan
+                    </div>
+                    
+                    <div class="menu-item">
+                        <div class="menu-icon">🧳</div>
+                        <div>
+                            <strong>Gestion des Bagages</strong><br>
+                            <small>Scan et enregistrement</small>
+                        </div>
+                        <span class="arrow-pointer">→</span>
+                    </div>
+                    
+                    <div class="menu-item">
+                        <div class="menu-icon">⚙️</div>
+                        <div>
+                            <strong>Paramètres</strong><br>
+                            <small>Préférences et compte</small>
+                        </div>
+                        <span class="arrow-pointer">→</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">🏠 Étape 2 : Écran d'accueil</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Vérifiez votre profil</strong> : Nom, rôle et aéroport</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Statut de connexion</strong> : 🟢 Vert = en ligne, 🔴 Rouge = hors ligne</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Notifications</strong> : Alertes importantes en haut</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Menu contextuel</strong> : Fonctions disponibles selon votre rôle</div>
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Important :</strong> L'application s'adapte automatiquement à votre rôle. En tant qu'Agent Bagages, vous n'avez accès qu'au module bagages !
+            </div>
+        </div>
+    </div>
+
+    <h1>MODULE BAGAGES - SCAN D'ÉTIQUETTE</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:42</span>
+                    <span>Bagages - BFS</span>
+                    <span>🔋 92%</span>
+                </div>
+                <div class="app-content">
+                    <h3 style="color: #0a7ea4; margin-bottom: 15px;">🧳 Gestion des Bagages</h3>
+                    
+                    <div class="scanner-area">
+                        📷<br>
+                        Positionnez l'étiquette dans le cadre<br>
+                        <small>OU utilisez le scanner PDA</small>
+                    </div>
+                    
+                    <div class="input-field" style="text-align: center; color: #999;">
+                        🔍 Numéro d'étiquette (scan manuel)
+                    </div>
+                    
+                    <div class="button" style="background: #28a745;">
+                        📷 ACTIVER CAMERA
+                    </div>
+                    
+                    <div class="button" style="background: #6c757d;">
+                        ⌨️ MODE PDA
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
+                        Dernier scan : Il y a 2 minutes<br>
+                        Bagage : AF123456
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">📷 Étape 3 : Scan d'étiquette</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Activez le scanner</strong> : Appuyez sur "ACTIVER CAMERA"</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Positionnez l'étiquette</strong> : Centrez le code-barres dans le cadre</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Détection automatique</strong> : L'application scanne automatiquement</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Confirmation sonore</strong> : Bip ✅ si réussi, Bip ❌ si erreur</div>
+            </div>
+            
+            <div class="highlight">
+                <strong>🔧 Mode PDA :</strong> Si vous utilisez un scanner externe, sélectionnez "MODE PDA" et le champ de saisie s'activera automatiquement.
+            </div>
+        </div>
+    </div>
+
+    <h1>VALIDATION DES INFORMATIONS BAGAGE</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:43</span>
+                    <span>Détails Bagage - BFS</span>
+                    <span>🔋 90%</span>
+                </div>
+                <div class="app-content">
+                    <div class="success-message">
+                        ✅ Bagage scanné avec succès !
+                    </div>
+                    
+                    <div class="flight-card">
+                        <div class="flight-header">
+                            <div class="flight-number">AF123456</div>
+                            <div class="flight-status status-boarding">À traiter</div>
+                        </div>
+                        
+                        <div style="margin: 10px 0;">
+                            <strong>Passager :</strong> Marie Martin<br>
+                            <strong>Vol :</strong> AF789 CDG → JFK<br>
+                            <strong>Poids :</strong> 18.5 kg<br>
+                            <strong>Destination :</strong> Tapis 3
+                        </div>
+                        
+                        <div class="highlight">
+                            ⏰ Scanné il y a 30 secondes
+                        </div>
+                    </div>
+                    
+                    <div class="button" style="background: #28a745;">
+                        ✅ VALIDER ET ENREGISTRER
+                    </div>
+                    
+                    <div class="button" style="background: #dc3545;">
+                        ❌ SIGNALER UN PROBLÈME
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">✅ Étape 4 : Validation des informations</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Vérifiez les informations</strong> : Passager, vol, destination</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Confirmez le poids</strong> : Vérifiez la conformité</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Destination finale</strong> : Confirmez le tapis de chargement</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Validez</strong> : Appuyez sur "VALIDER ET ENREGISTRER"</div>
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ En cas de problème :</strong> Si vous remarquez une anomalie (bagage endommagé, étiquette illisible, etc.), cliquez sur "SIGNALER UN PROBLÈME" et suivez la procédure.
+            </div>
+        </div>
+    </div>
+
+    <h1>MODULE EMBARQUEMENT - SCAN PASSAGER</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:44</span>
+                    <span>Embarquement - BFS</span>
+                    <span>🔋 88%</span>
+                </div>
+                <div class="app-content">
+                    <h3 style="color: #0a7ea4; margin-bottom: 15px;">✈️ Embarquement</h3>
+                    
+                    <div class="flight-card">
+                        <div class="flight-header">
+                            <div class="flight-number">AF789</div>
+                            <div class="flight-status status-boarding">Embarquement</div>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <strong>Route :</strong> CDG → JFK<br>
+                            <strong>Porte :</strong> B23<br>
+                            <strong>Heure :</strong> 10:30<br>
+                            <strong>Progression :</strong> 45/120 passagers
+                        </div>
+                    </div>
+                    
+                    <div class="scanner-area">
+                        📷<br>
+                            Scannez la carte d'embarquement<br>
+                            <small>OU le passeport</small>
+                    </div>
+                    
+                    <div class="input-field" style="text-align: center; color: #999;">
+                        🔍 Numéro de siège ou PNR
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #666;">
+                        Dernier embarquement : Il y a 1 minute<br>
+                        Siège 23A - ✅ Validé
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">✈️ Étape 5 : Embarquement des passagers</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Vérifiez le vol actif</strong> : Confirmez le numéro de vol et porte</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Scannez le document</strong> : Carte d'embarquement ou passeport</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Validation automatique</strong> : Le système vérifie l'autorisation</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Accès autorisé</strong> : Vert ✅ = autorisé, Rouge ❌ = refusé</div>
+            </div>
+            
+            <div class="highlight">
+                <strong>📊 Progression en temps réel :</strong> Le compteur se met à jour automatiquement après chaque embarquement validé.
+            </div>
+        </div>
+    </div>
+
+    <h1>MODULE RUSH - GESTION DES URGENCES</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:45</span>
+                    <span>RUSH - BFS</span>
+                    <span>🔋 85%</span>
+                </div>
+                <div class="app-content">
+                    <h3 style="color: #dc3545; margin-bottom: 15px;">🚨 GESTION RUSH</h3>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ MODE URGENCE ACTIVÉ</strong><br>
+                        Traitement prioritaire activé
+                    </div>
+                    
+                    <div class="scanner-area" style="background: #dc3545;">
+                        🚨<br>
+                        Scannez le bagage urgent<br>
+                        <small>Traitement immédiat requis</small>
+                    </div>
+                    
+                    <div class="input-field" style="text-align: center; color: #999;">
+                        🔍 Numéro d'étiquette RUSH
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <strong>Motif RUSH :</strong><br>
+                        <div class="menu-item" style="background: #fff3cd;">
+                            🔴 Connexion manquée
+                        </div>
+                        <div class="menu-item" style="background: #fff3cd;">
+                            🏥 Urgence médicale
+                        </div>
+                        <div class="menu-item" style="background: #fff3cd;">
+                            ⭐ VIP
+                        </div>
+                    </div>
+                    
+                    <div class="button" style="background: #dc3545;">
+                        🚨 DÉCLARER RUSH
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">🚨 Étape 6 : Gestion des urgences RUSH</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Identifiez l'urgence</strong> : Scannez l'étiquette du bagage concerné</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Sélectionnez le motif</strong> : Choisissez la raison de l'urgence</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Indiquez la destination</strong> : Précisez où le bagage doit être envoyé</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Déclarez RUSH</strong> : Validez pour traitement prioritaire immédiat</div>
+            </div>
+            
+            <div class="warning-box">
+                <strong>🚨 Action immédiate requise :</strong> Une fois déclaré RUSH, le bagage est automatiquement priorisé et les équipes concernées sont notifiées instantanément.
+            </div>
+        </div>
+    </div>
+
+    <h1>SYNCHRONISATION ET FIN DE SERVICE</h1>
+
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>9:46</span>
+                    <span>Synchronisation - BFS</span>
+                    <span>🔋 82%</span>
+                </div>
+                <div class="app-content">
+                    <h3 style="color: #0a7ea4; margin-bottom: 15px;">🔄 Synchronisation</h3>
+                    
+                    <div class="success-message">
+                        ✅ Synchronisation en cours...
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                            <span>Bagages scannés</span>
+                            <span><strong>23</strong> ✅</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                            <span>Embarquements</span>
+                            <span><strong>45</strong> ✅</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                            <span>Déclarations RUSH</span>
+                            <span><strong>2</strong> ✅</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                            <span>En attente de sync</span>
+                            <span><strong>0</strong> 🔄</span>
+                        </div>
+                    </div>
+                    
+                    <div class="button" style="background: #0a7ea4;">
+                        🔄 SYNCHRONISER MAINTENANT
+                    </div>
+                    
+                    <div class="button" style="background: #6c757d;">
+                        📊 RAPPORT DU JOUR
+                    </div>
+                    
+                    <div class="button" style="background: #dc3545;">
+                        🚪 DÉCONNEXION
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <div class="step-title">🏁 Étape 7 : Fin de service</div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">1</div>
+                <div class="arrow-text"><strong>Vérifiez la synchronisation</strong> : Assurez-vous que tout est synchronisé</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">2</div>
+                <div class="arrow-text"><strong>Consultez le rapport</strong> : Vérifiez les statistiques du jour</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">3</div>
+                <div class="arrow-text"><strong>Signalez les incidents</strong> : Rapportez tout problème rencontré</div>
+            </div>
+            
+            <div class="arrow-step">
+                <div class="arrow-number">4</div>
+                <div class="arrow-text"><strong>Déconnectez-vous</strong> : Terminez proprement votre session</div>
+            </div>
+            
+            <div class="highlight">
+                <strong>💡 Bonne pratique :</strong> Synchronisez toujours avant de quitter pour éviter toute perte de données !
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>BFS - Baggage Found Solution</strong></p>
+        <p>Manuel Visuel d'Utilisation - Version 1.0 - Février 2026</p>
+        <p>Document confidentiel - Formation du personnel BRSATS</p>
+        <p>Prochaine révision : Août 2026</p>
+    </div>
+</body>
+</html>

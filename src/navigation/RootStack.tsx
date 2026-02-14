@@ -9,6 +9,7 @@ import BaggageScreen from '../screens/BaggageScreen';
 import BoardingScreen from '../screens/BoardingScreen';
 import CheckinScreen from '../screens/CheckinScreen';
 import CreditsScreen from '../screens/CreditsScreen';
+import DeliveryScreen from '../screens/DeliveryScreen';
 import FAQScreen from '../screens/FAQScreen';
 import FlightSelectionScreen from '../screens/FlightSelectionScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -36,6 +37,7 @@ export type RootStackParamList = {
   Legal: undefined;
   Credits: undefined;
   Rush: undefined;
+  Delivery: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -70,6 +72,7 @@ export default function RootStack() {
       <Stack.Screen name="Legal" component={LegalScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Rush" component={RushScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Delivery" component={DeliveryScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

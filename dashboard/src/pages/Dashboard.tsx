@@ -25,6 +25,7 @@ interface FlightStats {
   routeDisplay?: string; // Route complète formatée
   scheduledTime: string;
   status: string;
+  flightType?: 'departure' | 'arrival'; // Type de vol
   stats: {
     totalPassengers: number;
     boardedPassengers: number;
@@ -41,6 +42,7 @@ interface RecentPassenger {
   route: string;
   baggageCount: number;
   checkedInAt: string;
+  flightType?: 'departure' | 'arrival'; // Type du vol auquel le passager est associé
 }
 
 interface RecentBaggage {
@@ -79,6 +81,8 @@ export default function Dashboard() {
   const [exporting, setExporting] = useState(false);
   const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [flightTypeFilter, setFlightTypeFilter] = useState<'all' | 'departure' | 'arrival'>('all');
+  const [baggageDate, setBaggageDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchData = useCallback(async () => {
     if (!user?.airport_code) return;
@@ -94,14 +98,46 @@ export default function Dashboard() {
         api.get(`/api/v1/stats/airport/${user.airport_code}?date=${localToday}`),
         api.get(`/api/v1/stats/flights/${user.airport_code}?date=${localToday}`),
         api.get(`/api/v1/stats/recent/${user.airport_code}?limit=5`),
-        api.get(`/api/v1/baggage?status=arrived&airport=${user.airport_code}`)
+        api.get(`/api/v1/baggage?status=arrived&airport=${user.airport_code}&date=${baggageDate}`)
       ]);
 
       setStats((statsRes.data as { data: AirportStats }).data);
-      setFlights((flightsRes.data as { data: { flights: FlightStats[] } }).data.flights || []);
+      const allFlights = (flightsRes.data as { data: { flights: FlightStats[] } }).data.flights || [];
+      setFlights(allFlights);
       
       const recentData = (recentRes.data as { data: { recentPassengers: RecentPassenger[]; recentBaggages: RecentBaggage[] } }).data;
-      setRecentPassengers(recentData.recentPassengers || []);
+      
+      // Enrichir les passagers avec le type de vol correspondant
+      let enrichedPassengers = (recentData.recentPassengers || []).map(passenger => {
+        // Chercher le vol qui correspond à ce passager
+        const correspondingFlight = allFlights.find(flight => flight.flightNumber === passenger.flightNumber);
+        
+        return {
+          ...passenger,
+          flightType: correspondingFlight?.flightType || 'departure' // Default to departure if not found
+        };
+      });
+      
+      // Filtrer les passagers en fonction du type de vol sélectionné
+      let filteredPassengers: RecentPassenger[] = enrichedPassengers;
+      
+      if (flightTypeFilter !== 'all') {
+        filteredPassengers = enrichedPassengers.filter(p => {
+          if (flightTypeFilter === 'arrival') {
+            // Pour un vol d'arrivée: afficher les passagers qui arrivent
+            // (ceux dont la destination du flight correspond à l'aéroport)
+            const flight = allFlights.find(f => f.flightNumber === p.flightNumber);
+            return flight?.flightType === 'arrival' && flight?.arrival === user.airport_code;
+          } else {
+            // Pour un vol de départ: afficher les passagers qui partent
+            // (ceux dont l'origine du flight correspond à l'aéroport)
+            const flight = allFlights.find(f => f.flightNumber === p.flightNumber);
+            return flight?.flightType === 'departure' && flight?.departure === user.airport_code;
+          }
+        });
+      }
+      
+      setRecentPassengers(filteredPassengers);
       setRecentBaggages(recentData.recentBaggages || []);
       
       const arrivedData = (arrivedRes.data as { data: ArrivedBaggage[] }).data || [];
@@ -114,7 +150,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, flightTypeFilter, baggageDate]);
 
   useEffect(() => {
     fetchData();
@@ -294,6 +330,42 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Filtres par type de vol */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFlightTypeFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            flightTypeFilter === 'all'
+              ? 'bg-primary-600 text-white'
+              : 'bg-black/30 border border-white/20 text-white/70 hover:bg-black/40'
+          }`}
+        >
+          Tous les vols
+        </button>
+        <button
+          onClick={() => setFlightTypeFilter('departure')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            flightTypeFilter === 'departure'
+              ? 'bg-blue-600 text-white'
+              : 'bg-black/30 border border-white/20 text-white/70 hover:bg-black/40'
+          }`}
+        >
+          <Plane className="inline w-4 h-4 mr-1" />
+          Départs
+        </button>
+        <button
+          onClick={() => setFlightTypeFilter('arrival')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            flightTypeFilter === 'arrival'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-black/30 border border-white/20 text-white/70 hover:bg-black/40'
+          }`}
+        >
+          <Plane className="inline w-4 h-4 mr-1 rotate-180" />
+          Arrivées
+        </button>
+      </div>
+
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
           <p className="text-red-300">{error}</p>
@@ -366,6 +438,11 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Plane className="w-5 h-5 text-primary-400" />
             Vols du jour
+            {flightTypeFilter !== 'all' && (
+              <span className="text-sm text-white/60">
+                ({flightTypeFilter === 'departure' ? 'Départs' : 'Arrivées'})
+              </span>
+            )}
           </h2>
         </div>
         <div className="p-6">
@@ -373,7 +450,11 @@ export default function Dashboard() {
             <p className="text-center text-white/50 py-8">Aucun vol programmé</p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {flights.map((flight) => (
+              {flights
+                .filter(flight => 
+                  flightTypeFilter === 'all' || flight.flightType === flightTypeFilter
+                )
+                .map((flight) => (
                 <div
                   key={flight.id}
                   className="bg-black/20 border border-white/5 rounded-lg p-4"
@@ -384,6 +465,15 @@ export default function Dashboard() {
                       <span className={`ml-2 px-2 py-0.5 text-xs rounded border ${getStatusColor(flight.status)}`}>
                         {getStatusLabel(flight.status)}
                       </span>
+                      {flight.flightType && (
+                        <span className={`ml-2 px-2 py-0.5 text-xs rounded border ${
+                          flight.flightType === 'departure' 
+                            ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        }`}>
+                          {flight.flightType === 'departure' ? '↗ Départ' : '↙ Arrivée'}
+                        </span>
+                      )}
                     </div>
                     {flight.scheduledTime && (
                       <span className="text-sm text-white/60 flex items-center gap-1">
@@ -446,6 +536,11 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-400" />
               Passagers récents
+              {flightTypeFilter !== 'all' && (
+                <span className="ml-2 text-xs text-white/60">
+                  ({flightTypeFilter === 'departure' ? 'Départs' : 'Arrivées'})
+                </span>
+              )}
             </h2>
           </div>
           <div className="p-4">
@@ -454,13 +549,22 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {recentPassengers.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                  <div key={p.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg border border-white/5">
                     <div>
                       <p className="font-medium text-white">{p.fullName}</p>
                       <p className="text-xs text-white/50">{p.pnr} • {p.flightNumber}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-white/70">{p.route}</p>
+                      <div className="flex items-center justify-end gap-2 mb-1">
+                        <span className="text-sm text-white/70">{p.route}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded border ${
+                          p.flightType === 'arrival'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                        }`}>
+                          {p.flightType === 'arrival' ? '↙ Arrivée' : '↗ Départ'}
+                        </span>
+                      </div>
                       <p className="text-xs text-white/40">{p.baggageCount} bagage(s)</p>
                     </div>
                   </div>
@@ -511,9 +615,108 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Bagages arrivés */}
+      {/* États de livraison des bagages */}
       <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
         <div className="px-6 py-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Package className="w-5 h-5 text-orange-400" />
+            États de livraison des bagages
+          </h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-black/20 border border-blue-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <Package className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {recentBaggages.filter(b => b.status === 'checked').length + 
+                      arrivedBaggages.filter(b => b.status === 'checked').length}
+                  </p>
+                  <p className="text-sm text-white/60">Enregistrés</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 border border-yellow-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                  <Package className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {recentBaggages.filter(b => b.status === 'in_transit').length + 
+                      arrivedBaggages.filter(b => b.status === 'in_transit').length}
+                  </p>
+                  <p className="text-sm text-white/60">En transit</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 border border-emerald-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/20 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {arrivedBaggages.filter(b => b.status === 'arrived').length}
+                  </p>
+                  <p className="text-sm text-white/60">Arrivés</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 border border-purple-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {arrivedBaggages.filter(b => b.status === 'delivered').length}
+                  </p>
+                  <p className="text-sm text-white/60">Livrés</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 border border-red-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <Plane className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {recentBaggages.filter(b => b.status === 'rush').length}
+                  </p>
+                  <p className="text-sm text-white/60">À réacheminer</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 border border-orange-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <Package className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {recentBaggages.filter(b => b.status === 'loaded').length}
+                  </p>
+                  <p className="text-sm text-white/60">Chargés</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bagages arrivés */}
+      <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl">
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Luggage className="w-5 h-5 text-emerald-400" />
             Bagages arrivés
@@ -523,6 +726,15 @@ export default function Dashboard() {
               </span>
             )}
           </h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-white/70">Filtrer par date:</label>
+            <input
+              type="date"
+              value={baggageDate}
+              onChange={(e) => setBaggageDate(e.target.value)}
+              className="px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-emerald-500"
+            />
+          </div>
         </div>
         <div className="p-4">
           {arrivedBaggages.length === 0 ? (
