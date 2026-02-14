@@ -36,7 +36,8 @@ router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportC
                 .lt('checked_in_at', `${today}T23:59:59`);
         }
         if (filterAirport) {
-            passQuery = passQuery.eq('airport_code', airport.toUpperCase());
+            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
+            passQuery = passQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
         }
         const { data: passengers, error: passError } = await passQuery;
         if (passError)
@@ -55,14 +56,15 @@ router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportC
         if (bagError)
             throw bagError;
         // Récupérer les statuts d'embarquement
-        let boardQuery = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, checked_in_at)');
+        let boardQuery = database_1.supabase.from('boarding_status').select('*, passengers!inner(airport_code, arrival, checked_in_at)');
         if (filterByDate) {
             boardQuery = boardQuery
                 .gte('passengers.checked_in_at', `${today}T00:00:00`)
                 .lt('passengers.checked_in_at', `${today}T23:59:59`);
         }
         if (filterAirport) {
-            boardQuery = boardQuery.eq('passengers.airport_code', airport.toUpperCase());
+            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
+            boardQuery = boardQuery.or(`(passengers.airport_code.eq.${airport.toUpperCase()},passengers.arrival.eq.${airport.toUpperCase()})`);
         }
         const { data: boardingStatuses, error: boardError } = await boardQuery;
         if (boardError)
@@ -73,7 +75,7 @@ router.get('/airport/:airport', airport_restriction_middleware_1.requireAirportC
             .select('flight_number')
             .eq('scheduled_date', today)
             .in('status', ['scheduled', 'boarding', 'departed']);
-        if (!filterAirport) {
+        if (filterAirport) {
             scheduledFlightsQuery = scheduledFlightsQuery.eq('airport_code', airport.toUpperCase());
         }
         const { data: scheduledFlights } = await scheduledFlightsQuery;
@@ -120,7 +122,10 @@ router.get('/recent/:airport', airport_restriction_middleware_1.requireAirportCo
     try {
         const { airport } = req.params;
         const limit = parseInt(req.query.limit) || 10;
-        const today = new Date().toISOString().split('T')[0];
+        // Utiliser le même fuseau horaire que /stats/airport (UTC+1 pour Afrique Centrale)
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        const today = now.toISOString().split('T')[0];
         const filterByAirport = airport.toUpperCase() !== 'ALL';
         // 1. Passagers récents (tous, pas seulement aujourd'hui) avec infos parsées
         let passQuery = database_1.supabase
@@ -138,7 +143,8 @@ router.get('/recent/:airport', airport_restriction_middleware_1.requireAirportCo
             .order('checked_in_at', { ascending: false })
             .limit(limit);
         if (filterByAirport) {
-            passQuery = passQuery.eq('airport_code', airport.toUpperCase());
+            // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
+            passQuery = passQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
         }
         const { data: recentPassengers, error: passError } = await passQuery;
         if (passError)
@@ -235,7 +241,17 @@ router.get('/recent/:airport', airport_restriction_middleware_1.requireAirportCo
 router.get('/flights/:airport', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { airport } = req.params;
-        const today = new Date().toISOString().split('T')[0];
+        const { date } = req.query;
+        // Utiliser la date fournie par le client, sinon utiliser UTC+1 comme fallback
+        let today;
+        if (date) {
+            today = String(date);
+        }
+        else {
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            today = now.toISOString().split('T')[0];
+        }
         const filterByAirport = airport.toUpperCase() !== 'ALL';
         // Récupérer les vols programmés SEULEMENT POUR AUJOURD'HUI (pas demain)
         let flightQuery = database_1.supabase
@@ -260,27 +276,37 @@ router.get('/flights/:airport', airport_restriction_middleware_1.requireAirportC
             const numericPart = flightNum.replace(/^[A-Z]{2}0*/, ''); // Enlever le code et les zéros
             // Pattern pour matcher avec ou sans zéros: ET64, ET064, ET0064
             const flightPattern = `${companyCode}%${numericPart}`;
+            // ✅ Construire la liste de toutes les destinations (escales + destination finale)
+            const stops = flight.stops || [];
+            const allDestinations = [...stops, flight.arrival];
             // Compter les passagers de ce vol POUR AUJOURD'HUI UNIQUEMENT
+            // ✅ FIX: Filtrer par TOUTES les destinations possibles (escales + finale)
+            // Les passagers peuvent descendre à n'importe quelle escale ou à la destination finale
             let passCountQuery = database_1.supabase
                 .from('passengers')
                 .select('*', { count: 'exact', head: true })
                 .ilike('flight_number', flightPattern)
+                .in('arrival', allDestinations)
                 .gte('checked_in_at', `${today}T00:00:00`)
                 .lt('checked_in_at', `${today}T23:59:59`);
             if (filterByAirport) {
-                passCountQuery = passCountQuery.eq('airport_code', airport.toUpperCase());
+                // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
+                passCountQuery = passCountQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
             }
             const { count: passengerCount } = await passCountQuery;
             // Compter les passagers embarqués POUR AUJOURD'HUI
             // D'abord récupérer les IDs des passagers de ce vol enregistrés aujourd'hui
+            // ✅ FIX: Filtrer par TOUTES les destinations possibles
             let passengersQuery = database_1.supabase
                 .from('passengers')
                 .select('id')
                 .ilike('flight_number', flightPattern)
+                .in('arrival', allDestinations)
                 .gte('checked_in_at', `${today}T00:00:00`)
                 .lt('checked_in_at', `${today}T23:59:59`);
             if (filterByAirport) {
-                passengersQuery = passengersQuery.eq('airport_code', airport.toUpperCase());
+                // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
+                passengersQuery = passengersQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
             }
             const { data: flightPassengers } = await passengersQuery;
             const passengerIds = flightPassengers?.map(p => p.id) || [];
@@ -304,6 +330,10 @@ router.get('/flights/:airport', airport_restriction_middleware_1.requireAirportC
                 bagCountQuery = bagCountQuery.eq('airport_code', airport.toUpperCase());
             }
             const { count: baggageCount } = await bagCountQuery;
+            // Construire la route complète pour l'affichage
+            const routeDisplay = stops.length > 0
+                ? `${flight.departure} → ${stops.join(' → ')} → ${flight.arrival}`
+                : `${flight.departure} → ${flight.arrival}`;
             return {
                 id: flight.id,
                 flightNumber: flight.flight_number,
@@ -311,6 +341,8 @@ router.get('/flights/:airport', airport_restriction_middleware_1.requireAirportC
                 airlineCode: flight.airline_code,
                 departure: flight.departure,
                 arrival: flight.arrival,
+                stops: stops, // Escales intermédiaires
+                routeDisplay: routeDisplay, // Route complète formatée
                 scheduledTime: flight.scheduled_time,
                 status: flight.status,
                 flightType: flight.flight_type || 'departure',
