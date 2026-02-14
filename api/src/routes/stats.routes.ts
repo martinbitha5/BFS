@@ -45,7 +45,7 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     }
     if (filterAirport) {
       // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-      passQuery = passQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
+      passQuery = passQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
     }
     const { data: passengers, error: passError } = await passQuery;
 
@@ -74,7 +74,7 @@ router.get('/airport/:airport', requireAirportCode, async (req: Request & { hasF
     }
     if (filterAirport) {
       // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-      boardQuery = boardQuery.or(`(passengers.airport_code.eq.${airport.toUpperCase()},passengers.arrival.eq.${airport.toUpperCase()})`);
+      boardQuery = boardQuery.or(`passengers.airport_code.eq.${airport.toUpperCase()},passengers.arrival.eq.${airport.toUpperCase()}`);
     }
     const { data: boardingStatuses, error: boardError } = await boardQuery;
 
@@ -162,7 +162,7 @@ router.get('/recent/:airport', requireAirportCode, async (req: Request, res: Res
     
     if (filterByAirport) {
       // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-      passQuery = passQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
+      passQuery = passQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
     }
     
     const { data: recentPassengers, error: passError } = await passQuery;
@@ -330,7 +330,7 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         
         if (filterByAirport) {
           // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-          passCountQuery = passCountQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
+          passCountQuery = passCountQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
         }
         
         const { count: passengerCount } = await passCountQuery;
@@ -348,7 +348,7 @@ router.get('/flights/:airport', requireAirportCode, async (req: Request, res: Re
         
         if (filterByAirport) {
           // Afficher les passagers qui se CHECK-IN à cet aéroport OU qui arrivent à cet aéroport
-          passengersQuery = passengersQuery.or(`(airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()})`);
+          passengersQuery = passengersQuery.or(`airport_code.eq.${airport.toUpperCase()},arrival.eq.${airport.toUpperCase()}`);
         }
         
         const { data: flightPassengers } = await passengersQuery;
