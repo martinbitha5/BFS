@@ -30,12 +30,12 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: '3',
     question: 'Que faire si je n\'ai pas de connexion internet ?',
-    answer: 'L\'application BFS fonctionne en mode hors ligne. Toutes les données sont enregistrées localement dans la base de données SQLite et seront synchronisées automatiquement dès que la connexion sera rétablie. Vous pouvez continuer à travailler normalement sans internet, ce qui est essentiel pour les opérations aéroportuaires où la connectivité peut être intermittente.',
+    answer: 'L\'application Police Bagages fonctionne en mode hors ligne. Toutes les données sont enregistrées localement dans la base de données SQLite et seront synchronisées automatiquement dès que la connexion sera rétablie. Vous pouvez continuer à travailler normalement sans internet, ce qui est essentiel pour les opérations aéroportuaires où la connectivité peut être intermittente.',
   },
   {
     id: '4',
     question: 'Dans quels aéroports ATS Handling opère-t-il ?',
-    answer: 'AFRICAN TRANSPORT SYSTEMS opère dans plusieurs aéroports de la République Démocratique du Congo : Kinshasa (N\'djili), Kisangani, Goma, Lubumbashi, Kolwezi, Kananga, Mbuyi-Mayi, Gemena et Mbandaka. L\'application BFS est utilisée dans tous ces aéroports pour assurer une gestion cohérente et efficace des opérations de manutention.',
+    answer: 'AFRICAN TRANSPORT SYSTEMS opère dans plusieurs aéroports de la République Démocratique du Congo : Kinshasa (N\'djili), Kisangani, Goma, Lubumbashi, Kolwezi, Kananga, Mbuyi-Mayi, Gemena et Mbandaka. L\'application Police Bagages est utilisée dans tous ces aéroports pour assurer une gestion cohérente et efficace des opérations de manutention.',
   },
   {
     id: '5',
@@ -54,7 +54,7 @@ const FAQ_DATA: FAQItem[] = [
   },
   {
     id: '8',
-    question: 'Quels sont les différents rôles dans l\'application BFS ?',
+    question: 'Quels sont les différents rôles dans l\'application Police Bagages ?',
     answer: 'L\'application propose plusieurs rôles spécialisés : Check-in (enregistrement des passagers), Bagages (gestion et suivi des bagages), Embarquement (validation de l\'embarquement), Arrivée (confirmation de l\'arrivée des bagages), et Superviseur (accès à toutes les fonctionnalités, statistiques et rapports). Chaque rôle a des permissions spécifiques pour garantir la sécurité et l\'efficacité des opérations.',
   },
   {
@@ -65,17 +65,17 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: '10',
     question: 'L\'application conserve-t-elle un historique des actions ?',
-    answer: 'Oui, l\'application BFS conserve un historique complet de toutes les actions effectuées (audit trail). Cet historique inclut qui a effectué quelle action, quand et sur quelles données. Cet historique est accessible aux superviseurs et permet de tracer toutes les opérations pour des raisons de sécurité, de conformité et de qualité de service.',
+    answer: 'Oui, l\'application Police Bagages conserve un historique complet de toutes les actions effectuées (audit trail). Cet historique inclut qui a effectué quelle action, quand et sur quelles données. Cet historique est accessible aux superviseurs et permet de tracer toutes les opérations pour des raisons de sécurité, de conformité et de qualité de service.',
   },
   {
     id: '11',
     question: 'Quels services ATS Handling propose-t-il ?',
-    answer: 'AFRICAN TRANSPORT HANDLING propose une gamme complète de services aéroportuaires : assistance au sol, traitement des cargos, manutention des bagages, sûreté aéroportuaire, maintenance, support informatique, cleaning, catering et restauration. L\'application BFS est spécialement conçue pour optimiser la gestion de ces services.',
+    answer: 'AFRICAN TRANSPORT HANDLING propose une gamme complète de services aéroportuaires : assistance au sol, traitement des cargos, manutention des bagages, sûreté aéroportuaire, maintenance, support informatique, cleaning, catering et restauration. L\'application Police Bagages est spécialement conçue pour optimiser la gestion de ces services.',
   },
   {
     id: '12',
     question: 'Qui sont les partenaires d\'ATS Handling ?',
-    answer: 'ATS Handling travaille avec de nombreux partenaires prestigieux, notamment RVA (Régie des Voies Aériennes), RAWBANK, AAC, Royal Air Maroc, Ethiopian Airlines, Turkish Airlines, ASKY, Air Côte d\'Ivoire et TAAG. L\'application BFS assure une intégration fluide avec les systèmes de ces partenaires.',
+    answer: 'ATS Handling travaille avec de nombreux partenaires prestigieux, notamment RVA (Régie des Voies Aériennes), RAWBANK, AAC, Royal Air Maroc, Ethiopian Airlines, Turkish Airlines, ASKY, Air Côte d\'Ivoire et TAAG. L\'application Police Bagages assure une intégration fluide avec les systèmes de ces partenaires.',
   },
 ];
 

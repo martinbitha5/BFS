@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Button from '../components/Button';
+import Input from '../components/Input';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance } from '../services';
-import { Colors, Spacing, BorderRadius, FontSizes, FontWeights } from '../theme';
-import Input from '../components/Input';
-import Button from '../components/Button';
+import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -77,7 +77,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
               <View style={styles.logoInnerGlow} />
-              <Text style={styles.logoText}>BFS</Text>
+              <Text style={styles.logoText}>PB</Text>
             </View>
             <View style={styles.logoDecoration}>
               <Ionicons name="airplane" size={16} color={Colors.primary.main} style={styles.decorationIcon} />

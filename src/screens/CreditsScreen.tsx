@@ -64,7 +64,7 @@ export default function CreditsScreen({ navigation }: Props) {
         </View>
         <Text style={[styles.headerTitle, { color: colors.primary.contrast }]}>Crédits</Text>
         <Text style={[styles.headerSubtitle, { color: colors.primary.contrast + 'CC' }]}>
-          L&apos;équipe derrière BFS
+          L&apos;équipe derrière Police Bagages
         </Text>
       </View>
 
@@ -75,7 +75,7 @@ export default function CreditsScreen({ navigation }: Props) {
             <View style={[styles.appIcon, { backgroundColor: colors.primary.light + '20' }]}>
               <Ionicons name="airplane" size={40} color={colors.primary.main} />
             </View>
-            <Text style={[styles.appName, { color: colors.text.primary }]}>BFS - Baggage Flow System</Text>
+            <Text style={[styles.appName, { color: colors.text.primary }]}>Police Bagages</Text>
             <Text style={[styles.appVersion, { color: colors.text.secondary }]}>Version 1.0.0 (2024)</Text>
             <Text style={[styles.appDescription, { color: colors.text.secondary }]}>
               Solution complète de gestion des bagages et passagers pour AFRICAN TRANSPORT SYSTEMS
@@ -114,7 +114,7 @@ export default function CreditsScreen({ navigation }: Props) {
               Toute l&apos;équipe ATS pour le soutien dans le développement de l&apos;application.
             </Text>
             <Text style={[styles.thanksText, { color: colors.text.secondary }]}>
-              Merci aux agents terrain qui utilisent quotidiennement BFS et contribuent à son amélioration continue.
+              Merci aux agents terrain qui utilisent quotidiennement Police Bagages et contribuent à son amélioration continue.
             </Text>
           </View>
         </Card>

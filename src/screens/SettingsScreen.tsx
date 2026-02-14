@@ -100,7 +100,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleContactSupport = () => {
     const email = 'support@brsats.com';
-    const subject = encodeURIComponent('Support BFS - Demande d\'assistance');
+    const subject = encodeURIComponent('Support Police Bagages - Demande d\'assistance');
     const body = encodeURIComponent('Bonjour,\n\nJe souhaite obtenir de l\'aide concernant...\n\n');
     const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
 

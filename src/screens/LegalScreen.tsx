@@ -24,7 +24,7 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>1. Éditeur de l&apos;application</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L&apos;application BFS (Baggage Flight System) est éditée par :
+            L&apos;application Police Bagages est éditée par :
           </Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
             <Text style={[styles.bold, { color: colors.text.primary }]}>AFRICAN TRANSPORT SYSTEMS</Text>{'\n'}
@@ -59,7 +59,7 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>3. Propriété intellectuelle</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L&apos;ensemble du contenu de l&apos;application BFS (textes, images, vidéos, logos, icônes, etc.) 
+            L&apos;ensemble du contenu de l&apos;application Police Bagages (textes, images, vidéos, logos, icônes, etc.) 
             est la propriété exclusive d&apos;AFRICAN TRANSPORT SYSTEMS ou de ses partenaires, sauf mention 
             contraire.
           </Text>
@@ -97,7 +97,7 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>6. Responsabilité</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            AFRICAN TRANSPORT SYSTEMS s&apos;efforce de fournir sur l&apos;application BFS des informations aussi 
+            AFRICAN TRANSPORT SYSTEMS s&apos;efforce de fournir sur l&apos;application Police Bagages des informations aussi 
             précises que possible. Toutefois, il ne pourra être tenu responsable des omissions, des 
             inexactitudes et des carences dans la mise à jour, qu&apos;elles soient de son fait ou du fait 
             des tiers partenaires qui lui fournissent ces informations.
@@ -119,7 +119,7 @@ export default function LegalScreen({ navigation }: Props) {
         <Card style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>7. Cookies et traceurs</Text>
           <Text style={[styles.text, { color: colors.text.secondary }]}>
-            L&apos;application BFS peut utiliser des cookies ou des technologies similaires pour améliorer 
+            L&apos;application Police Bagages peut utiliser des cookies ou des technologies similaires pour améliorer 
             l&apos;expérience utilisateur et analyser l&apos;utilisation de l&apos;application. Ces cookies sont 
             utilisés uniquement dans le cadre technique de l&apos;application et ne sont pas utilisés à des 
             fins publicitaires.
