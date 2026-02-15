@@ -1,8 +1,9 @@
-import { Briefcase, Calendar, CheckCircle, Eye, Luggage, Plane, RefreshCw, Search, User, Users, X } from 'lucide-react';
+import { Briefcase, Calendar, CheckCircle, Download, Eye, Luggage, Plane, RefreshCw, Search, User, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { exportToExcel } from '../utils/exportExcel';
 
 interface Baggage {
   id: string;
@@ -298,6 +299,58 @@ export default function Passengers() {
     }
   };
 
+  /**
+   * Télécharger le rapport Excel pour un vol spécifique
+   */
+  const handleDownloadFlightReport = async (flight: FlightGroup) => {
+    try {
+      // Préparer les données du vol
+      const flightPassengers = flight.passengers.map(p => ({
+        id: p.id,
+        pnr: p.pnr,
+        full_name: p.fullName,
+        flight_number: p.flightNumber,
+        departure: p.departure,
+        arrival: p.arrival,
+        seat_number: p.seatNumber,
+        baggage_count: p.baggageCount,
+        checked_at: p.checkedInAt,
+        boarding_status: p.boarding_status,
+        baggages: p.baggages
+      }));
+
+      const flightBaggages = flight.passengers.reduce((acc: any[], p) => {
+        if (p.baggages && Array.isArray(p.baggages)) {
+          return acc.concat(p.baggages.map(b => ({
+            ...b,
+            passenger_id: p.id,
+            passenger_name: p.fullName,
+            pnr: p.pnr,
+            flight_number: p.flightNumber
+          })));
+        }
+        return acc;
+      }, []);
+
+      // Appeler la fonction d'export
+      await exportToExcel(
+        {
+          passengers: flightPassengers,
+          baggages: flightBaggages,
+          statistics: {}
+        },
+        user?.airport_code || 'FIH',
+        new Date().toISOString().split('T')[0],
+        new Date().toISOString().split('T')[0],
+        flight.flightNumber,
+        flight.arrival
+      );
+    } catch (error) {
+      console.error('Erreur export:', error);
+      alert('Erreur lors du téléchargement du rapport');
+    }
+  };
+
   if (loading && !error) {
     return <LoadingPlane text="Chargement des vols..." size="md" />;
   }
@@ -557,13 +610,23 @@ export default function Passengers() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => setSelectedFlight(flight)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Voir
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedFlight(flight)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Voir
+                          </button>
+                          <button
+                            onClick={() => handleDownloadFlightReport(flight)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500/20 text-green-300 rounded hover:bg-green-500/30 transition-colors"
+                            title={`Télécharger le rapport pour le vol ${flight.flightNumber}`}
+                          >
+                            <Download className="w-4 h-4" />
+                            Télécharger
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
