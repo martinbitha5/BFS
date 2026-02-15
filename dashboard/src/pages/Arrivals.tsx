@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle, Download, Eye, Plane, RefreshCw, Search, Users, X } from 'lucide-react';
+import { CheckCircle, Download, Eye, Plane, RefreshCw, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -82,7 +82,7 @@ export default function Arrivals() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
+      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}&filter=arrival`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {
