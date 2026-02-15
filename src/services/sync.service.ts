@@ -16,12 +16,23 @@ class SyncService {
     private isSyncing: boolean = false;
     private syncInterval: ReturnType<typeof setInterval> | null = null;
     private readonly SYNC_INTERVAL_MS = 30000; // 30 secondes
-    private readonly MAX_RETRIES = 5;
+    private readonly MAX_RETRIES_BEFORE_SLOWDOWN = 50; // Basculer à un intervalle plus long après 50 tentatives
     
     // ✅ CACHE pour éviter les appels répétés à AsyncStorage
     private cachedApiUrl: string | null = null;
     private cachedApiKey: string | null = null;
     private cacheLoaded: boolean = false;
+
+    /**
+     * Calcule le délai d'attente avant retry avec backoff exponentiel
+     * Formule: min(baseDelay * 2^retryCount, maxDelay)
+     */
+    private getBackoffDelay(retryCount: number): number {
+        const baseDelay = 1000; // 1 seconde
+        const maxDelay = 5 * 60 * 1000; // 5 minutes max
+        const exponentialDelay = baseDelay * Math.pow(2, retryCount);
+        return Math.min(exponentialDelay, maxDelay);
+    }
 
     /**
      * Démarre la synchronisation automatique
@@ -98,27 +109,24 @@ class SyncService {
                 } catch (error: any) {
                     failedCount++;
                     const newRetryCount = item.retryCount + 1;
+                    const backoffDelay = this.getBackoffDelay(item.retryCount);
                     
                     // ✅ LOG DÉTAILLÉ DE L'ERREUR
                     console.error(`[Sync] ❌ ÉCHEC ${item.tableName}/${item.recordId}:`);
                     console.error(`[Sync]    → Erreur: ${error.message}`);
-                    console.error(`[Sync]    → Tentative: ${newRetryCount}/${this.MAX_RETRIES}`);
+                    console.error(`[Sync]    → Tentative: #${newRetryCount}`);
+                    console.error(`[Sync]    → Prochain retry dans: ${(backoffDelay / 1000).toFixed(1)}s`);
                     if (error.stack) {
                         console.error(`[Sync]    → Stack:`, error.stack);
                     }
                     
-                    if (newRetryCount >= this.MAX_RETRIES) {
-                        console.error(`[Sync] 🚫 Échec définitif pour ${item.tableName}/${item.recordId} après ${this.MAX_RETRIES} tentatives`);
-                        console.error(`[Sync]    → Dernière erreur: ${error.message}`);
-                        // Optionnel: Supprimer ou marquer comme définitivement échoué
-                        await databaseService.removeSyncQueueItem(item.id);
-                    } else {
-                        await databaseService.updateSyncQueueItem(
-                            item.id,
-                            newRetryCount,
-                            error.message
-                        );
-                    }
+                    // 🔄 RETRY INDÉFINI: Toujours garder l'item, juste incrémenter retry_count
+                    // avec backoff exponentiel
+                    await databaseService.updateSyncQueueItem(
+                        item.id,
+                        newRetryCount,
+                        `${error.message} (${new Date().toISOString()})`
+                    );
                 }
             }
 

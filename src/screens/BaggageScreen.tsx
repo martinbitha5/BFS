@@ -93,6 +93,18 @@ export default function BaggageScreen({ navigation }: Props) {
     focusPdaInput();
   }, [showScanner, focusPdaInput]);
 
+  // 🔄 AUTO-CONFIRM: Après 2 secondes, réinitialiser et nouveau scan
+  useEffect(() => {
+    if (scannedTagInfo && !showScanner) {
+      const confirmTimer = setTimeout(() => {
+        console.log('[BaggageScreen] ✅ Auto-confirm après 2 sec - Nouveau scan');
+        resetScanner();
+      }, 2000);
+
+      return () => clearTimeout(confirmTimer);
+    }
+  }, [scannedTagInfo, showScanner]);
+
   /**
    * Scan du tag RFID du bagage
    * - Parse le tag pour extraire les informations (PNR, nom, vol, etc.)

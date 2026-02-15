@@ -7,7 +7,7 @@ import { Badge, Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 // ✅ OPTIMISATION: Imports statiques au lieu d'imports dynamiques pour réduire la latence
-import { authServiceInstance, flightService, parserService, rawScanService } from '../services';
+import { authServiceInstance, parserService, rawScanService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { BoardingConfirmation } from '../types/boarding-new.types';
 import { BoardingStatus } from '../types/boarding.types';
@@ -123,6 +123,18 @@ export default function BoardingScreen({ navigation }: Props) {
   useEffect(() => {
     focusPdaInput();
   }, [showScanner, focusPdaInput]);
+
+  // 🔄 AUTO-CONFIRM: Après 2 secondes, réinitialiser et nouveau scan
+  useEffect(() => {
+    if (lastPassenger && !showScanner) {
+      const confirmTimer = setTimeout(() => {
+        console.log('[BoardingScreen] ✅ Auto-confirm après 2 sec - Nouveau scan');
+        resetScanner();
+      }, 2000);
+
+      return () => clearTimeout(confirmTimer);
+    }
+  }, [lastPassenger, showScanner]);
 
   // MODIFICATION 1: États pour le boarding confirmation
 
@@ -264,41 +276,9 @@ export default function BoardingScreen({ navigation }: Props) {
 
 
 
-      // ✅ ÉTAPE 3: Valider que le vol est programmé pour aujourd'hui
-
-      const validation = await flightService.validateFlightForToday(
-
-        flightNumber,
-
-        user.airportCode,
-
-        departure,
-
-        arrival
-
-      );
-
-
-
-      if (!validation.isValid) {
-
-        await playErrorSound();
-
-        setToastMessage(`❌ Vol non autorisé !\n${validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.'}`);
-
-        setToastType('error');
-
-        setShowToast(true);
-
-        resetScanner();
-
-        return;
-
-      }
-
-
-
-      // ✅ ÉTAPE 4: Vérifier que l'aéroport correspond
+      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
+      // 🔄 OPTIMISATION OFFLINE: On enlève validateFlightForToday()
+      // Le boarding pass scanné + check-in effectué = preuve de validité (offline-first)
 
       if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
 

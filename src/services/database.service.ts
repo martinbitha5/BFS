@@ -1000,16 +1000,75 @@ class DatabaseService {
     return id;
   }
 
+  // Sync Queue
+  async addToSyncQueue(item: Omit<SyncQueueItem, 'id' | 'createdAt'>): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+
+    await this.db.runAsync(
+      `INSERT INTO sync_queue (id, table_name, record_id, operation, data, retry_count, user_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        item.tableName,
+        item.recordId,
+        item.operation,
+        item.data,
+        item.retryCount,
+        item.userId,
+        now,
+      ]
+    );
+
+    return id;
+  }
+
+  /**
+   * Calcule le délai d'attente avant retry avec backoff exponentiel
+   * Formule: min(baseDelay * 2^retryCount, maxDelay)
+   */
+  private getBackoffDelay(retryCount: number): number {
+    const baseDelay = 1000; // 1 seconde
+    const maxDelay = 5 * 60 * 1000; // 5 minutes max
+    const exponentialDelay = baseDelay * Math.pow(2, retryCount);
+    return Math.min(exponentialDelay, maxDelay);
+  }
+
   async getPendingSyncItems(limit: number = 50): Promise<SyncQueueItem[]> {
     if (!this.db) throw new Error('Database not initialized');
 
+    // 🔄 RETRY INDÉFINI: Pas de limite de retry_count
+    // Récupérer tous les items non retryables (créés en premier)
     const results = await this.db.getAllAsync<any>(
-      'SELECT * FROM sync_queue WHERE retry_count < 5 ORDER BY created_at ASC LIMIT ?',
+      'SELECT * FROM sync_queue ORDER BY created_at ASC LIMIT ?',
       [limit]
     );
 
+    const now = Date.now();
+    
+    // ✅ FILTRER PAR BACKOFF EXPONENTIEL
+    // Un item n'est retentable que si assez de temps s'est écoulé depuis sa création
+    const retryableItems = results.filter((row: any) => {
+      const createdAt = new Date(row.created_at).getTime();
+      const timeSinceCreation = now - createdAt;
+      const backoffDelay = this.getBackoffDelay(row.retry_count);
+      
+      const canRetry = timeSinceCreation >= backoffDelay;
+      
+      if (!canRetry) {
+        console.log(
+          `[SyncQueue] ⏳ Item en cooldown: ${row.table_name}/${row.record_id} ` +
+          `(retry #${row.retry_count}, attendre ${((backoffDelay - timeSinceCreation) / 1000).toFixed(1)}s)`
+        );
+      }
+      
+      return canRetry;
+    });
+
     // ✅ MAPPER SNAKE_CASE → CAMELCASE
-    return results.map((row: any) => ({
+    return retryableItems.map((row: any) => ({
       id: row.id,
       tableName: row.table_name,      // snake_case → camelCase
       recordId: row.record_id,        // snake_case → camelCase

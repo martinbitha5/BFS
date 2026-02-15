@@ -9,7 +9,7 @@ import { useFlightContext } from '../contexts/FlightContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 // ✅ OPTIMISATION: Imports statiques au lieu d'imports dynamiques pour réduire la latence
-import { authServiceInstance, databaseServiceInstance, flightService, parserService, rawScanService } from '../services';
+import { authServiceInstance, databaseServiceInstance, parserService, rawScanService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { PassengerData } from '../types/passenger.types';
 import { logAudit } from '../utils/audit.util';
@@ -116,6 +116,18 @@ export default function CheckinScreen({ navigation }: Props) {
   useEffect(() => {
     focusPdaInput();
   }, [showScanner, focusPdaInput]);
+
+  // 🔄 AUTO-CONFIRM: Après 2 secondes, réinitialiser et nouveau scan
+  useEffect(() => {
+    if (lastPassenger && !showScanner) {
+      const confirmTimer = setTimeout(() => {
+        console.log('[CheckinScreen] ✅ Auto-confirm après 2 sec - Nouveau scan');
+        resetScanner();
+      }, 2000);
+
+      return () => clearTimeout(confirmTimer);
+    }
+  }, [lastPassenger, showScanner]);
 
   useEffect(() => {
     loadUser();
@@ -237,36 +249,9 @@ export default function CheckinScreen({ navigation }: Props) {
         return;
       }
 
-      // ✅ ÉTAPE 3: Valider que le vol est programmé pour aujourd'hui
-      const validation = await flightService.validateFlightForToday(
-        flightNumber,
-        user.airportCode,
-        departure,
-        arrival
-      );
-
-      if (!validation.isValid) {
-        await playErrorSound();
-        isProcessingRef.current = false;
-        setProcessing(false);
-        setScanned(false);
-        
-        // Utiliser Alert native qui reste affichée
-        Alert.alert(
-          'VOL NON AUTORISÉ',
-          validation.reason || 'Le vol n\'est pas programmé pour aujourd\'hui.',
-          [
-            {
-              text: 'Nouveau scan',
-              onPress: () => setShowScanner(true),
-            },
-          ],
-          { cancelable: false }
-        );
-        return;
-      }
-
-      // ✅ ÉTAPE 4: Vérifier que l'aéroport correspond
+      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
+      // 🔄 OPTIMISATION OFFLINE: On enlève validateFlightForToday()
+      // Le boarding pass scanné = preuve de validité du vol (offline-first)
       if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
         await playErrorSound();
         setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);
