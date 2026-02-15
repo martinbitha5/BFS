@@ -1,4 +1,4 @@
-import { Calendar, Download, Package, RefreshCw, Search, X } from 'lucide-react';
+import { Package, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -57,15 +57,38 @@ export default function Deliveries() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/baggages?airport=${encodeURIComponent(user.airport_code)}`, { headers });
-      const data = response.data as { success: boolean; data: Baggage[] };
+      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
+      const data = response.data as { success: boolean; data: any[] };
       
       if (!data.success) {
         setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
         setBaggages([]);
       } else if (data.data && Array.isArray(data.data)) {
+        // Extract all baggages from passengers and filter only delivered ones
+        const allBaggages: Baggage[] = [];
+        data.data.forEach((passenger: any) => {
+          if (passenger.baggages && Array.isArray(passenger.baggages)) {
+            passenger.baggages.forEach((baggage: any) => {
+              allBaggages.push({
+                id: baggage.id,
+                tag_number: baggage.tag_number,
+                flight_number: passenger.flightNumber,
+                passenger_id: passenger.id,
+                passenger_name: passenger.fullName,
+                pnr: passenger.pnr,
+                status: baggage.status,
+                weight: baggage.weight,
+                checked_at: baggage.checked_at,
+                arrived_at: baggage.arrived_at,
+                delivered_at: baggage.delivered_at,
+                current_location: baggage.current_location,
+              });
+            });
+          }
+        });
+        
         // Filter only delivered baggages
-        const deliveredBaggages = data.data.filter(b => b.status === 'delivered');
+        const deliveredBaggages = allBaggages.filter(b => b.status === 'delivered');
         setBaggages(deliveredBaggages);
       } else {
         setError('Format de réponse invalide - expected array');
