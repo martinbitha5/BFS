@@ -3,9 +3,12 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import About from './pages/About';
+import Arrivals from './pages/Arrivals';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
 import DataDeletionRequest from './pages/DataDeletionRequest';
+import Deliveries from './pages/Deliveries';
+import Departures from './pages/Departures';
 import Export from './pages/Export';
 import FlightManagement from './pages/FlightManagement';
 import Legal from './pages/Legal';
@@ -53,6 +56,42 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Vols en Départ (Supervisor) */}
+          <Route
+            path="/departures"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Departures />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Vols en Arrivée (Supervisor) */}
+          <Route
+            path="/arrivals"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Arrivals />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Livraisons de Bagages (Supervisor) */}
+          <Route
+            path="/deliveries"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Deliveries />
                 </Layout>
               </ProtectedRoute>
             }

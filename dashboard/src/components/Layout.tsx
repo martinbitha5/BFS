@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Menu, Package, Plane, Users, X } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Package, Plane, Users, X, Truck, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +23,9 @@ export default function Layout({ children }: LayoutProps) {
   // Navigation pour les superviseurs uniquement
   const navItems: NavItem[] = [
     { path: '/dashboard', label: "Dashboard", icon: LayoutDashboard },
-    { path: '/flights', label: 'Gestion Vols', icon: Plane },
+    { path: '/departures', label: 'Départ', icon: Plane },
+    { path: '/arrivals', label: 'Arrivée', icon: RotateCw },
+    { path: '/deliveries', label: 'Livraison', icon: Truck },
     { path: '/passengers', label: 'Passagers', icon: Users },
     { path: '/brs', label: 'BRS International', icon: Package },
   ];
