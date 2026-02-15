@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle, Download, Eye, Plane, RefreshCw, Search, Users, X } from 'lucide-react';
+import { CheckCircle, Download, Eye, Plane, RefreshCw, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -367,7 +367,7 @@ export default function Departures() {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(['today', 'yesterday', 'week', 'month', 'all'] as const).map(period => (
+            {(['today', 'yesterday', 'week', 'month', 'custom', 'all'] as const).map(period => (
               <button
                 key={period}
                 onClick={() => setPeriodFilter(period)}

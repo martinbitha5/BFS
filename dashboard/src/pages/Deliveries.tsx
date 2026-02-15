@@ -257,7 +257,7 @@ export default function Deliveries() {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(['today', 'yesterday', 'week', 'month', 'all'] as const).map(period => (
+            {(['today', 'yesterday', 'week', 'month', 'custom', 'all'] as const).map(period => (
               <button
                 key={period}
                 onClick={() => setPeriodFilter(period)}
