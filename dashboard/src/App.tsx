@@ -10,7 +10,6 @@ import DataDeletionRequest from './pages/DataDeletionRequest';
 import Deliveries from './pages/Deliveries';
 import Departures from './pages/Departures';
 import Export from './pages/Export';
-import FlightManagement from './pages/FlightManagement';
 import Legal from './pages/Legal';
 import Login from './pages/Login';
 import Passengers from './pages/Passengers';
@@ -116,18 +115,6 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Export />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Gestion des Vols (Supervisor) */}
-          <Route
-            path="/flights"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <FlightManagement />
                 </Layout>
               </ProtectedRoute>
             }
