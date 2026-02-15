@@ -526,6 +526,13 @@ export default function BoardingScreen({ navigation }: Props) {
 
     setBoardingStatus(null);
 
+    setPdaScanData('');  // ✅ Vider les données PDA
+
+    // ✅ Refocaliser immédiatement le TextInput du PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
+
   };
 
 

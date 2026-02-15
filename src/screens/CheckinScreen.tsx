@@ -452,8 +452,13 @@ export default function CheckinScreen({ navigation }: Props) {
     setLastPassenger(null);
     setScanned(false);
     setProcessing(false);
+    setPdaScanData('');  // ✅ Vider les données PDA
     setShowScanner(true);
     setScanning(true);
+    // ✅ Refocaliser immédiatement le TextInput du PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   return (

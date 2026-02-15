@@ -442,10 +442,16 @@ Ce bagage supplémentaire ne peut pas être accepté.`,
   const resetScanner = () => {
     isProcessingRef.current = false;
     setProcessing(false);
-    setTimeout(() => {
-      setScanned(false);
-    }, 1500);
+    setScanned(false);
+    setLastScannedTagNumber(null);
+    setScannedTagInfo(null);  // ✅ Réinitialiser le tag info (important pour l'auto-confirm)
+    setFoundPassenger(null);
+    setPdaScanData('');  // ✅ Vider les données PDA
     setShowScanner(true);
+    // ✅ Refocaliser immédiatement le TextInput du PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   const handleScanAgain = () => {
