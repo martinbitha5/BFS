@@ -57,7 +57,7 @@ export default function Deliveries() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
+      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}&filter=arrival`, { headers });
       const data = response.data as { success: boolean; data: any[] };
       
       if (!data.success) {
