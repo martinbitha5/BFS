@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Police Bagages",
-    "slug": "police-bagages",
+    "slug": "BFS",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "policebagages",
+    "scheme": "bfs",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -32,7 +32,7 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE"
       ],
-      "package": "com.anonymous.policebagages",
+      "package": "com.anonymous.BFS",
       "runtimeVersion": {
         "policy": "appVersion"
       },

@@ -139,17 +139,17 @@ export default function ArrivalScreen({ navigation }: Props) {
             return;
           }
           
-          // VÉRIFICATION D'AÉROPORT (seulement en production)
-          if (!__DEV__) {
-            if (passengerData.arrival !== user.airportCode) {
-              await playErrorSound();
-              const errorMsg = getScanErrorMessage(user.role as any, 'arrival', 'wrong_airport');
-              setToastMessage(errorMsg.message);
-              setToastType(errorMsg.type);
-              setShowToast(true);
-              resetScanner();
-              return;
-            }
+          // FIX CRITICAL: Vérifier l'aéroport TOUJOURS (pas seulement en production)
+          // Le bagage doit arriver à sa destination finale correcte (sinon redirection)
+          if (passengerData.arrival !== user.airportCode) {
+            await playErrorSound();
+            Alert.alert(
+              'MAUVAISE DESTINATION',
+              `Bagage ${baggageData.tag_number} doit arriver a ${passengerData.arrival}, pas a ${user.airportCode}. REDIRIGER LE BAGAGE.`,
+              [{ text: 'OK', onPress: () => resetScanner() }]
+            );
+            console.error(`[ArrivalScreen] Baggage ${baggageData.tag_number} scanned at wrong airport. Expected: ${passengerData.arrival}, Scanned at: ${user.airportCode}`);
+            return;
           }
 
           // Continuer avec le flux normal pour bagage trouvé dans la BD

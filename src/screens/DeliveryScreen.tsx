@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
@@ -144,7 +144,7 @@ export default function DeliveryScreen() {
           return;
         }
 
-        // Requête via l'API backend (comme ArrivalScreen)
+        // 1️⃣ CHERCHER VIA L'API BACKEND D'ABORD
         let baggageData;
         try {
           console.log('[DELIVERY] 3️⃣ Appel API: /api/v1/baggage/' + cleanedData);
@@ -156,7 +156,7 @@ export default function DeliveryScreen() {
           
           if (response.data?.success && response.data?.data) {
             baggageData = response.data.data;
-            console.log('[DELIVERY] 5️⃣ Bagage trouvé:', baggageData.id);
+            console.log('[DELIVERY] 5️⃣ Bagage trouvé via API:', baggageData.id);
             console.log('[DELIVERY] 6️⃣ Tag:', baggageData.tag_number);
           } else {
             console.log('[DELIVERY] ⚠️ Aucun bagage trouvé via API');
@@ -164,14 +164,30 @@ export default function DeliveryScreen() {
         } catch (apiError: any) {
           console.log('[DELIVERY] ❌ Erreur API Status:', apiError.response?.status);
           console.log('[DELIVERY] ❌ Erreur API Message:', apiError.message);
-          console.log('[DELIVERY] ❌ Erreur API Data:', apiError.response?.data);
+          console.log('[DELIVERY] ❌ En dev? Essai fallback base locale...');
+        }
+
+        // 2️⃣ SI PAS TROUVÉ EN API → CHERCHER DANS LA BASE LOCALE (FALLBACK DEV)
+        if (!baggageData) {
+          try {
+            console.log('[DELIVERY] 7️⃣ Recherche fallback dans base locale...');
+            const localBaggage = await databaseServiceInstance.getBaggageByTagNumber(cleanedData);
+            if (localBaggage) {
+              baggageData = localBaggage;
+              console.log('[DELIVERY] 8️⃣ Bagage trouvé en base locale:', baggageData.id);
+            } else {
+              console.log('[DELIVERY] ⚠️ Aucun bagage trouvé en base locale non plus');
+            }
+          } catch (localError) {
+            console.error('[DELIVERY] ❌ Erreur recherche locale:', localError);
+          }
         }
 
         console.log('[DELIVERY] 🔟 baggageData trouvé?', !!baggageData);
 
         if (!baggageData) {
           await playErrorSound();
-          setToastMessage('Bagage non trouvé');
+          setToastMessage('Bagage non trouvé (API ni local)');
           setToastType('error');
           setShowToast(true);
           resetScanner();
@@ -273,6 +289,17 @@ export default function DeliveryScreen() {
           </Animated.View>
           <Text style={styles.checkmarkText}>LIVRÉ</Text>
         </View>
+      ) : processing ? (
+        // Processing/Loading screen
+        <View style={[styles.processingContainer, { backgroundColor: colors.background.default }]}>
+          <ActivityIndicator size="large" color={colors.success.main} />
+          <Text style={[styles.processingText, { color: colors.text.primary }]}>
+            Traitement en cours...
+          </Text>
+          <Text style={[styles.processingSubText, { color: colors.text.secondary }]}>
+            Vérification du bagage
+          </Text>
+        </View>
       ) : showScanner ? (
         // PDA Scanner view
         <View style={styles.pdaScanContainer}>
@@ -342,6 +369,22 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.bold,
     letterSpacing: 4,
     textTransform: 'uppercase',
+  },
+  // Processing/Loading screen styles
+  processingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  processingText: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold,
+    marginTop: Spacing.md,
+  },
+  processingSubText: {
+    fontSize: FontSizes.sm,
+    marginTop: Spacing.xs,
   },
   // PDA Scanner styles
   pdaScanContainer: {
