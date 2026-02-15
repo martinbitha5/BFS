@@ -305,6 +305,36 @@ export default function BaggageScreen({ navigation }: Props) {
         return;
       }
 
+      // 🔴 VALIDATION CRITIQUE P0: Vérifier que passenger.id existe et est valide
+      if (!passenger.id || typeof passenger.id !== 'string' || passenger.id.trim() === '') {
+        console.error('[BAGGAGE] 🔴 CRITICAL P0: passenger.id invalide!', {
+          id: passenger.id,
+          type: typeof passenger.id,
+          fullName: passenger.fullName,
+          pnr: passenger.pnr,
+        });
+        
+        await playErrorSound();
+        setProcessing(false);
+        
+        Alert.alert(
+          'ERREUR SYSTÈME',
+          'Les données du passager sont incomplètes.\n\nID passager manquant.\n\nContactez le support.',
+          [
+            {
+              text: 'Nouveau scan',
+              onPress: () => {
+                isProcessingRef.current = false;
+                setScanned(false);
+                setShowScanner(true);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
       // ✅ Vérifier le nombre de bagages déjà enregistrés vs nombre attendu
       const existingBaggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
       const baggageCount = existingBaggages?.length || 0;
