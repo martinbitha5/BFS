@@ -18,7 +18,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/departures');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
     } finally {

@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import About from './pages/About';
 import Arrivals from './pages/Arrivals';
 import BRSInternational from './pages/BRSInternational';
+import Dashboard from './pages/Dashboard';
 import DataDeletionRequest from './pages/DataDeletionRequest';
 import Deliveries from './pages/Deliveries';
 import Departures from './pages/Departures';
@@ -29,7 +30,7 @@ function RoleBasedRedirect() {
     return <Navigate to="/login" replace />;
   }
   
-  return <Navigate to="/departures" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -47,6 +48,18 @@ function App() {
           
           {/* Redirection par défaut selon le rôle */}
           <Route path="/" element={<RoleBasedRedirect />} />
+          
+          {/* Dashboard Principal (Supervisor) */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           
           {/* Vols en Départ (Supervisor) */}
           <Route
