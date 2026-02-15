@@ -246,7 +246,8 @@ export const exportToExcel = async (
     'Poids (kg)',
     'Statut',
     'Arrivé le',
-    'Localisation'
+    'Localisation',
+    'Livraison'
   ];
   bagSheet.addRow(bagHeaders);
 
@@ -305,12 +306,13 @@ export const exportToExcel = async (
         b.weight || 0,
         statusLabel,
         b.arrived_at ? new Date(b.arrived_at).toLocaleString('fr-FR') : '-',
-        b.current_location || '-'
+        b.current_location || '-',
+        b.delivered_at ? new Date(b.delivered_at).toLocaleString('fr-FR') : '-'
       ]);
     });
   } else {
     // Si pas de bagages, ajouter un message
-    bagSheet.addRow(['Aucun bagage pour cette période', '', '', '', '', '', '', '']);
+    bagSheet.addRow(['Aucun bagage pour cette période', '', '', '', '', '', '', '', '']);
     bagSheet.getCell('A2').font = { italic: true, color: { argb: 'FF6B7280' } };
   }
 
@@ -323,6 +325,7 @@ export const exportToExcel = async (
   bagSheet.getColumn(6).width = 12;  // Statut
   bagSheet.getColumn(7).width = 20;  // Arrivé le
   bagSheet.getColumn(8).width = 15;  // Localisation
+  bagSheet.getColumn(9).width = 20;  // Livraison
 
   // Bordures et alignement
   bagSheet.eachRow((row, rowNumber) => {
