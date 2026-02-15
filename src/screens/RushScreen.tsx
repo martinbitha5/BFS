@@ -127,10 +127,13 @@ export default function RushScreen() {
   const resetScanner = () => {
     isProcessingRef.current = false;
     setProcessing(false);
-    setTimeout(() => {
-      setScanned(false);
-    }, 1500);
+    setScanned(false);
     setShowScanner(true);
+    setPdaScanData('');  // ✅ Vider les données PDA
+    // ✅ Refocaliser immédiatement le TextInput du PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   const handleScanAgain = () => {
@@ -141,6 +144,11 @@ export default function RushScreen() {
     setReason('');
     setNextFlight('');
     setShowScanner(true);
+    setPdaScanData('');  // ✅ Vider les données PDA
+    // ✅ Refocaliser le PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   const handleDeclareRush = async () => {

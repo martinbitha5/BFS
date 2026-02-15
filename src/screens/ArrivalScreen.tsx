@@ -429,9 +429,13 @@ export default function ArrivalScreen({ navigation }: Props) {
 
   const resetScanner = () => {
     setProcessing(false);
+    setScanned(false);
+    setPdaScanData('');  // ✅ Vider les données PDA
+    setShowScanner(true);
+    // ✅ Refocaliser immédiatement le TextInput du PDA
     setTimeout(() => {
-      setScanned(false);
-    }, 2000);
+      focusPdaInput();
+    }, 100);
   };
 
   const resetAll = () => {
@@ -445,6 +449,11 @@ export default function ArrivalScreen({ navigation }: Props) {
     setProcessing(false);
     setLastScannedTag(null);
     setLastScanTime(0);
+    setPdaScanData('');  // ✅ Vider les données PDA
+    // ✅ Refocaliser le PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   return (

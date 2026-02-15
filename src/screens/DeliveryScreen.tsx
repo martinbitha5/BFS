@@ -262,6 +262,11 @@ export default function DeliveryScreen() {
     setShowCheckmark(false);
     setScanned(false);  // ✅ Immédiatement réinitialisé
     setShowScanner(true);
+    setPdaScanData('');  // ✅ Vider les données PDA
+    // ✅ Refocaliser immédiatement le TextInput du PDA
+    setTimeout(() => {
+      focusPdaInput();
+    }, 100);
   };
 
   return (
