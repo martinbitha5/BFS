@@ -324,8 +324,10 @@ export default function Passengers() {
           return acc.concat(p.baggages.map(b => ({
             ...b,
             passenger_id: p.id,
-            passenger_name: p.fullName,
-            pnr: p.pnr,
+            passengers: {
+              pnr: p.pnr,
+              full_name: p.fullName
+            },
             flight_number: p.flightNumber
           })));
         }
