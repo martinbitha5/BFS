@@ -24,6 +24,12 @@ export const exportToExcel = async (
   // Filtrer les données par date si fourni
   const filterByDate = (item: any, start?: string, end?: string) => {
     if (!start || !end) return true;
+    
+    // Si pas de date sur l'item, inclure quand même
+    if (!item.checked_at && !item.checked_in_at && !item.created_at) {
+      return true;
+    }
+    
     const itemDate = new Date(item.checked_at || item.checked_in_at || item.created_at || new Date());
     const startDateTime = new Date(start);
     const endDateTime = new Date(end);
@@ -36,7 +42,9 @@ export const exportToExcel = async (
 
   // Vérifier qu'il y a des données après filtrage
   if (filteredPassengers.length === 0 && filteredBaggages.length === 0) {
-    throw new Error('Aucune donnée à exporter pour cette période');
+    const errorMsg = `Aucune donnée à exporter pour la période ${startDate ? new Date(startDate).toLocaleDateString('fr-FR') : 'sélectionnée'}`;
+    console.error('[EXPORT] ' + errorMsg);
+    throw new Error(errorMsg);
   }
 
   // Créer le workbook
@@ -65,8 +73,12 @@ export const exportToExcel = async (
     totalBaggages: filteredBaggages.length,
     boardedPassengers: filteredPassengers.filter((p: any) => p.boarding_status?.[0]?.boarded).length,
     notBoardedPassengers: filteredPassengers.filter((p: any) => !p.boarding_status?.[0]?.boarded).length,
-    arrivedBaggages: filteredBaggages.filter((b: any) => b.status === 'arrived').length,
-    inTransitBaggages: filteredBaggages.filter((b: any) => b.status === 'checked').length,
+    arrivedBaggages: filteredBaggages.filter((b: any) => 
+      b.status === 'arrived' || b.arrived_at || b.status === 'rush'
+    ).length,
+    inTransitBaggages: filteredBaggages.filter((b: any) => 
+      b.status === 'checked' || (b.status === 'loaded' && !b.arrived_at)
+    ).length,
     // Statistiques BIRS
     totalBirsItems: birsItems.length,
     arrivedBirsItems: birsItems.filter((item: any) => item.reconciled_at).length,
@@ -263,11 +275,17 @@ export const exportToExcel = async (
 
   if (filteredBaggages.length > 0) {
     filteredBaggages.forEach((b: any) => {
-      const statusLabel = b.status === 'arrived' ? 'Arrivé'
+      // Déterminer le statut avec tous les cas possibles
+      const statusLabel = 
+        b.status === 'arrived' ? 'Arrivé'
         : b.status === 'rush' ? 'RUSH'
         : b.status === 'loaded' ? 'Loaded'
-        : b.passenger_id ? 'Loaded'  // Si bagage lié au passager → Loaded
-          : 'Enregistré';
+        : b.status === 'checked' ? 'Checked'
+        : b.status === 'in_transit' ? 'En Transit'
+        : b.delivered_at ? 'Livré'
+        : b.arrived_at ? 'Arrivé'
+        : b.passenger_id ? 'Loaded'
+        : 'Enregistré';
 
       // Chercher le passager correspondant - essayer plusieurs approches
       let passengerName = '-';
@@ -298,6 +316,9 @@ export const exportToExcel = async (
         }
       }
 
+      // Localisation : essayer plusieurs champs possibles
+      const location = b.location || b.current_location || b.storage_location || b.gate || '-';
+
       bagSheet.addRow([
         b.tag_number,
         passengerPnr,
@@ -306,7 +327,7 @@ export const exportToExcel = async (
         b.weight || 0,
         statusLabel,
         b.arrived_at ? new Date(b.arrived_at).toLocaleString('fr-FR') : '-',
-        b.current_location || '-',
+        location,
         b.delivered_at ? new Date(b.delivered_at).toLocaleString('fr-FR') : '-'
       ]);
     });

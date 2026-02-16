@@ -472,9 +472,9 @@ export default function BoardingScreen({ navigation }: Props) {
 
       const boardingStatusData: BoardingStatus = {
 
-        id: result.id,
+        id: result?.id || serverPassengerId || '',
 
-        passengerId: existingScan.id,
+        passengerId: existingScan?.id || serverPassengerId || '',
 
         boarded: true,
 

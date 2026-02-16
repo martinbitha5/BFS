@@ -260,6 +260,11 @@ export default function Arrivals() {
 
   const handleDownloadFlightReport = async (flight: FlightGroup) => {
     try {
+      if (!flight.passengers || flight.passengers.length === 0) {
+        alert('Aucune donnée disponible pour ce vol');
+        return;
+      }
+
       const flightPassengers = flight.passengers.map(p => ({
         id: p.id,
         pnr: p.pnr,
@@ -296,14 +301,15 @@ export default function Arrivals() {
           statistics: {}
         },
         user?.airport_code || 'FIH',
-        new Date().toISOString().split('T')[0],
-        new Date().toISOString().split('T')[0],
+        undefined,  // Pas de filtrage par date pour export de vol spécifique
+        undefined,  // Pas de filtrage par date pour export de vol spécifique
         flight.flightNumber,
         flight.arrival
       );
     } catch (error) {
       console.error('Erreur export:', error);
-      alert('Erreur lors du téléchargement du rapport');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du téléchargement du rapport';
+      alert(`Erreur export: ${errorMessage}`);
     }
   };
 
