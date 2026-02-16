@@ -18,7 +18,7 @@ export default function LegalScreen({ navigation }: Props) {
       <View style={[styles.content, { paddingTop: insets.top + Spacing.lg }]}>
         <Card style={styles.section}>
           <Text style={[styles.title, { color: colors.text.primary }]}>Mentions légales</Text>
-          <Text style={[styles.lastUpdated, { color: colors.text.secondary }]}>Dernière mise à jour : Janvier 2024</Text>
+          <Text style={[styles.lastUpdated, { color: colors.text.secondary }]}>Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}</Text>
         </Card>
 
         <Card style={styles.section}>

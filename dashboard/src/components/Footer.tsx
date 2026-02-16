@@ -61,7 +61,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="pt-4 border-t border-white/10 text-center">
           <p className="text-xs text-white/60">
-            © 2024 BFS System - African Transport Systems. Tous droits réservés.
+            © {new Date().getFullYear()} BFS System - African Transport Systems. Tous droits réservés.
           </p>
         </div>
       </div>

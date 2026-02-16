@@ -71,7 +71,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="pt-4 border-t border-white/10 text-center">
           <p className="text-xs text-white/60">
-            © 2024 BFS System - African Transport Systems. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
+            © {new Date().getFullYear()} BFS System - African Transport Systems. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
           </p>
         </div>
       </div>
