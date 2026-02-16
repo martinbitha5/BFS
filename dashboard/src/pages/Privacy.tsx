@@ -107,7 +107,7 @@ export default function Privacy() {
                 Cette politique peut être mise à jour. Les modifications importantes seront notifiées.
               </p>
               <p className="mt-2 text-sm text-white/70">
-                Dernière mise à jour : Décembre 2024
+                Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}
               </p>
             </section>
           </div>

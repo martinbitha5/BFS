@@ -355,7 +355,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
           <View style={styles.infoItem}>
             <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Build</Text>
-            <Text style={[styles.infoValue, { color: colors.text.primary }]}>2024.01</Text>
+            <Text style={[styles.infoValue, { color: colors.text.primary }]}>2026.02</Text>
           </View>
         </Card>
 

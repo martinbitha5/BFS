@@ -86,7 +86,7 @@ export default function LanguageSelection() {
 
         <div className="mt-8 text-center">
           <p className="text-white/80">
-            © 2024 BFS System - Baggage Found Solution
+            © {new Date().getFullYear()} BFS System - Baggage Found Solution
           </p>
         </div>
       </div>

@@ -118,7 +118,7 @@ export default function Privacy() {
                     notifiées par email.
                   </p>
                   <p className="mt-2 text-sm text-white/70">
-                    Dernière mise à jour : Décembre 2024
+                    Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}
                   </p>
                 </section>
               </>
@@ -219,7 +219,7 @@ export default function Privacy() {
                     This policy may be updated. Significant changes will be notified to you via email.
                   </p>
                   <p className="mt-2 text-sm text-white/70">
-                    Last updated: December 2024
+                    Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                   </p>
                 </section>
               </>

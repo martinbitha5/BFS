@@ -76,7 +76,7 @@ export default function CreditsScreen({ navigation }: Props) {
               <Ionicons name="airplane" size={40} color={colors.primary.main} />
             </View>
             <Text style={[styles.appName, { color: colors.text.primary }]}>Police Bagages</Text>
-            <Text style={[styles.appVersion, { color: colors.text.secondary }]}>Version 1.0.0 (2024)</Text>
+            <Text style={[styles.appVersion, { color: colors.text.secondary }]}>Version 1.0.0 ({new Date().getFullYear()})</Text>
             <Text style={[styles.appDescription, { color: colors.text.secondary }]}>
               Solution complète de gestion des bagages et passagers pour AFRICAN TRANSPORT SYSTEMS
             </Text>
