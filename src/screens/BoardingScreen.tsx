@@ -544,13 +544,26 @@ export default function BoardingScreen({ navigation }: Props) {
 
       setShowToast(true);
 
+      // ✅ IMPORTANT: Reset complet de l'état après erreur
+      isProcessingRef.current = false;
+
       setProcessing(false);
 
       setScanned(false);
 
+      setPdaScanData('');
+
       setShowScanner(true);
 
+      setTimeout(() => {
+
+        focusPdaInput();
+
+      }, 100);
+
     } finally {
+
+      isProcessingRef.current = false;
 
       setProcessing(false);
 

@@ -439,10 +439,15 @@ export default function CheckinScreen({ navigation }: Props) {
       setToastMessage(error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement du scan');
       setToastType('error');
       setShowToast(true);
+      // ✅ IMPORTANT: Reset complet de l'état après erreur
       isProcessingRef.current = false;
       setProcessing(false);
       setScanned(false);
+      setPdaScanData('');
       setShowScanner(true);
+      setTimeout(() => {
+        focusPdaInput();
+      }, 100);
     }
   };
 

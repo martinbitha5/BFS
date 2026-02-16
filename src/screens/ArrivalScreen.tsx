@@ -422,12 +422,24 @@ export default function ArrivalScreen({ navigation }: Props) {
       setToastMessage(error instanceof Error ? error.message : errorMsg.message);
       setToastType('error');
       setShowToast(true);
+      
+      // ✅ IMPORTANT: Réinitialiser complètement l'état après une erreur
+      isProcessingRef.current = false;
+      setProcessing(false);
+      setScanned(false);
+      setPdaScanData('');
+      setTimeout(() => {
+        setShowScanner(true);
+        focusPdaInput();
+      }, 100);
     } finally {
+      isProcessingRef.current = false;
       setProcessing(false);
     }
   };
 
   const resetScanner = () => {
+    isProcessingRef.current = false;  // ✅ Réinitialiser le ref aussi!
     setProcessing(false);
     setScanned(false);
     setPdaScanData('');  // ✅ Vider les données PDA
