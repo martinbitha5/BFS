@@ -298,85 +298,134 @@ export default function BoardingScreen({ navigation }: Props) {
 
 
 
-      // ✅ ÉTAPE 5: Chercher dans raw_scans par raw_data
-      // ✅ OPTIMISATION: Import statique au lieu de dynamique
-      const existingScan = await rawScanService.findByRawData(data);
-
+      // ✅ ÉTAPE 5: Chercher le passager via l'API par PNR (support multi-PDA)
+      // Récupérer le PNR du boarding pass parsé
+      const pnr = parsedData?.pnr;
       
-
-      // Vérifier que le scan existe (check-in effectué)
-
-      if (!existingScan || !existingScan.statusCheckin) {
-
+      if (!pnr) {
         await playErrorSound();
-
-        const errorMsg = getScanErrorMessage(user.role as any, 'boarding', 'not_checked_in');
-
-        setToastMessage(errorMsg.message);
-
-        setToastType(errorMsg.type);
-
+        setToastMessage('❌ Impossible d\'extraire le PNR du boarding pass');
+        setToastType('error');
         setShowToast(true);
-
         resetScanner();
-
         return;
-
       }
 
+      console.log('[BoardingScreen] 🔍 Cherche passager par PNR:', pnr);
 
+      let serverPassengerId: string | null = null;
+      let existingPassenger: any = null;
 
-      // Vérifier si déjà embarqué
+      try {
+        // Chercher via l'API par PNR (compatible multi-PDA)
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+        const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
+        
+        console.log('[BoardingScreen] 📡 Appel API - PNR:', pnr, 'URL:', apiUrl);
+        
+        const searchResponse = await fetch(
+          `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(pnr)}&airport=${encodeURIComponent(user.airportCode)}`,
+          {
+            method: 'GET',
+            headers: {
+              'x-api-key': apiKey || '',
+              'x-airport-code': user.airportCode || '',
+            }
+          }
+        );
 
-      if (existingScan.statusBoarding) {
+        console.log('[BoardingScreen] 📥 Réponse API - Status:', searchResponse.status);
 
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          console.log('[BoardingScreen] 📋 Données API reçues:', JSON.stringify(searchData).substring(0, 200));
+          
+          if (searchData.success && searchData.data && searchData.data.length > 0) {
+            existingPassenger = searchData.data[0];
+            serverPassengerId = existingPassenger.id;
+            console.log('[BoardingScreen] ✅ Passager trouvé via API:', serverPassengerId, 'Nom:', existingPassenger.fullName);
+          } else {
+            console.warn('[BoardingScreen] ⚠️ Aucun passager trouvé dans la réponse API');
+          }
+        } else {
+          const errorText = await searchResponse.text();
+          console.warn('[BoardingScreen] ⚠️ API retourne:', searchResponse.status, '-', errorText.substring(0, 200));
+        }
+      } catch (apiError) {
+        console.warn('[BoardingScreen] ⚠️ Erreur API, fallback à la recherche locale:', apiError);
+      }
+
+      // Fallback: chercher en local si pas trouvé via API
+      let existingScan = null;
+      if (!serverPassengerId) {
+        existingScan = await rawScanService.findByRawData(data);
+        if (existingScan) {
+          serverPassengerId = existingScan.id;
+          console.log('[BoardingScreen] ✅ Passager trouvé localement:', serverPassengerId);
+        }
+      }
+
+      // Vérifier que le passager existe
+      if (!serverPassengerId) {
         await playErrorSound();
-
-        setToastMessage('⚠️ Passager déjà embarqué !');
-
-        setToastType('warning');
-
+        setToastMessage('❌ Passager non trouvé. Veuillez effectuer le check-in d\'abord.');
+        setToastType('error');
         setShowToast(true);
-
-        isProcessingRef.current = false;
-
-        setProcessing(false);
-
-        setScanned(false);
-
-        setShowScanner(true);
-
+        resetScanner();
         return;
-
       }
 
+      // Vérifier si déjà embarqué (via API si possible, sinon local)
+      if (existingPassenger?.boarding_status?.[0]?.boarded) {
+        await playErrorSound();
+        setToastMessage('⚠️ Passager déjà embarqué !');
+        setToastType('warning');
+        setShowToast(true);
+        isProcessingRef.current = false;
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
+      }
 
+      if (existingScan?.statusBoarding) {
+        await playErrorSound();
+        setToastMessage('⚠️ Passager déjà embarqué !');
+        setToastType('warning');
+        setShowToast(true);
+        isProcessingRef.current = false;
+        setProcessing(false);
+        setScanned(false);
+        setShowScanner(true);
+        return;
+      }
 
-      // ✅ ÉTAPE 5: Mettre à jour le statut boarding dans raw_scans
-
-      const result = await rawScanService.createOrUpdateRawScan({
-
-        rawData: data,
-
-        scanType: 'boarding_pass',
-
-        statusField: 'boarding',
-
-        userId: user.id,
-
-        airportCode: user.airportCode,
-
-      });
-
-
+      // ✅ ÉTAPE 6: Mettre à jour le statut boarding en local (backup)
+      let result = null;
+      if (existingScan) {
+        result = await rawScanService.createOrUpdateRawScan({
+          rawData: data,
+          scanType: 'boarding_pass',
+          statusField: 'boarding',
+          userId: user.id,
+          airportCode: user.airportCode,
+        });
+      } else {
+        // Créer un nouvel enregistrement si trouvé via API mais pas localement
+        result = {
+          id: serverPassengerId,
+          scanCount: 1
+        };
+      }
 
       // Enregistrer l'action d'audit
       // ✅ OPTIMISATION: Import statique au lieu de dynamique
       await logAudit(
         'BOARD_PASSENGER',
         'boarding',
-        `Embarquement confirmé - Vol: ${flightNumber || 'N/A'} - Scan #${result.scanCount}`,
-        result.id
+        `Embarquement confirmé - Vol: ${flightNumber || 'N/A'} - PNR: ${pnr}`,
+        result?.id || serverPassengerId
       );
 
 
@@ -385,15 +434,15 @@ export default function BoardingScreen({ navigation }: Props) {
 
       const displayPassenger: Passenger = {
 
-        id: existingScan.id,
+        id: serverPassengerId || existingScan?.id || '',
 
         pnr: parsedData?.pnr || 'En attente parsing web',
 
-        fullName: parsedData?.fullName || 'Passager embarqué',
+        fullName: existingPassenger?.fullName || parsedData?.fullName || 'Passager embarqué',
 
-        firstName: parsedData?.firstName || '',
+        firstName: existingPassenger?.firstName || parsedData?.firstName || '',
 
-        lastName: parsedData?.lastName || '',
+        lastName: existingPassenger?.lastName || parsedData?.lastName || '',
 
         flightNumber: flightNumber || 'Voir dashboard',
 
@@ -405,9 +454,9 @@ export default function BoardingScreen({ navigation }: Props) {
 
         baggageCount: 0,
 
-        checkedInAt: (existingScan.checkinAt || new Date().toISOString()) as string,
+        checkedInAt: (existingScan?.checkinAt || new Date().toISOString()) as string,
 
-        checkedInBy: (existingScan.checkinBy || user.id) as string,
+        checkedInBy: (existingScan?.checkinBy || user.id) as string,
 
         createdAt: new Date().toISOString(),
 
