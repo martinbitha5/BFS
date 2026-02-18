@@ -16,6 +16,7 @@ interface Passenger {
   baggageCount: number;
   checkedInAt: string | null;
   airportCode: string;
+  airline_code?: string;
   baggages: {
     id: string;
     tag_number: string;
@@ -98,11 +99,19 @@ export default function Dashboard() {
       const arrData = arrResponse.data as { success: boolean; data: Passenger[] };
 
       if (depData.success && Array.isArray(depData.data)) {
-        setDepartures(depData.data);
+        // Filter by airline_code if user has one
+        const filteredDepartures = user.airline_code && user.airline_code !== 'ALL'
+          ? depData.data.filter(p => p.airline_code === user.airline_code)
+          : depData.data;
+        setDepartures(filteredDepartures);
       }
 
       if (arrData.success && Array.isArray(arrData.data)) {
-        setArrivals(arrData.data);
+        // Filter by airline_code if user has one
+        const filteredArrivals = user.airline_code && user.airline_code !== 'ALL'
+          ? arrData.data.filter(p => p.airline_code === user.airline_code)
+          : arrData.data;
+        setArrivals(filteredArrivals);
       }
 
       setLoading(false);
@@ -113,7 +122,7 @@ export default function Dashboard() {
     } finally {
       setRefreshing(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchData();

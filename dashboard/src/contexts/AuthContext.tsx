@@ -6,6 +6,7 @@ interface User {
   email: string;
   full_name: string;
   airport_code: string;
+  airline_code?: string;
   role: 'supervisor' | 'baggage_dispute' | 'support';
   created_at?: string;
   updated_at?: string;

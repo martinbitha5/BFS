@@ -355,7 +355,7 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
       });
     }
 
-    const { email, password, full_name, role, airport_code } = req.body;
+    const { email, password, full_name, role, airport_code, airline_code } = req.body;
 
     if (!email || !password || !full_name || !role) {
       return res.status(400).json({ 
@@ -380,7 +380,7 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
       });
     }
 
-    // Pour supervisor, airport_code est requis
+    // Pour supervisor, airport_code ET airline_code sont requis
     if (role === 'supervisor' && !airport_code) {
       return res.status(400).json({ 
         success: false, 
@@ -388,7 +388,16 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
       });
     }
 
+    if (role === 'supervisor' && !airline_code) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Le code de compagnie aérienne est requis pour les superviseurs' 
+      });
+    }
+
     const finalAirportCode = role === 'baggage_dispute' ? 'ALL' : airport_code;
+    const finalAirlineCode = role === 'baggage_dispute' ? 'ALL' : airline_code;
+
 
     // Vérifier si l'email existe déjà
     const { data: existingUser } = await supabase
@@ -428,6 +437,7 @@ router.post('/create-by-support', async (req: Request, res: Response, next: Next
         full_name,
         role,
         airport_code: finalAirportCode,
+        airline_code: finalAirlineCode,
         is_approved: true, // Créé par support = approuvé automatiquement
         approved_at: new Date().toISOString()
       })

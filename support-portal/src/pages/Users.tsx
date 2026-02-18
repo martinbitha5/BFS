@@ -23,6 +23,7 @@ interface UserData {
   email: string;
   full_name: string;
   airport_code: string;
+  airline_code?: string;
   role: 'supervisor' | 'baggage_dispute' | 'support';
   is_approved?: boolean;
   created_at?: string;
@@ -57,6 +58,25 @@ const AIRPORTS = [
   { code: 'JNB', name: 'Johannesburg' },
 ];
 
+const AIRLINES = [
+  { code: 'ET', name: 'Ethiopian Airlines' },
+  { code: 'KQ', name: 'Kenya Airways' },
+  { code: 'TP', name: 'TAP Air Portugal' },
+  { code: 'AF', name: 'Air France' },
+  { code: 'BA', name: 'British Airways' },
+  { code: 'LH', name: 'Lufthansa' },
+  { code: 'MS', name: 'EgyptAir' },
+  { code: 'ZA', name: 'Precision Air' },
+  { code: 'TC', name: 'Air Tanzania' },
+  { code: 'RA', name: 'Royal Air Maroc' },
+  { code: 'SA', name: 'South African Airways' },
+  { code: 'CW', name: 'Brussels Airlines' },
+  { code: 'SN', name: 'Brussels Airlines' },
+  { code: 'DL', name: 'Delta Air Lines' },
+  { code: 'UA', name: 'United Airlines' },
+  { code: 'AA', name: 'American Airlines' },
+];
+
 export default function Users() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +92,8 @@ export default function Users() {
     password: '',
     full_name: '',
     role: 'supervisor' as 'supervisor' | 'baggage_dispute',
-    airport_code: ''
+    airport_code: '',
+    airline_code: ''
   });
 
   const fetchUsers = useCallback(async () => {
@@ -108,6 +129,11 @@ export default function Users() {
       return;
     }
 
+    if (newUser.role === 'supervisor' && !newUser.airline_code) {
+      setError('Le code de compagnie aérienne est requis pour les superviseurs');
+      return;
+    }
+
     try {
       setCreating(true);
       setError(null);
@@ -118,7 +144,8 @@ export default function Users() {
         password: newUser.password,
         full_name: newUser.full_name,
         role: newUser.role,
-        airport_code: newUser.role === 'baggage_dispute' ? 'ALL' : newUser.airport_code
+        airport_code: newUser.role === 'baggage_dispute' ? 'ALL' : newUser.airport_code,
+        airline_code: newUser.role === 'baggage_dispute' ? 'ALL' : newUser.airline_code
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -127,7 +154,7 @@ export default function Users() {
       if (data.success) {
         setSuccessMessage(`Utilisateur "${newUser.full_name}" créé avec succès !`);
         setShowModal(false);
-        setNewUser({ email: '', password: '', full_name: '', role: 'supervisor', airport_code: '' });
+        setNewUser({ email: '', password: '', full_name: '', role: 'supervisor', airport_code: '', airline_code: '' });
         fetchUsers();
         setTimeout(() => setSuccessMessage(null), 5000);
       }
@@ -277,6 +304,11 @@ export default function Users() {
                         <span className="text-white/50 text-xs flex items-center gap-1">
                           <MapPin className="w-3 h-3" /> {user.airport_code}
                         </span>
+                        {user.airline_code && (
+                          <span className="text-white/50 text-xs flex items-center gap-1">
+                            ✈ {user.airline_code}
+                          </span>
+                        )}
                         <span className={`px-2 py-0.5 rounded text-xs border ${getRoleColor(user.role)}`}>
                           {getRoleLabel(user.role)}
                         </span>
@@ -381,6 +413,23 @@ export default function Users() {
                     {AIRPORTS.map(apt => (
                       <option key={apt.code} value={apt.code} className="bg-slate-800">
                         {apt.code} - {apt.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {newUser.role === 'supervisor' && (
+                <div>
+                  <label className="block text-white/80 text-sm mb-1">Compagnie Aérienne *</label>
+                  <select
+                    value={newUser.airline_code}
+                    onChange={(e) => setNewUser({ ...newUser, airline_code: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  >
+                    <option value="" className="bg-slate-800">Sélectionner une compagnie</option>
+                    {AIRLINES.map(airline => (
+                      <option key={airline.code} value={airline.code} className="bg-slate-800">
+                        {airline.code} - {airline.name}
                       </option>
                     ))}
                   </select>
