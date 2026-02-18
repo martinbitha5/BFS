@@ -152,8 +152,40 @@ export default function ArrivalScreen({ navigation }: Props) {
             return;
           }
 
+          // 🔴 FIX: Convertir les données de l'API (snake_case) vers le type Passenger (camelCase)
+          const convertedPassenger: Passenger = {
+            id: passengerData.id || baggageData.id,
+            pnr: passengerData.pnr || '',
+            fullName: passengerData.full_name?.trim() || '',
+            firstName: passengerData.first_name || '',
+            lastName: passengerData.last_name || '',
+            flightNumber: passengerData.flight_number || '',
+            airline: passengerData.airline || '',
+            airlineCode: passengerData.airline_code || '',
+            departure: passengerData.departure || user.airportCode,
+            arrival: passengerData.arrival || '',
+            route: `${passengerData.departure || user.airportCode}-${passengerData.arrival || ''}`,
+            baggageCount: passengerData.baggage_count || 1,
+            baggageBaseNumber: passengerData.baggage_base_number,
+            checkedInAt: passengerData.checked_in_at || new Date().toISOString(),
+            checkedInBy: passengerData.checked_in_by || user.id,
+            synced: passengerData.synced ?? true,
+            createdAt: passengerData.created_at || new Date().toISOString(),
+            updatedAt: passengerData.updated_at || new Date().toISOString(),
+          };
+
+          // 🔴 FIX: Vérifier que le nom du passager n'est pas vide
+          if (!convertedPassenger.fullName) {
+            await playErrorSound();
+            setToastMessage('Nom du passager manquant dans le système');
+            setToastType('error');
+            setShowToast(true);
+            resetScanner();
+            return;
+          }
+
           // Continuer avec le flux normal pour bagage trouvé dans la BD
-          setPassenger(passengerData);
+          setPassenger(convertedPassenger);
           setBaggage(baggageData);
           setBirsItem(null);
           setInternationalBaggage(null);
@@ -170,7 +202,7 @@ export default function ArrivalScreen({ navigation }: Props) {
             await logAudit(
               'CONFIRM_ARRIVAL',
               'baggage',
-              `Confirmation automatique arrivée bagage: ${baggageData.tag_number} pour passager ${passengerData.full_name} (PNR: ${passengerData.pnr})`,
+              `Confirmation automatique arrivée bagage: ${baggageData.tag_number} pour passager ${convertedPassenger.fullName} (PNR: ${convertedPassenger.pnr})`,
               baggageData.id
             );
 
@@ -302,10 +334,16 @@ export default function ArrivalScreen({ navigation }: Props) {
           {
             text: 'Nouveau scan',
             onPress: () => {
+              // 🔴 FIX: Reset le ref pour permettre les prochains scans
+              isProcessingRef.current = false;
               setScanned(false);
               setShowScanner(true);
               setLastScannedTag(null);
               setLastScanTime(0);
+              // 🔴 FIX: Refocaliser le PDA input pour être prêt pour le prochain scan
+              setTimeout(() => {
+                focusPdaInput();
+              }, 100);
             },
           },
         ],
