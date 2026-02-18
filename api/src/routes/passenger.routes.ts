@@ -13,7 +13,7 @@ const router = Router();
  */
 router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: string; hasFullAccess?: boolean }, res: Response, next: NextFunction) => {
   try {
-    const { flight, pnr, date, filter } = req.query;
+    const { flight, pnr, date, filter, airline_code } = req.query;
     const airportCode = req.userAirportCode; // Peut être undefined si accès total
     
     // Auto-sync si la table est vide mais que des raw_scans existent
@@ -36,6 +36,10 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
     }
     if (pnr) {
       query = query.eq('pnr', pnr.toString().toUpperCase());
+    }
+    // ✅ Filtrer par code compagnie aérienne si fourni
+    if (airline_code && airline_code !== 'ALL') {
+      query = query.eq('airline_code', airline_code);
     }
     // ✅ Filtrer par date si fournie
     if (date) {

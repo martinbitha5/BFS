@@ -91,15 +91,23 @@ export default function Dashboard() {
       };
 
       // Fetch departures
-      const depResponse = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
+      const depParams = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        depParams.append('airline_code', user.airline_code);
+      }
+      const depResponse = await api.get(`/api/v1/passengers?${depParams}`, { headers });
       const depData = depResponse.data as { success: boolean; data: Passenger[] };
 
       // Fetch arrivals
-      const arrResponse = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}&filter=arrival`, { headers });
+      const arrParams = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        arrParams.append('airline_code', user.airline_code);
+      }
+      const arrResponse = await api.get(`/api/v1/passengers?${arrParams}`, { headers });
       const arrData = arrResponse.data as { success: boolean; data: Passenger[] };
 
       if (depData.success && Array.isArray(depData.data)) {
-        // Filter by airline_code if user has one
+        // Filter by airline_code if user has one (client-side filter as backup)
         const filteredDepartures = user.airline_code && user.airline_code !== 'ALL'
           ? depData.data.filter(p => p.airline_code === user.airline_code)
           : depData.data;
@@ -107,7 +115,7 @@ export default function Dashboard() {
       }
 
       if (arrData.success && Array.isArray(arrData.data)) {
-        // Filter by airline_code if user has one
+        // Filter by airline_code if user has one (client-side filter as backup)
         const filteredArrivals = user.airline_code && user.airline_code !== 'ALL'
           ? arrData.data.filter(p => p.airline_code === user.airline_code)
           : arrData.data;
@@ -236,7 +244,12 @@ export default function Dashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white">Dashboard Opérationnel</h1>
-          <p className="text-white/60 mt-2">Aéroport: {user?.airport_code}</p>
+          <p className="text-white/60 mt-2">
+            Aéroport: {user?.airport_code}
+            {user?.airline_code && user?.airline_code !== 'ALL' && (
+              <span className="ml-4">✈ Compagnie: {user.airline_code}</span>
+            )}
+          </p>
         </div>
         <button
           onClick={fetchData}
