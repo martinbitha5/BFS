@@ -82,7 +82,12 @@ export default function Arrivals() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}&filter=arrival`, { headers });
+      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        params.append('airline_code', user.airline_code);
+      }
+
+      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {

@@ -85,7 +85,12 @@ export default function Passengers() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}`, { headers });
+      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        params.append('airline_code', user.airline_code);
+      }
+
+      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {
@@ -107,11 +112,11 @@ export default function Passengers() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchPassengers();
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   // Date filtering helper
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {

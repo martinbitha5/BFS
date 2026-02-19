@@ -57,7 +57,12 @@ export default function Deliveries() {
         'Content-Type': 'application/json'
       };
 
-      const response = await api.get(`/api/v1/passengers?airport=${encodeURIComponent(user.airport_code)}&filter=arrival`, { headers });
+      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        params.append('airline_code', user.airline_code);
+      }
+
+      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
       const data = response.data as { success: boolean; data: any[] };
       
       if (!data.success) {
@@ -104,11 +109,11 @@ export default function Deliveries() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchBaggages();
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
     const now = new Date();
