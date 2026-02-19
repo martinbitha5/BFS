@@ -86,8 +86,13 @@ export default function Passengers() {
         'Content-Type': 'application/json'
       };
 
-      // Les paramètres airport et airline_code sont ajoutés automatiquement par l'intercepteur
-      const response = await api.get('/api/v1/passengers', { headers });
+      // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
+      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
+      if (user.airline_code && user.airline_code !== 'ALL') {
+        params.append('airline_code', user.airline_code);
+      }
+      
+      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {
