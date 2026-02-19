@@ -67,6 +67,7 @@ function parseSimpleBoardingPass(rawData: string): any {
     let departure = null;
     let arrival = null;
     let flightNumber = null;
+    let airlineCode = null;  // ✅ Code compagnie (ET, KQ, etc.)
     let seatNumber = null;
     let baggageCount = 0;
 
@@ -85,6 +86,7 @@ function parseSimpleBoardingPass(rawData: string): any {
       const companyCode = bcbpMatch[5];
       const flightNum = bcbpMatch[6];
       flightNumber = companyCode + flightNum;
+      airlineCode = companyCode; // ✅ Extraire le code compagnie
       
       if (bcbpMatch[8] && bcbpMatch[9]) {
         seatNumber = bcbpMatch[9] + bcbpMatch[8];
@@ -116,6 +118,7 @@ function parseSimpleBoardingPass(rawData: string): any {
       departure,
       arrival,
       flightNumber,
+      airlineCode,  // ✅ Code compagnie (ET, KQ, etc.)
       seatNumber,
       baggageCount
     };
@@ -173,6 +176,7 @@ async function performSyncInBackground(airportCode: string): Promise<void> {
                   full_name: parsed.fullName || 'UNKNOWN',
                   pnr: parsed.pnr,
                   flight_number: parsed.flightNumber || 'UNKNOWN',
+                  airline_code: parsed.airlineCode || null,  // ✅ Code compagnie
                   departure: parsed.departure || airportCode,
                   arrival: parsed.arrival || 'UNK',
                   seat_number: parsed.seatNumber,

@@ -68,9 +68,8 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
             query = query.eq('pnr', pnr.toString().toUpperCase());
         }
         // ✅ Filtrer par code compagnie aérienne si fourni
-        // NOTE: On filtre via flight_number car airline_code n'existe pas dans la table
         if (airline_code && airline_code !== 'ALL') {
-            query = query.ilike('flight_number', `${airline_code}%`);
+            query = query.eq('airline_code', airline_code);
         }
         // ✅ Filtrer par date si fournie
         if (date) {
@@ -401,12 +400,12 @@ router.post('/sync', async (req, res, next) => {
         // Traiter chaque passager individuellement
         for (const passenger of passengers) {
             try {
-                // Nettoyer les données du passager - ne garder que les colonnes valides
-                // Note: airline et airline_code n'existent pas dans la table passengers
+                // Nettoyer les données du passager
                 const cleanPassenger = {
                     pnr: passenger.pnr,
                     full_name: passenger.full_name,
                     flight_number: passenger.flight_number,
+                    airline_code: passenger.airline_code || passenger.flight_number?.substring(0, 2) || null, // ✅ Code compagnie
                     seat_number: passenger.seat_number,
                     departure: passenger.departure,
                     arrival: passenger.arrival,

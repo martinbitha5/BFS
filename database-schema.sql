@@ -48,6 +48,7 @@ CREATE TABLE passengers (
   full_name TEXT NOT NULL,
   pnr TEXT,
   flight_number TEXT,
+  airline_code TEXT,  -- Code compagnie (ET, KQ, etc.)
   seat_number TEXT,
   class TEXT,
   departure TEXT NOT NULL,
@@ -66,6 +67,7 @@ CREATE TABLE passengers (
 -- Index pour recherches fréquentes
 CREATE INDEX idx_passengers_airport_code ON passengers(airport_code);
 CREATE INDEX idx_passengers_flight_number ON passengers(flight_number);
+CREATE INDEX idx_passengers_airline_code ON passengers(airline_code);
 CREATE INDEX idx_passengers_pnr ON passengers(pnr);
 CREATE INDEX idx_passengers_departure ON passengers(departure);
 CREATE INDEX idx_passengers_arrival ON passengers(arrival);
