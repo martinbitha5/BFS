@@ -84,12 +84,14 @@ export default function Arrivals() {
       };
 
       // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
-      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
+      const params = new URLSearchParams();
+      params.append('airport', user.airport_code);
+      params.append('filter', 'arrival');
       if (user.airline_code && user.airline_code !== 'ALL') {
         params.append('airline_code', user.airline_code);
       }
       
-      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
+      const response = await api.get(`/api/v1/passengers?${params.toString()}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {
@@ -115,11 +117,11 @@ export default function Arrivals() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchPassengers();
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
     const now = new Date();

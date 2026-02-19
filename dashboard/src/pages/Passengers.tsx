@@ -87,12 +87,16 @@ export default function Passengers() {
       };
 
       // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
-      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
+      const params = new URLSearchParams();
+      params.append('airport', user.airport_code);
       if (user.airline_code && user.airline_code !== 'ALL') {
         params.append('airline_code', user.airline_code);
       }
       
-      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
+      const response = await api.get(`/api/v1/passengers?${params.toString()}`, { 
+        headers,
+        params: Object.fromEntries(params)  // ← Passe les params explicitement
+      });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {

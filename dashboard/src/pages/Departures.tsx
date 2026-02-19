@@ -84,12 +84,17 @@ export default function Departures() {
       };
 
       // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
-      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
+      const params = new URLSearchParams();
+      params.append('airport', user.airport_code);
       if (user.airline_code && user.airline_code !== 'ALL') {
         params.append('airline_code', user.airline_code);
       }
       
-      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
+      // 🔍 DEBUG: Log des paramètres
+      console.log('[Departures] User airline_code:', user.airline_code);
+      console.log('[Departures] URL params:', params.toString());
+      
+      const response = await api.get(`/api/v1/passengers?${params.toString()}`, { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {
