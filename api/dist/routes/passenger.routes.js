@@ -68,7 +68,9 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
             query = query.eq('pnr', pnr.toString().toUpperCase());
         }
         // ✅ Filtrer par code compagnie aérienne si fourni
+        console.log(`[PASSENGERS API] airline_code param: ${airline_code}, userAirportCode: ${airportCode}`);
         if (airline_code && airline_code !== 'ALL') {
+            console.log(`[PASSENGERS API] Applying airline filter: ${airline_code}`);
             query = query.eq('airline_code', airline_code);
         }
         // ✅ Filtrer par date si fournie
