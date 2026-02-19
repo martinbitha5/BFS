@@ -46,7 +46,7 @@ const router = (0, express_1.Router)();
  */
 router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
-        const { flight, pnr, date, filter } = req.query;
+        const { flight, pnr, date, filter, airline_code } = req.query;
         const airportCode = req.userAirportCode; // Peut être undefined si accès total
         // Auto-sync si la table est vide mais que des raw_scans existent
         if (airportCode) {
@@ -67,6 +67,12 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
         if (pnr) {
             query = query.eq('pnr', pnr.toString().toUpperCase());
         }
+        // ✅ Filtrer par code compagnie aérienne si fourni
+        // NOTE: La colonne airline_code n'existe pas encore dans la table passengers
+        // On filtre côté client pour l'instant
+        // if (airline_code && airline_code !== 'ALL') {
+        //   query = query.eq('airline_code', airline_code);
+        // }
         // ✅ Filtrer par date si fournie
         if (date) {
             query = query.gte('checked_in_at', `${date}T00:00:00`)

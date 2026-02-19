@@ -38,9 +38,11 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
       query = query.eq('pnr', pnr.toString().toUpperCase());
     }
     // ✅ Filtrer par code compagnie aérienne si fourni
-    if (airline_code && airline_code !== 'ALL') {
-      query = query.eq('airline_code', airline_code);
-    }
+    // NOTE: La colonne airline_code n'existe pas encore dans la table passengers
+    // On filtre côté client pour l'instant
+    // if (airline_code && airline_code !== 'ALL') {
+    //   query = query.eq('airline_code', airline_code);
+    // }
     // ✅ Filtrer par date si fournie
     if (date) {
       query = query.gte('checked_in_at', `${date}T00:00:00`)

@@ -312,7 +312,7 @@ router.post('/create-by-support', async (req, res, next) => {
                 error: 'Accès refusé : Seul le support peut créer des comptes'
             });
         }
-        const { email, password, full_name, role, airport_code } = req.body;
+        const { email, password, full_name, role, airport_code, airline_code } = req.body;
         if (!email || !password || !full_name || !role) {
             return res.status(400).json({
                 success: false,
@@ -333,14 +333,21 @@ router.post('/create-by-support', async (req, res, next) => {
                 error: 'Le mot de passe doit contenir au moins 6 caractères'
             });
         }
-        // Pour supervisor, airport_code est requis
+        // Pour supervisor, airport_code ET airline_code sont requis
         if (role === 'supervisor' && !airport_code) {
             return res.status(400).json({
                 success: false,
                 error: 'Le code aéroport est requis pour les superviseurs'
             });
         }
+        if (role === 'supervisor' && !airline_code) {
+            return res.status(400).json({
+                success: false,
+                error: 'Le code de compagnie aérienne est requis pour les superviseurs'
+            });
+        }
         const finalAirportCode = role === 'baggage_dispute' ? 'ALL' : airport_code;
+        const finalAirlineCode = role === 'baggage_dispute' ? 'ALL' : airline_code;
         // Vérifier si l'email existe déjà
         const { data: existingUser } = await database_1.supabase
             .from('users')
@@ -375,6 +382,7 @@ router.post('/create-by-support', async (req, res, next) => {
             full_name,
             role,
             airport_code: finalAirportCode,
+            airline_code: finalAirlineCode,
             is_approved: true, // Créé par support = approuvé automatiquement
             approved_at: new Date().toISOString()
         })
