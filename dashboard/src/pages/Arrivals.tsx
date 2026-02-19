@@ -82,12 +82,9 @@ export default function Arrivals() {
         'Content-Type': 'application/json'
       };
 
-      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
-      if (user.airline_code && user.airline_code !== 'ALL') {
-        params.append('airline_code', user.airline_code);
-      }
-
-      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
+      // Les paramètres airport et airline_code sont ajoutés automatiquement par l'intercepteur
+      // filter=arrival pour les vols en arrivée
+      const response = await api.get('/api/v1/passengers?filter=arrival', { headers });
       const data = response.data as { success: boolean; data: Passenger[] };
       
       if (!data.success) {

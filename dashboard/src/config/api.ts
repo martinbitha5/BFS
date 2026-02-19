@@ -57,11 +57,22 @@ api.interceptors.request.use((config) => {
           config.params = { airport: effectiveAirportCode };
         }
         
+        // ✅ Ajouter aussi le airline_code si disponible
+        if (user.airline_code && user.airline_code !== 'ALL') {
+          if (config.params) {
+            (config.params as Record<string, unknown>).airline_code = user.airline_code;
+          }
+        }
+        
         // Ajouter aussi dans les headers pour les routes qui l'utilisent
         if (config.headers) {
           config.headers['x-airport-code'] = effectiveAirportCode;
           config.headers['x-user-id'] = user.id;
           config.headers['x-user-role'] = user.role;
+          // ✅ Ajouter airline_code dans les headers aussi
+          if (user.airline_code && user.airline_code !== 'ALL') {
+            config.headers['x-airline-code'] = user.airline_code;
+          }
         }
         
         // Ajouter dans le body pour les requêtes POST/PUT si nécessaire
