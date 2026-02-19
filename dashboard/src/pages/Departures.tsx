@@ -109,11 +109,11 @@ export default function Departures() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchPassengers();
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
     const now = new Date();
