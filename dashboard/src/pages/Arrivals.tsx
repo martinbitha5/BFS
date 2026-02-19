@@ -19,6 +19,7 @@ interface Passenger {
   fullName: string;
   pnr: string;
   flightNumber: string;
+  airline_code?: string;  // ✅ Code compagnie aérienne
   departure: string;
   arrival: string;
   seatNumber: string | null;
@@ -91,7 +92,11 @@ export default function Arrivals() {
         setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
         setPassengers([]);
       } else if (data.data && Array.isArray(data.data)) {
-        setPassengers(data.data);
+        // ✅ Filtrer par airline_code côté client (comme Dashboard.tsx)
+        const filteredData = user.airline_code && user.airline_code !== 'ALL'
+          ? data.data.filter(p => p.airline_code === user.airline_code)
+          : data.data;
+        setPassengers(filteredData);
       } else {
         setError('Format de réponse invalide - expected array');
         setPassengers([]);

@@ -66,9 +66,14 @@ export default function Deliveries() {
         setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
         setBaggages([]);
       } else if (data.data && Array.isArray(data.data)) {
-        // Extract all baggages from passengers and filter only delivered ones
+        // ✅ Filtrer les passagers par airline_code avant d'extraire les bagages
+        const filteredPassengers = user.airline_code && user.airline_code !== 'ALL'
+          ? data.data.filter((p: any) => p.airline_code === user.airline_code)
+          : data.data;
+        
+        // Extract all baggages from filtered passengers
         const allBaggages: Baggage[] = [];
-        data.data.forEach((passenger: any) => {
+        filteredPassengers.forEach((passenger: any) => {
           if (passenger.baggages && Array.isArray(passenger.baggages)) {
             passenger.baggages.forEach((baggage: any) => {
               allBaggages.push({
