@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import About from './pages/About';
 import Arrivals from './pages/Arrivals';
+import BaggageManagement from './pages/BaggageManagement';
 import BRSInternational from './pages/BRSInternational';
 import Dashboard from './pages/Dashboard';
 import DataDeletionRequest from './pages/DataDeletionRequest';
@@ -127,6 +128,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Passengers />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Gestion des Bagages (Supervisor) */}
+          <Route
+            path="/baggage-management"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BaggageManagement />
                 </Layout>
               </ProtectedRoute>
             }

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard BFS</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Dashboard BFS</h1>
+        
+        <div class="section">
+            <h2>1. Connexion</h2>
+            <button onclick="login()">Se connecter (superviseur@bfs.cd)</button>
+            <button onclick="logout()">Se déconnecter</button>
+            <div id="auth-status"></div>
+        </div>
+
+        <div class="section">
+            <h2>2. Vérification du stockage local</h2>
+            <button onclick="checkLocalStorage()">Vérifier localStorage</button>
+            <pre id="localstorage-content"></pre>
+        </div>
+
+        <div class="section">
+            <h2>3. Test API Passagers</h2>
+            <button onclick="testAPIPassengers()">Tester /api/v1/passengers</button>
+            <pre id="api-result"></pre>
+        </div>
+
+        <div class="section">
+            <h2>4. Console</h2>
+            <div id="console-output"></div>
+        </div>
+
+        <div class="section">
+            <h2>5. Iframe Dashboard</h2>
+            <button onclick="loadDashboard()">Charger le dashboard</button>
+            <button onclick="hideDashboard()">Cacher le dashboard</button>
+            <div id="dashboard-container" class="hidden">
+                <iframe id="dashboard-frame" src="http://localhost:4173" width="100%" height="600" style="border: 1px solid #ccc;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        const API_KEY = 'bfs-api-key-secure-2025';
+        
+        function log(message, type = 'info') {
+            const consoleDiv = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue';
+            consoleDiv.innerHTML += `<div style="color: ${color}; margin: 5px 0;">[${timestamp}] ${message}</div>`;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        async function login() {
+            try {
+                log('Tentative de connexion...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        email: 'superviseur@bfs.cd',
+                        password: 'password123'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log('Connexion réussie!', 'success');
+                log(`Token reçu: ${data.token.substring(0, 20)}...`, 'success');
+                log(`Utilisateur: ${data.user.email}, Rôle: ${data.user.role}`, 'success');
+                log(`Aéroport: ${data.user.airport_code}, Compagnie: ${data.user.airline_code}`, 'success');
+
+                // Stocker le token et les données utilisateur
+                localStorage.setItem('bfs_token', data.token);
+                localStorage.setItem('bfs_user', JSON.stringify(data.user));
+
+                document.getElementById('auth-status').innerHTML = '<span class="success">Connecté ✓</span>';
+                
+            } catch (error) {
+                log(`Erreur de connexion: ${error.message}`, 'error');
+                document.getElementById('auth-status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('bfs_token');
+            localStorage.removeItem('bfs_user');
+            log('Déconnexion réussie', 'success');
+            document.getElementById('auth-status').innerHTML = '<span class="info">Déconnecté</span>';
+        }
+
+        function checkLocalStorage() {
+            const token = localStorage.getItem('bfs_token');
+            const userData = localStorage.getItem('bfs_user');
+            
+            let content = '=== LOCALSTORAGE ===\n';
+            content += `Token: ${token ? token.substring(0, 50) + '...' : 'Aucun token'}\n`;
+            
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    content += `Utilisateur:\n`;
+                    content += `  - ID: ${user.id}\n`;
+                    content += `  - Email: ${user.email}\n`;
+                    content += `  - Rôle: ${user.role}\n`;
+                    content += `  - Aéroport: ${user.airport_code}\n`;
+                    content += `  - Compagnie: ${user.airline_code}\n`;
+                } catch (error) {
+                    content += `Erreur parsing user data: ${error.message}\n`;
+                }
+            } else {
+                content += 'Aucune donnée utilisateur\n';
+            }
+            
+            document.getElementById('localstorage-content').textContent = content;
+            log('LocalStorage vérifié', 'info');
+        }
+
+        async function testAPIPassengers() {
+            try {
+                const token = localStorage.getItem('bfs_token');
+                const userData = localStorage.getItem('bfs_user');
+                
+                if (!token || !userData) {
+                    log('Token ou données utilisateur manquants', 'error');
+                    return;
+                }
+
+                const user = JSON.parse(userData);
+                log(`Test API avec: Aéroport=${user.airport_code}, Compagnie=${user.airline_code}`, 'info');
+
+                const params = new URLSearchParams();
+                params.append('airport', user.airport_code || 'FIH');
+                if (user.airline_code && user.airline_code !== 'ALL') {
+                    params.append('airline_code', user.airline_code);
+                }
+
+                const url = `${API_BASE}/api/v1/passengers?${params.toString()}`;
+                log(`URL: ${url}`, 'info');
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'x-api-key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log(`API Response: ${data.success ? 'Succès' : 'Échec'}`, data.success ? 'success' : 'error');
+                log(`Nombre de passagers: ${data.data?.length || 0}`, 'info');
+                
+                if (data.data && data.data.length > 0) {
+                    log(`Premier passager: ${data.data[0].first_name} ${data.data[0].last_name} (${data.data[0].airline_code})`, 'info');
+                }
+
+                document.getElementById('api-result').textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                log(`Erreur API: ${error.message}`, 'error');
+                document.getElementById('api-result').textContent = `Erreur: ${error.message}`;
+            }
+        }
+
+        function loadDashboard() {
+            document.getElementById('dashboard-container').classList.remove('hidden');
+            log('Dashboard chargé dans l\'iframe', 'info');
+        }
+
+        function hideDashboard() {
+            document.getElementById('dashboard-container').classList.add('hidden');
+        }
+
+        // Vérifier l'état initial
+        window.onload = function() {
+            checkLocalStorage();
+            log('Page de test chargée', 'info');
+        };
+    </script>
+</body>
+</html>

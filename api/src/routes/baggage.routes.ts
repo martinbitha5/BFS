@@ -337,7 +337,8 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
     }
 
     // Si pas de passenger_id fourni, essayer de trouver le passager automatiquement
-    if (!baggageData.passenger_id && baggageData.flight_number && baggageData.airport_code) {
+    // MAIS PAS pour les bagages manuels (manually_authorized = true)
+    if (!baggageData.passenger_id && baggageData.flight_number && baggageData.airport_code && !baggageData.manually_authorized) {
       console.log('[BAGGAGE] Recherche automatique du passager pour vol:', baggageData.flight_number);
       
       // Chercher les passagers sur ce vol qui ont des bagages manquants
@@ -370,6 +371,8 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
       if (!baggageData.passenger_id) {
         console.log('[BAGGAGE] ⚠️ Aucun passager trouvé avec bagages manquants sur ce vol');
       }
+    } else if (baggageData.manually_authorized) {
+      console.log('[BAGGAGE] 📝 Bagage manuel - pas de liaison automatique au passager');
     }
 
     // Créer le bagage (avec ou sans passenger_id)

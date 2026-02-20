@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Menu, Package, Plane, RotateCw, Truck, Users, X } from 'lucide-react';
+import { LayoutDashboard, LogOut, Luggage, Menu, Package, Plane, RotateCw, Truck, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/arrivals', label: 'Arrivée', icon: RotateCw },
     { path: '/deliveries', label: 'Livraison', icon: Truck },
     { path: '/passengers', label: 'Passagers', icon: Users },
+    { path: '/baggage-management', label: 'Gestion Bagages', icon: Luggage },
     { path: '/brs', label: 'BRS International', icon: Package },
   ];
 

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard BFS - Manuel</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .step { margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        .manual-test { background: #fff3cd; border-left-color: #ffc107; }
+        button { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .primary { background: #007bff; color: white; }
+        .success-btn { background: #28a745; color: white; }
+        .danger { background: #dc3545; color: white; }
+        .result { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 4px; }
+        iframe { width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 4px; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status.ok { background: #28a745; color: white; }
+        .status.error { background: #dc3545; color: white; }
+        .status.pending { background: #ffc107; color: #212529; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Manuel du Dashboard BFS</h1>
+        <p>Ce test vous guidera pour vérifier que le dashboard fonctionne correctement.</p>
+        
+        <div class="step info">
+            <h3>📋 Instructions de test</h3>
+            <p><strong>URL du Dashboard:</strong> <a href="http://localhost:4173" target="_blank">http://localhost:4173</a></p>
+            <p><strong>Identifiants de test:</strong> superviseur@bfs.cd / password123</p>
+            <p><strong>Compagnie attendue:</strong> ET (Ethiopian Airlines)</p>
+            <p><strong>Aéroport:</strong> FIH</p>
+        </div>
+
+        <div class="step manual-test">
+            <h3>🔍 Test 1: Connexion</h3>
+            <p>1. Cliquez sur le lien ci-dessus pour ouvrir le dashboard</p>
+            <p>2. Connectez-vous avec les identifiants fournis</p>
+            <p>3. Vérifiez que vous êtes redirigé vers le tableau de bord principal</p>
+            <button class="primary" onclick="window.open('http://localhost:4173', '_blank')">Ouvrir le Dashboard</button>
+        </div>
+
+        <div class="step manual-test">
+            <h3>📊 Test 2: Vérification des données</h3>
+            <p>Après connexion, vérifiez que vous voyez:</p>
+            <ul>
+                <li>✅ Le nombre total de passagers (attendu: 23)</li>
+                <li>✅ Les statistiques des vols (vols actifs, passagers enregistrés)</li>
+                <li>✅ Les graphiques d'embarquement et de bagages</li>
+                <li>✅ Des noms de passagers (ex: "MASIKA KANEFU JEANNEE")</li>
+                <li>✅ Des numéros de vol (ex: "ET64")</li>
+            </ul>
+        </div>
+
+        <div class="step manual-test">
+            <h3>🎯 Test 3: Filtrage par compagnie</h3>
+            <p>Vérifiez que vous ne voyez que les données Ethiopian Airlines (ET):</p>
+            <ul>
+                <li>Tous les vols devraient commencer par "ET" (ex: ET64, ET701)</li>
+                <li>Le filtre en haut devrait indiquer "ET" ou "Ethiopian Airlines"</li>
+                <li>Pas de données d'autres compagnies (pas de SN, pas de 8Z, etc.)</li>
+            </ul>
+        </div>
+
+        <div class="step manual-test">
+            <h3>📱 Test 4: Navigation</h3>
+            <p>Testez les différentes sections:</p>
+            <ul>
+                <li>📊 Tableau de bord principal</li>
+                <li>✈️ Page des départs</li>
+                <li>🛄 Page des livraisons de bagages</li>
+                <li>📈 Statistiques et rapports</li>
+            </ul>
+        </div>
+
+        <div class="result">
+            <h3>📝 Rapport de test</h3>
+            <div id="test-results">
+                <p>Cliquez sur les boutons ci-dessus pour démarrer les tests, puis remplissez vos observations:</p>
+                
+                <div style="margin: 20px 0;">
+                    <label><strong>Connexion réussie?</strong></label><br>
+                    <button class="success-btn" onclick="updateStatus('connexion', 'ok')">✅ Oui</button>
+                    <button class="danger" onclick="updateStatus('connexion', 'error')">❌ Non</button>
+                    <span id="connexion-status" class="status pending">En attente</span>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label><strong>Données affichées?</strong></label><br>
+                    <button class="success-btn" onclick="updateStatus('donnees', 'ok')">✅ Oui</button>
+                    <button class="danger" onclick="updateStatus('donnees', 'error')">❌ Non</button>
+                    <span id="donnees-status" class="status pending">En attente</span>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label><strong>Filtrage ET correct?</strong></label><br>
+                    <button class="success-btn" onclick="updateStatus('filtre', 'ok')">✅ Oui</button>
+                    <button class="danger" onclick="updateStatus('filtre', 'error')">❌ Non</button>
+                    <span id="filtre-status" class="status pending">En attente</span>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label><strong>Nombre de passagers visible?</strong></label><br>
+                    <input type="number" id="passenger-count" placeholder="Ex: 23" style="padding: 5px;">
+                    <button class="primary" onclick="checkPassengerCount()">Vérifier</button>
+                </div>
+                
+                <div id="final-result" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                    <strong>Résultat global:</strong> <span id="global-status">En attente des tests...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="step info">
+            <h3>💡 Astuces de débogage</h3>
+            <p>Si vous ne voyez pas de données:</p>
+            <ul>
+                <li>Ouvrez la console du navigateur (F12 → Console)</li>
+                <li>Vérifiez qu'il n'y a pas d'erreurs en rouge</li>
+                <li>Allez dans l'onglet Network pour voir les requêtes API</li>
+                <li>Vérifiez que les requêtes vers localhost:3000 réussissent</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="primary" onclick="window.open('http://localhost:4173', '_blank')" style="font-size: 16px; padding: 15px 30px;">
+                🚀 Lancer le test du Dashboard
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(test, status) {
+            const statusElement = document.getElementById(test + '-status');
+            statusElement.className = 'status ' + status;
+            statusElement.textContent = status === 'ok' ? '✅ OK' : '❌ Problème';
+            updateGlobalResult();
+        }
+
+        function checkPassengerCount() {
+            const count = document.getElementById('passenger-count').value;
+            const expected = 23;
+            if (count == expected) {
+                alert('✅ Parfait! Le nombre de passagers correspond aux attentes.');
+            } else if (count > 0) {
+                alert(`⚠️  Vous voyez ${count} passagers, mais nous en attendons ${expected}. C\'est peut-être normal si le filtre fonctionne.`);
+            } else {
+                alert('❌ Aucun passager visible - il y a probablement un problème.');
+            }
+        }
+
+        function updateGlobalResult() {
+            const connexion = document.getElementById('connexion-status').classList.contains('ok');
+            const donnees = document.getElementById('donnees-status').classList.contains('ok');
+            const filtre = document.getElementById('filtre-status').classList.contains('ok');
+            
+            const globalElement = document.getElementById('global-status');
+            
+            if (connexion && donnees && filtre) {
+                globalElement.innerHTML = '<span style="color: #28a745;">🎉 TOUT FONCTIONNE PARFAITEMENT!</span>';
+                globalElement.parentElement.style.background = '#d4edda';
+            } else if (connexion) {
+                globalElement.innerHTML = '<span style="color: #ffc107;">⚠️  Connexion OK, mais problème d\'affichage des données</span>';
+                globalElement.parentElement.style.background = '#fff3cd';
+            } else {
+                globalElement.innerHTML = '<span style="color: #dc3545;">❌ Problème de connexion - vérifiez que le serveur tourne</span>';
+                globalElement.parentElement.style.background = '#f8d7da';
+            }
+        }
+
+        // Vérification automatique des serveurs
+        fetch('http://localhost:4173').then(() => {
+            console.log('✅ Dashboard accessible');
+        }).catch(() => {
+            console.log('❌ Dashboard non accessible - vérifiez que npm run preview tourne');
+        });
+
+        fetch('http://localhost:3000/health').then(() => {
+            console.log('✅ API accessible');
+        }).catch(() => {
+            console.log('❌ API non accessible - vérifiez que l\'API tourne sur port 3000');
+        });
+    </script>
+</body>
+</html>

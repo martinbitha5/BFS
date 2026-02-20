@@ -68,7 +68,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
         // Ensuite récupérer TOUS les bagages de ce passager par passenger_id
         const { data: nationalBaggages, error: nationalError } = await supabase
           .from('baggages')
-          .select('id, tag_number, status, weight, current_location, last_scanned_at')
+          .select('id, tag_number, status, weight, current_location, last_scanned_at, destination, notes')
           .eq('passenger_id', passenger.id)
           .order('created_at', { ascending: false });
 
@@ -82,7 +82,9 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
               weight: bag.weight,
               current_location: bag.current_location,
               last_scanned_at: bag.last_scanned_at,
-              baggage_type: 'national'
+              baggage_type: 'national',
+              destination: bag.destination,
+              notes: bag.notes
             });
           }
         }
@@ -92,7 +94,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
         if (allBaggages.length === 0 && passenger.flight_number) {
           const { data: orphanBaggages, error: orphanError } = await supabase
             .from('baggages')
-            .select('id, tag_number, status, weight, current_location, last_scanned_at')
+            .select('id, tag_number, status, weight, current_location, last_scanned_at, destination, notes')
             .is('passenger_id', null)
             .eq('flight_number', passenger.flight_number)
             .order('created_at', { ascending: false });
@@ -113,6 +115,8 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
                 current_location: bag.current_location,
                 last_scanned_at: bag.last_scanned_at,
                 baggage_type: 'national',
+                destination: bag.destination,
+                notes: bag.notes,
                 note: 'Bagage du vol (non lié individuellement)'
               });
             }
@@ -121,7 +125,8 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
       }
     } else if (normalizedTag) {
       // Rechercher par tag RFID - retourne un seul bagage
-      const { data: nationalBaggage, error: nationalError } = await supabase
+      // 1. D'abord chercher les bagages manuels (sans passenger_id)
+      const { data: manualBaggage, error: manualError } = await supabase
         .from('baggages')
         .select(`
           id,
@@ -130,36 +135,83 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
           weight,
           current_location,
           last_scanned_at,
-          passengers!inner (
-            full_name,
-            pnr,
-            flight_number,
-            departure,
-            arrival
-          )
+          destination,
+          notes,
+          manually_authorized,
+          flight_number
         `)
-        .ilike('tag_number', normalizedTag)
+        .eq('tag_number', normalizedTag)
+        .is('passenger_id', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
-      if (nationalBaggage && !nationalError) {
-        const passenger = (nationalBaggage as any).passengers;
+      if (manualBaggage && !manualError) {
+        // Bagage manuel trouvé - pas de passager associé
         passengerInfo = {
-          passenger_name: passenger.full_name,
-          pnr: passenger.pnr,
-          flight_number: passenger.flight_number,
-          origin: passenger.departure,
-          destination: passenger.arrival
+          passenger_name: 'Bagage Manuel',
+          pnr: 'MANUAL',
+          flight_number: manualBaggage.flight_number || 'N/A',
+          origin: null,
+          destination: manualBaggage.destination
         };
         allBaggages.push({
-          bag_id: nationalBaggage.tag_number,
-          status: nationalBaggage.status,
-          weight: nationalBaggage.weight,
-          current_location: nationalBaggage.current_location,
-          last_scanned_at: nationalBaggage.last_scanned_at,
-          baggage_type: 'national'
+          bag_id: manualBaggage.tag_number,
+          status: manualBaggage.status,
+          weight: manualBaggage.weight,
+          current_location: manualBaggage.current_location,
+          last_scanned_at: manualBaggage.last_scanned_at,
+          baggage_type: 'national',
+          destination: manualBaggage.destination,
+          notes: manualBaggage.notes,
+          manually_authorized: manualBaggage.manually_authorized
         });
+      } else {
+        // 2. Si pas de bagage manuel, chercher les bagages liés à un passager
+        const { data: nationalBaggage, error: nationalError } = await supabase
+          .from('baggages')
+          .select(`
+            id,
+            tag_number,
+            status,
+            weight,
+            current_location,
+            last_scanned_at,
+            destination,
+            notes,
+            passengers!inner (
+              full_name,
+              pnr,
+              flight_number,
+              departure,
+              arrival
+            )
+          `)
+          .ilike('tag_number', normalizedTag)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (nationalBaggage && !nationalError) {
+          const passenger = (nationalBaggage as any).passengers;
+          passengerInfo = {
+            passenger_name: passenger.full_name,
+            pnr: passenger.pnr,
+            flight_number: passenger.flight_number,
+            origin: passenger.departure,
+            destination: passenger.arrival
+          };
+          allBaggages.push({
+            bag_id: nationalBaggage.tag_number,
+            status: nationalBaggage.status,
+            weight: nationalBaggage.weight,
+            current_location: nationalBaggage.current_location,
+            last_scanned_at: nationalBaggage.last_scanned_at,
+            baggage_type: 'national',
+            destination: nationalBaggage.destination,
+            notes: nationalBaggage.notes
+          });
+        }
       }
     }
 

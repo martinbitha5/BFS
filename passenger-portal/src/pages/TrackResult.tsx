@@ -18,6 +18,8 @@ interface BaggageItem {
   baggage_type?: 'national' | 'international' | 'birs';
   origin?: string;
   destination?: string;
+  notes?: string;
+  manually_authorized?: boolean;
 }
 
 interface StatusSummary {
@@ -258,11 +260,25 @@ export default function TrackResult() {
                   <h1 className="text-4xl font-bold text-white">{t('track.title')}</h1>
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-white/70">
-                  <span>{t('track.pnr')}: <span className="font-semibold text-white">{trackingData.pnr}</span></span>
-                  <span>•</span>
+                  {trackingData.pnr !== 'MANUAL' && (
+                    <>
+                      <span>{t('track.pnr')}: <span className="font-semibold text-white">{trackingData.pnr}</span></span>
+                      <span>•</span>
+                    </>
+                  )}
                   <span>{t('track.flight')}: <span className="font-semibold text-white">{trackingData.flight_number}</span></span>
-                  <span>•</span>
-                  <span>{t('track.passenger')}: <span className="font-semibold text-white">{trackingData.passenger_name}</span></span>
+                  {trackingData.pnr !== 'MANUAL' && (
+                    <>
+                      <span>•</span>
+                      <span>{t('track.passenger')}: <span className="font-semibold text-white">{trackingData.passenger_name}</span></span>
+                    </>
+                  )}
+                  {trackingData.pnr === 'MANUAL' && (
+                    <>
+                      <span>•</span>
+                      <span className="text-orange-300 font-semibold">Bagage Manuel</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -344,11 +360,17 @@ export default function TrackResult() {
                                     {baggage.baggage_type === 'international' && (
                                       <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">International</span>
                                     )}
+                                    {baggage.manually_authorized && (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">Manuel</span>
+                                    )}
                                   </div>
                                   <p className="text-sm text-white/70">{statusInfo.description}</p>
                                   <p className="text-sm text-white/70 font-mono mt-1">{t('track.details.tag')}: {baggage.bag_id}</p>
                                   {baggage.weight && (
                                     <p className="text-sm text-white/60">{baggage.weight} kg</p>
+                                  )}
+                                  {baggage.notes && (
+                                    <p className="text-sm text-white/60 mt-1 italic">📝 {baggage.notes}</p>
                                   )}
                                 </div>
                                 {baggage.last_scanned_at && (
@@ -433,14 +455,28 @@ export default function TrackResult() {
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-sm border border-white/20 p-6">
                     <h3 className="font-bold text-white mb-4">{t('track.details.title')}</h3>
                     <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-white/60 mb-1">{t('track.details.passenger')}</p>
-                        <p className="font-semibold text-white">{trackingData.passenger_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-white/60 mb-1">PNR</p>
-                        <p className="font-semibold text-white font-mono">{trackingData.pnr}</p>
-                      </div>
+                      {trackingData.pnr !== 'MANUAL' ? (
+                        <>
+                          <div>
+                            <p className="text-xs text-white/60 mb-1">{t('track.details.passenger')}</p>
+                            <p className="font-semibold text-white">{trackingData.passenger_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-white/60 mb-1">PNR</p>
+                            <p className="font-semibold text-white font-mono">{trackingData.pnr}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="bg-orange-500/20 border border-orange-500/30 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-5 h-5 text-orange-300" />
+                            <p className="text-orange-300 font-semibold">Bagage Manuel</p>
+                          </div>
+                          <p className="text-sm text-orange-200/80">
+                            Ce bagage a été ajouté manuellement par le personnel de l'aéroport pour faciliter le suivi.
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-xs text-white/60 mb-1">{t('track.details.flight')}</p>
                         <p className="font-semibold text-white">{trackingData.flight_number}</p>

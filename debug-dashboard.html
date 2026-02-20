@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Dashboard BFS - Console</title>
+    <style>
+        body { font-family: monospace; margin: 0; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #2d2d30; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .debug-frame { width: 100%; height: 600px; border: 2px solid #007acc; border-radius: 5px; background: white; }
+        .console { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; margin-top: 20px; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        .log { margin: 2px 0; }
+        .error { color: #f48771; }
+        .warn { color: #dcdcaa; }
+        .info { color: #4fc1ff; }
+        .success { color: #89d185; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 3px; cursor: pointer; background: #0e639c; color: white; }
+        button:hover { background: #1177bb; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 3px; margin: 5px; }
+        .loading { background: #007acc; color: white; }
+        .success-status { background: #16825d; color: white; }
+        .error-status { background: #c72e2e; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Debug Dashboard BFS</h1>
+            <p>Outil de débogage pour identifier pourquoi les données ne s'affichent pas</p>
+        </div>
+
+        <div class="controls">
+            <button onclick="loadDashboard()">🚀 Charger le Dashboard</button>
+            <button onclick="checkConsole()">📋 Vérifier la console</button>
+            <button onclick="testAPI()">🔌 Tester l'API</button>
+            <button onclick="clearConsole()">🗑️ Effacer</button>
+            <span id="status" class="status loading">En attente...</span>
+        </div>
+
+        <iframe id="dashboard-frame" class="debug-frame" src="about:blank"></iframe>
+        
+        <div class="console" id="debug-console">
+            <div class="log info">Console de débogage initialisée...</div>
+        </div>
+    </div>
+
+    <script>
+        let frame = document.getElementById('dashboard-frame');
+        let consoleDiv = document.getElementById('debug-console');
+        let status = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleDiv.appendChild(logEntry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function clearConsole() {
+            consoleDiv.innerHTML = '<div class="log info">Console effacée...</div>';
+        }
+
+        function updateStatus(text, type = 'loading') {
+            status.textContent = text;
+            status.className = `status ${type}`;
+        }
+
+        async function loadDashboard() {
+            log('Chargement du dashboard...', 'info');
+            updateStatus('Chargement...', 'loading');
+            
+            try {
+                // Test de connexion au dashboard
+                const response = await fetch('http://localhost:4173');
+                if (response.ok) {
+                    log('Dashboard accessible ✅', 'success');
+                    frame.src = 'http://localhost:4173';
+                    
+                    // Attendre le chargement
+                    frame.onload = function() {
+                        log('Dashboard chargé dans l\'iframe ✅', 'success');
+                        updateStatus('Dashboard chargé', 'success-status');
+                        
+                        // Vérifier la console de l'iframe
+                        setTimeout(() => {
+                            checkFrameConsole();
+                        }, 3000);
+                    };
+                    
+                    frame.onerror = function() {
+                        log('Erreur lors du chargement du dashboard ❌', 'error');
+                        updateStatus('Erreur de chargement', 'error-status');
+                    };
+                } else {
+                    log(`Dashboard inaccessible (status: ${response.status}) ❌`, 'error');
+                    updateStatus('Dashboard inaccessible', 'error-status');
+                }
+            } catch (error) {
+                log(`Erreur de connexion: ${error.message} ❌`, 'error');
+                updateStatus('Connexion impossible', 'error-status');
+            }
+        }
+
+        function checkFrameConsole() {
+            try {
+                log('Vérification de la console de l\'iframe...', 'info');
+                
+                // Injecter un script de débogage dans l'iframe
+                const debugScript = `
+                    // Capturer les erreurs globales
+                    window.addEventListener('error', function(event) {
+                        window.parent.postMessage({
+                            type: 'console-error',
+                            message: event.message,
+                            filename: event.filename,
+                            lineno: event.lineno,
+                            colno: event.colno
+                        }, '*');
+                    });
+                    
+                    // Capturer les avertissements
+                    window.addEventListener('unhandledrejection', function(event) {
+                        window.parent.postMessage({
+                            type: 'console-error',
+                            message: 'Unhandled promise rejection: ' + event.reason
+                        }, '*');
+                    });
+                    
+                    // Capturer console.log
+                    const originalLog = console.log;
+                    console.log = function(...args) {
+                        window.parent.postMessage({
+                            type: 'console-log',
+                            message: args.join(' ')
+                        }, '*');
+                        originalLog.apply(console, args);
+                    };
+                    
+                    // Capturer console.error
+                    const originalError = console.error;
+                    console.error = function(...args) {
+                        window.parent.postMessage({
+                            type: 'console-error',
+                            message: args.join(' ')
+                        }, '*');
+                        originalError.apply(console, args);
+                    };
+                    
+                    // Vérifier les données
+                    console.log('=== DÉBUT ANALYSE DASHBOARD ===');
+                    console.log('URL actuelle:', window.location.href);
+                    console.log('User agent:', navigator.userAgent);
+                    console.log('LocalStorage:', JSON.stringify(localStorage, null, 2));
+                    
+                    // Vérifier si React est chargé
+                    if (window.React) {
+                        console.log('React détecté ✅');
+                    } else {
+                        console.log('React non détecté ⚠️');
+                    }
+                    
+                    // Vérifier le contexte d'authentification
+                    setTimeout(function() {
+                        console.log('=== VÉRIFICATION AUTH ===');
+                        const authData = localStorage.getItem('auth-storage');
+                        if (authData) {
+                            console.log('Données auth trouvées:', authData);
+                        } else {
+                            console.log('Aucune donnée auth trouvée ❌');
+                        }
+                    }, 2000);
+                    
+                    console.log('=== ANALYSE TERMINÉE ===');
+                `;
+                
+                frame.contentWindow.postMessage({ type: 'execute-script', script: debugScript }, '*');
+                log('Script de débogage injecté ✅', 'success');
+                
+            } catch (error) {
+                log(`Impossible d'accéder à l'iframe: ${error.message} ❌`, 'error');
+            }
+        }
+
+        // Écouter les messages de l'iframe
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'console-log') {
+                log(`[Dashboard] ${event.data.message}`, 'info');
+            } else if (event.data.type === 'console-error') {
+                log(`[Dashboard ERROR] ${event.data.message}`, 'error');
+            } else if (event.data.type === 'execute-script') {
+                try {
+                    eval(event.data.script);
+                } catch (error) {
+                    log(`Erreur script: ${error.message}`, 'error');
+                }
+            }
+        });
+
+        async function testAPI() {
+            log('Test de l\'API...', 'info');
+            updateStatus('Test API...', 'loading');
+            
+            try {
+                // Test connexion API
+                const loginResponse = await fetch('http://localhost:3000/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': 'bfs-api-key-secure-2025'
+                    },
+                    body: JSON.stringify({
+                        email: 'superviseur@bfs.cd',
+                        password: 'password123'
+                    })
+                });
+                
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    log('Connexion API réussie ✅', 'success');
+                    log(`Token: ${loginData.data.token.substring(0, 20)}...`, 'info');
+                    
+                    // Test récupération données
+                    const token = loginData.data.token;
+                    const user = loginData.data.user;
+                    
+                    const passengersResponse = await fetch(`http://localhost:3000/api/v1/passengers?airport=FIH&airline_code=ET`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'x-api-key': 'bfs-api-key-secure-2025'
+                        }
+                    });
+                    
+                    if (passengersResponse.ok) {
+                        const passengersData = await passengersResponse.json();
+                        log(`Données passagers récupérées: ${passengersData.data.length} ✅`, 'success');
+                        
+                        if (passengersData.data.length > 0) {
+                            const first = passengersData.data[0];
+                            log(`Premier passager: ${first.fullName} (${first.flightNumber})`, 'info');
+                        }
+                    } else {
+                        log(`Erreur récupération passagers: ${passengersResponse.status} ❌`, 'error');
+                    }
+                    
+                    updateStatus('API OK', 'success-status');
+                } else {
+                    log(`Erreur connexion API: ${loginResponse.status} ❌`, 'error');
+                    updateStatus('API Error', 'error-status');
+                }
+            } catch (error) {
+                log(`Erreur API: ${error.message} ❌`, 'error');
+                updateStatus('API Inaccessible', 'error-status');
+            }
+        }
+
+        function checkConsole() {
+            log('Vérification de la console...', 'info');
+            checkFrameConsole();
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', function() {
+            log('Outil de débogage chargé ✅', 'success');
+            setTimeout(() => {
+                testAPI(); // Tester l'API d'abord
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
