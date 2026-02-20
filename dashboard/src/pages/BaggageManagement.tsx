@@ -49,6 +49,7 @@ export default function BaggageManagement() {
     tag_number: '',
     flight_number: '',
     weight: '',
+    origin: '',
     destination: '',
     notes: ''
   });
@@ -149,6 +150,7 @@ export default function BaggageManagement() {
         flight_number: manualTagForm.flight_number,
         weight: manualTagForm.weight ? parseFloat(manualTagForm.weight) : null,
         airport_code: user?.airport_code,
+        origin: manualTagForm.origin,
         destination: manualTagForm.destination,
         notes: manualTagForm.notes,
         manually_authorized: true,
@@ -157,7 +159,7 @@ export default function BaggageManagement() {
 
       if ((response.data as any).success) {
         setSuccess('Étiquette manuelle créée avec succès');
-        setManualTagForm({ tag_number: '', flight_number: '', weight: '', destination: '', notes: '' });
+        setManualTagForm({ tag_number: '', flight_number: '', weight: '', origin: '', destination: '', notes: '' });
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur lors de la création de l\'étiquette');
@@ -407,6 +409,16 @@ export default function BaggageManagement() {
                     value={manualTagForm.weight}
                     onChange={(e) => setManualTagForm({...manualTagForm, weight: e.target.value})}
                     placeholder="15.3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/85 mb-1">Origine</label>
+                  <input
+                    type="text"
+                    value={manualTagForm.origin}
+                    onChange={(e) => setManualTagForm({...manualTagForm, origin: e.target.value})}
+                    placeholder="ex: BZV"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   />
                 </div>

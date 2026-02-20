@@ -59,7 +59,7 @@ router.get('/track', async (req, res, next) => {
                 // Ensuite récupérer TOUS les bagages de ce passager par passenger_id
                 const { data: nationalBaggages, error: nationalError } = await database_1.supabase
                     .from('baggages')
-                    .select('id, tag_number, status, weight, current_location, last_scanned_at, destination, notes')
+                    .select('id, tag_number, status, weight, current_location, last_scanned_at, origin, destination, notes')
                     .eq('passenger_id', passenger.id)
                     .order('created_at', { ascending: false });
                 console.log('[TRACK] Bagages par passenger_id:', nationalBaggages?.length || 0);
@@ -82,7 +82,7 @@ router.get('/track', async (req, res, next) => {
                 if (allBaggages.length === 0 && passenger.flight_number) {
                     const { data: orphanBaggages, error: orphanError } = await database_1.supabase
                         .from('baggages')
-                        .select('id, tag_number, status, weight, current_location, last_scanned_at, destination, notes')
+                        .select('id, tag_number, status, weight, current_location, last_scanned_at, origin, destination, notes')
                         .is('passenger_id', null)
                         .eq('flight_number', passenger.flight_number)
                         .order('created_at', { ascending: false });
@@ -100,6 +100,7 @@ router.get('/track', async (req, res, next) => {
                                 current_location: bag.current_location,
                                 last_scanned_at: bag.last_scanned_at,
                                 baggage_type: 'national',
+                                origin: bag.origin,
                                 destination: bag.destination,
                                 notes: bag.notes,
                                 note: 'Bagage du vol (non lié individuellement)'
@@ -121,6 +122,7 @@ router.get('/track', async (req, res, next) => {
           weight,
           current_location,
           last_scanned_at,
+          origin,
           destination,
           notes,
           manually_authorized,
@@ -137,7 +139,7 @@ router.get('/track', async (req, res, next) => {
                     passenger_name: 'Bagage Manuel',
                     pnr: 'MANUAL',
                     flight_number: manualBaggage.flight_number || 'N/A',
-                    origin: null,
+                    origin: manualBaggage.origin,
                     destination: manualBaggage.destination
                 };
                 allBaggages.push({
