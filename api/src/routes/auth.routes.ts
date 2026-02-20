@@ -249,7 +249,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
     // Récupérer le profil utilisateur
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('*')
+      .select('id, email, full_name, airport_code, airline_code, role, is_approved, created_at, updated_at')
       .eq('id', user.id)
       .single();
 

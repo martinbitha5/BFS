@@ -83,19 +83,13 @@ export default function Passengers() {
 
       const headers = { 
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-api-key': 'bfs-api-key-secure-2025'
       };
 
-      // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
-      const params = new URLSearchParams();
-      params.append('airport', user.airport_code);
-      if (user.airline_code && user.airline_code !== 'ALL') {
-        params.append('airline_code', user.airline_code);
-      }
-      
-      const response = await api.get(`/api/v1/passengers?${params.toString()}`, { 
-        headers,
-        params: Object.fromEntries(params)  // ← Passe les params explicitement
+      // Laisse l'intercepteur ajouter les paramètres automatiquement
+      const response = await api.get('/api/v1/passengers', { 
+        headers
       });
       const data = response.data as { success: boolean; data: Passenger[] };
       
@@ -103,11 +97,8 @@ export default function Passengers() {
         setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
         setPassengers([]);
       } else if (data.data && Array.isArray(data.data)) {
-        // ✅ Filtrer par airline_code côté client (comme Dashboard.tsx)
-        const filteredData = user.airline_code && user.airline_code !== 'ALL'
-          ? data.data.filter(p => p.airline_code === user.airline_code)
-          : data.data;
-        setPassengers(filteredData);
+        console.log(`[Passengers] Passagers récupérés: ${data.data.length} (compagnie: ${user.airline_code || 'Toutes'})`);
+        setPassengers(data.data);
       } else {
         setError('Format de réponse invalide - expected array');
         setPassengers([]);

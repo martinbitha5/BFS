@@ -54,30 +54,23 @@ export default function Deliveries() {
 
       const headers = { 
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-api-key': 'bfs-api-key-secure-2025'
       };
 
-      // Construire les paramètres de requête explicitement (comme Dashboard.tsx)
-      const params = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
-      if (user.airline_code && user.airline_code !== 'ALL') {
-        params.append('airline_code', user.airline_code);
-      }
-      
-      const response = await api.get(`/api/v1/passengers?${params}`, { headers });
+      // Laisse l'intercepteur ajouter les paramètres automatiquement
+      const response = await api.get('/api/v1/passengers?filter=arrival', { headers });
       const data = response.data as { success: boolean; data: any[] };
       
       if (!data.success) {
         setError(`Erreur API: ${data.data ? 'pas de succès' : 'réponse invalide'}`);
         setBaggages([]);
       } else if (data.data && Array.isArray(data.data)) {
-        // ✅ Filtrer les passagers par airline_code avant d'extraire les bagages
-        const filteredPassengers = user.airline_code && user.airline_code !== 'ALL'
-          ? data.data.filter((p: any) => p.airline_code === user.airline_code)
-          : data.data;
+        console.log(`[Deliveries] Passagers récupérés: ${data.data.length} (compagnie: ${user.airline_code || 'Toutes'})`);
         
-        // Extract all baggages from filtered passengers
+        // Extract all baggages from passengers
         const allBaggages: Baggage[] = [];
-        filteredPassengers.forEach((passenger: any) => {
+        data.data.forEach((passenger: any) => {
           if (passenger.baggages && Array.isArray(passenger.baggages)) {
             passenger.baggages.forEach((baggage: any) => {
               allBaggages.push({
@@ -100,6 +93,7 @@ export default function Deliveries() {
         
         // Filter only delivered baggages
         const deliveredBaggages = allBaggages.filter(b => b.status === 'delivered');
+        console.log(`[Deliveries] Bagages livrés: ${deliveredBaggages.length}`);
         setBaggages(deliveredBaggages);
       } else {
         setError('Format de réponse invalide - expected array');

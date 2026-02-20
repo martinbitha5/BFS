@@ -86,40 +86,35 @@ export default function Dashboard() {
       }
 
       const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'x-api-key': 'bfs-api-key-secure-2025'
+            };
 
-      // Fetch departures
-      const depParams = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}`);
-      if (user.airline_code && user.airline_code !== 'ALL') {
-        depParams.append('airline_code', user.airline_code);
-      }
-      const depResponse = await api.get(`/api/v1/passengers?${depParams}`, { headers });
+      // Fetch departures - Laisse l'intercepteur ajouter les paramètres
+      console.log(`[Dashboard] Récupération départs pour compagnie: ${user.airline_code}`);
+      const depResponse = await api.get('/api/v1/passengers', { headers });
       const depData = depResponse.data as { success: boolean; data: Passenger[] };
 
-      // Fetch arrivals
-      const arrParams = new URLSearchParams(`airport=${encodeURIComponent(user.airport_code)}&filter=arrival`);
-      if (user.airline_code && user.airline_code !== 'ALL') {
-        arrParams.append('airline_code', user.airline_code);
-      }
-      const arrResponse = await api.get(`/api/v1/passengers?${arrParams}`, { headers });
+      // Fetch arrivals - Laisse l'intercepteur ajouter les paramètres
+      console.log(`[Dashboard] Récupération arrivées pour compagnie: ${user.airline_code}`);
+      const arrResponse = await api.get('/api/v1/passengers?filter=arrival', { headers });
       const arrData = arrResponse.data as { success: boolean; data: Passenger[] };
 
       if (depData.success && Array.isArray(depData.data)) {
-        // Filter by airline_code if user has one (client-side filter as backup)
-        const filteredDepartures = user.airline_code && user.airline_code !== 'ALL'
-          ? depData.data.filter(p => p.airline_code === user.airline_code)
-          : depData.data;
-        setDepartures(filteredDepartures);
+        console.log(`[Dashboard] Départs récupérés: ${depData.data.length} passagers`);
+        setDepartures(depData.data);
+      } else {
+        console.warn(`[Dashboard] Erreur données départs:`, depData);
+        setDepartures([]);
       }
 
       if (arrData.success && Array.isArray(arrData.data)) {
-        // Filter by airline_code if user has one (client-side filter as backup)
-        const filteredArrivals = user.airline_code && user.airline_code !== 'ALL'
-          ? arrData.data.filter(p => p.airline_code === user.airline_code)
-          : arrData.data;
-        setArrivals(filteredArrivals);
+        console.log(`[Dashboard] Arrivées récupérées: ${arrData.data.length} passagers`);
+        setArrivals(arrData.data);
+      } else {
+        console.warn(`[Dashboard] Erreur données arrivées:`, arrData);
+        setArrivals([]);
       }
 
       setLoading(false);
@@ -137,10 +132,16 @@ export default function Dashboard() {
   }, [fetchData]);
 
   const stats = (): DashboardStats => {
+    console.log('[DEBUG] Calcul stats - departures:', departures.length, 'arrivals:', arrivals.length);
     const allPassengers = [...departures, ...arrivals];
     const allBaggages = allPassengers.flatMap(p => p.baggages || []);
+    
+    console.log('[DEBUG] Total passagers:', allPassengers.length);
+    console.log('[DEBUG] Total bagages:', allBaggages.length);
+    console.log('[DEBUG] Passagers enregistrés:', allPassengers.filter(p => p.checkedInAt).length);
+    console.log('[DEBUG] Passagers embarqués:', allPassengers.filter(p => p.boarding_status?.[0]?.boarded).length);
 
-    return {
+    const result = {
       totalFlights: new Set([...departures, ...arrivals].map(p => p.flightNumber)).size,
       totalPassengers: allPassengers.length,
       totalBaggages: allBaggages.length,
@@ -150,6 +151,9 @@ export default function Dashboard() {
       pendingBaggages: allBaggages.filter(b => !b.delivered_at && b.arrived_at).length,
       avgBaggagesPerPassenger: allPassengers.length > 0 ? Math.round((allBaggages.length / allPassengers.length) * 10) / 10 : 0
     };
+    
+    console.log('[DEBUG] Stats calculées:', result);
+    return result;
   };
 
   const flightChartData = (): FlightData[] => {
@@ -232,7 +236,9 @@ export default function Dashboard() {
     );
   }
 
+  console.log('[DEBUG] Avant calcul dashboardStats - loading:', loading);
   const dashboardStats = stats();
+  console.log('[DEBUG] Après calcul dashboardStats:', dashboardStats);
   const flightData = flightChartData();
   const statusData = statusDistribution();
   const pvbData = passengersVsBaggages();

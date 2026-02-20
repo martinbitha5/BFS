@@ -50,12 +50,26 @@ export default function Export() {
     setStats(null);
 
     try {
+      const token = localStorage.getItem('bfs_token');
+      if (!token) {
+        setError('Token d\'authentification manquant');
+        setLoading(false);
+        return;
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-api-key': 'bfs-api-key-secure-2025'
+      };
+
       const response = await api.get('/api/v1/export/raw-scans', {
         params: {
           airport: user.airport_code,
           start_date: startDate,
           end_date: endDate
-        }
+        },
+        headers
       });
 
       const data = response.data as { data: RawScan[]; stats: ExportStats };
