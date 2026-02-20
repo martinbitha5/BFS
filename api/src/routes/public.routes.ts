@@ -48,7 +48,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
       // D'abord trouver le passager par PNR
       const { data: passenger, error: passengerError } = await supabase
         .from('passengers')
-        .select('id, full_name, pnr, flight_number, departure, arrival')
+        .select('id, full_name, pnr, flight_number, departure, arrival, baggage_count')
         .eq('pnr', searchPnr)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -65,33 +65,40 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
           destination: passenger.arrival
         };
 
-        // Ensuite récupérer TOUS les bagages de ce passager par passenger_id
-        const { data: nationalBaggages, error: nationalError } = await supabase
-          .from('baggages')
-          .select('id, tag_number, status, weight, current_location, last_scanned_at, origin, destination, notes')
-          .eq('passenger_id', passenger.id)
-          .order('created_at', { ascending: false });
+        // ⚠️ VÉRIFIER D'ABORD LE BAGGAGE_COUNT DU PASSAGER
+        const expectedBaggageCount = passenger.baggage_count || 0;
+        console.log('[TRACK] Passager attendu:', expectedBaggageCount, 'bagage(s)');
 
-        console.log('[TRACK] Bagages par passenger_id:', nationalBaggages?.length || 0);
+        // Si le passager a 0 bagages attendus, ne rien chercher
+        if (expectedBaggageCount === 0) {
+          console.log('[TRACK] ✅ Aucun bagage attendu pour ce passager');
+        } else {
+          // Sinon, chercher les bagages liés à ce passager
+          const { data: nationalBaggages, error: nationalError } = await supabase
+            .from('baggages')
+            .select('id, tag_number, status, weight, current_location, last_scanned_at, origin, destination, notes')
+            .eq('passenger_id', passenger.id)
+            .order('created_at', { ascending: false });
 
-        if (nationalBaggages && nationalBaggages.length > 0 && !nationalError) {
-          for (const bag of nationalBaggages) {
-            allBaggages.push({
-              bag_id: bag.tag_number,
-              status: bag.status,
-              weight: bag.weight,
-              current_location: bag.current_location,
-              last_scanned_at: bag.last_scanned_at,
-              baggage_type: 'national',
-              destination: bag.destination,
-              notes: bag.notes
-            });
+          console.log('[TRACK] Bagages par passenger_id:', nationalBaggages?.length || 0);
+
+          if (nationalBaggages && nationalBaggages.length > 0 && !nationalError) {
+            for (const bag of nationalBaggages) {
+              allBaggages.push({
+                bag_id: bag.tag_number,
+                status: bag.status,
+                weight: bag.weight,
+                current_location: bag.current_location,
+                last_scanned_at: bag.last_scanned_at,
+                baggage_type: 'national',
+                destination: bag.destination,
+                notes: bag.notes
+              });
+            }
           }
-        }
 
-        // Si aucun bagage trouvé par passenger_id, chercher les bagages orphelins du même vol
-        // (bagages avec passenger_id NULL mais même flight_number)
-        if (allBaggages.length === 0 && passenger.flight_number) {
+          // Si pas assez de bagages trouvés, chercher des bagages orphelins sur le vol
+          if (allBaggages.length < expectedBaggageCount && passenger.flight_number) {
           const { data: orphanBaggages, error: orphanError } = await supabase
             .from('baggages')
             .select('id, tag_number, status, weight, current_location, last_scanned_at, origin, destination, notes')
@@ -102,12 +109,13 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
           console.log('[TRACK] Bagages orphelins même vol:', orphanBaggages?.length || 0);
 
           if (orphanBaggages && orphanBaggages.length > 0 && !orphanError) {
-            // Calculer combien de bagages pour ce passager basé sur baggage_count
-            const passengerBaggageCount = (passenger as any).baggage_count || orphanBaggages.length;
+            // Ne prendre que le nombre manquant de bagages, pas tous
+            const missingBaggageCount = expectedBaggageCount - allBaggages.length;
+            const baggagesToTake = orphanBaggages.slice(0, missingBaggageCount);
             
-            // Prendre les bagages orphelins (on ne peut pas savoir exactement lesquels appartiennent à qui)
-            // Pour l'instant, on affiche tous les bagages orphelins du vol
-            for (const bag of orphanBaggages) {
+            console.log(`[TRACK] Prendre ${baggagesToTake.length} bagages orphelins sur ${orphanBaggages.length} disponibles`);
+            
+            for (const bag of baggagesToTake) {
               allBaggages.push({
                 bag_id: bag.tag_number,
                 status: bag.status,
@@ -123,7 +131,8 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
             }
           }
         }
-      }
+      } // Fin du if expectedBaggageCount === 0
+    }
     } else if (normalizedTag) {
       // Rechercher par tag RFID - retourne un seul bagage
       // 1. D'abord chercher les bagages manuels (sans passenger_id)
