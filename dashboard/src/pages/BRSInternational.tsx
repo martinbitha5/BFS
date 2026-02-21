@@ -45,6 +45,7 @@ export default function BRSInternational() {
   const { user } = useAuth();
   
   const [reports, setReports] = useState<BIRSReport[]>([]);
+  const [filteredByAirline, setFilteredByAirline] = useState(false);
   const [stats, setStats] = useState<BIRSStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,10 +61,19 @@ export default function BRSInternational() {
 
     try {
       setError('');
+      setFilteredByAirline(!!user.airline_code && user.airline_code !== 'ALL');
       
       const [reportsRes, statsRes] = await Promise.all([
-        api.get('/api/v1/birs/reports'),
-        api.get(`/api/v1/birs/statistics/${user.airport_code}`)
+        api.get('/api/v1/birs/reports', {
+          params: {
+            airline_code: user.airline_code || undefined
+          }
+        }),
+        api.get(`/api/v1/birs/statistics/${user.airport_code}`, {
+          params: {
+            airline_code: user.airline_code || undefined
+          }
+        })
       ]);
 
       setReports((reportsRes.data as { data: BIRSReport[] }).data || []);
@@ -74,7 +84,7 @@ export default function BRSInternational() {
     } finally {
       setLoading(false);
     }
-  }, [user?.airport_code]);
+  }, [user?.airport_code, user?.airline_code]);
 
   useEffect(() => {
     fetchData();
@@ -85,7 +95,11 @@ export default function BRSInternational() {
     setLoadingItems(true);
 
     try {
-      const response = await api.get(`/api/v1/birs/reports/${report.id}`);
+      const response = await api.get(`/api/v1/birs/reports/${report.id}`, {
+        params: {
+          airline_code: user?.airline_code || undefined
+        }
+      });
       const data = response.data as { data: { items: ReportItem[] } };
       setReportItems(data.data.items || []);
     } catch (err: unknown) {
@@ -104,7 +118,8 @@ export default function BRSInternational() {
 
     try {
       const response = await api.post(`/api/v1/birs/reconcile/${reportId}`, {
-        airportCode: user.airport_code
+        airportCode: user.airport_code,
+        airline_code: user.airline_code || undefined
       });
 
       const data = response.data as { data: { matchedCount: number; unmatchedCount: number } };
@@ -324,6 +339,11 @@ export default function BRSInternational() {
           <p className="text-sm text-white/60">
             Rapports uploadés par les compagnies aériennes via le portail
           </p>
+          {filteredByAirline && user?.airline_code && (
+            <p className="text-xs text-primary-400 mt-1">
+              Filtré par compagnie: {user.airline_code}
+            </p>
+          )}
         </div>
         <button
           onClick={fetchData}
