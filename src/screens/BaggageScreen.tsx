@@ -328,6 +328,52 @@ export default function BaggageScreen({ navigation }: Props) {
               { cancelable: false }
             );
             return; // 🛑 Arrêter le traitement
+          } else if (response.status === 403) {
+            // 🚨 Erreur spéciale: Fraude détectée (baggage_count = 0)
+            const errorResult = await response.json();
+            console.log('[BAGGAGE] 🚨 FRAUDE DÉTECTÉE par le serveur:', errorResult.message);
+            await playErrorSound();
+            setProcessing(false);
+            
+            Alert.alert(
+              '🚨 FRAUDE DÉTECTÉE',
+              errorResult.message || 'Ce passager n\'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.',
+              [
+                {
+                  text: 'Compris (Déclasser)',
+                  onPress: () => {
+                    isProcessingRef.current = false;
+                    setScanned(false);
+                    setShowScanner(true);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+            return; // 🛑 Arrêter le traitement
+          } else if (response.status === 409) {
+            // ⚠️ Erreur: Tag appartient à un passager mais pas dans sa plage
+            const errorResult = await response.json();
+            console.log('[BAGGAGE] ⚠️ Tag non attribué:', errorResult.message);
+            await playErrorSound();
+            setProcessing(false);
+            
+            Alert.alert(
+              '⚠️ TAG NON ATTRIBUÉ',
+              errorResult.message || 'Ce tag appartient à un passager mais n\'est pas dans sa plage de bagages.',
+              [
+                {
+                  text: 'Compris',
+                  onPress: () => {
+                    isProcessingRef.current = false;
+                    setScanned(false);
+                    setShowScanner(true);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+            return; // 🛑 Arrêter le traitement
           } else {
             console.log(`[BAGGAGE] Passager non trouvé via API (status: ${response.status})`);
           }

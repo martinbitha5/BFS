@@ -173,25 +173,42 @@ router.get('/by-baggage-tag', requireAirportCode, async (req: Request & { userAi
     const tagBaseNum = parseInt(tagBase, 10);
     let foundPassenger = null;
     
+    // 🔍 Vérification spéciale: chercher d'abord les passagers avec baggage_count = 0
     for (const passenger of passengers || []) {
-      const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
-      const baggageCount = passenger.baggage_count || 1;
-      
-      if (isNaN(passengerBaseNum)) continue;
-      
-      // Verifier si le tag scanne correspond a un des bagages attendus
-      for (let i = 0; i < baggageCount; i++) {
-        const expectedBaseNum = passengerBaseNum + i;
-        if (tagBaseNum === expectedBaseNum) {
+      if (passenger.baggage_count === 0) {
+        const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
+        if (!isNaN(passengerBaseNum) && tagBaseNum === passengerBaseNum) {
+          console.log(`[PASSENGER API] 🚨 Passager avec baggage_count = 0 trouvé: ${passenger.full_name}`);
           foundPassenger = passenger;
           break;
         }
       }
-      
-      if (foundPassenger) break;
+    }
+    
+    // Si pas trouvé, chercher normalement dans les plages de bagages
+    if (!foundPassenger) {
+      for (const passenger of passengers || []) {
+        const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
+        const baggageCount = passenger.baggage_count || 1;
+        
+        if (isNaN(passengerBaseNum)) continue;
+        
+        // Verifier si le tag scanne correspond a un des bagages attendus
+        for (let i = 0; i < baggageCount; i++) {
+          const expectedBaseNum = passengerBaseNum + i;
+          if (tagBaseNum === expectedBaseNum) {
+            foundPassenger = passenger;
+            break;
+          }
+        }
+        
+        if (foundPassenger) break;
+      }
     }
     
     if (!foundPassenger) {
+      console.log(`[PASSENGER API] Passager non trouvé pour tag: ${tagBase}`);
+      
       return res.status(404).json({
         success: false,
         error: 'Aucun passager trouve pour ce tag'
