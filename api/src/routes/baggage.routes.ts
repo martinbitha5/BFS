@@ -227,8 +227,14 @@ router.post('/', requireAirportCode, async (req: Request, res: Response, next: N
     const baggageData = req.body;
     const { passenger_id, tag_number, airport_code } = baggageData;
 
-    // Si un passenger_id est fourni, vérifier la limite de bagages
-    if (passenger_id) {
+    // Récupérer le rôle de l'utilisateur depuis la requête (ajouté par requireAirportCode)
+    const userRole = (req as any).userRole;
+    
+    // Les utilisateurs avec pleins pouvoirs (support, baggage_dispute, supervisor) bypassent les restrictions
+    const hasFullAccess = userRole === 'support' || userRole === 'baggage_dispute' || userRole === 'supervisor';
+
+    // Si un passenger_id est fourni, vérifier la limite de bagages (sauf pour les utilisateurs avec pleins pouvoirs)
+    if (passenger_id && !hasFullAccess) {
       // Récupérer le passager avec son baggage_count
       const { data: passenger, error: passengerError } = await supabase
         .from('passengers')

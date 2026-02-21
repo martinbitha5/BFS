@@ -189,29 +189,54 @@ router.get('/by-baggage-tag', airport_restriction_middleware_1.requireAirportCod
         // Trouver le passager dont le tag correspond
         const tagBaseNum = parseInt(tagBase, 10);
         let foundPassenger = null;
+        // 🔍 Vérification spéciale: chercher d'abord les passagers avec baggage_count = 0
         for (const passenger of passengers || []) {
-            const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
-            const baggageCount = passenger.baggage_count || 1;
-            if (isNaN(passengerBaseNum))
-                continue;
-            // Verifier si le tag scanne correspond a un des bagages attendus
-            for (let i = 0; i < baggageCount; i++) {
-                const expectedBaseNum = passengerBaseNum + i;
-                if (tagBaseNum === expectedBaseNum) {
+            if (passenger.baggage_count === 0) {
+                const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
+                if (!isNaN(passengerBaseNum) && tagBaseNum === passengerBaseNum) {
+                    console.log(`[PASSENGER API] 🚨 Passager avec baggage_count = 0 trouvé: ${passenger.full_name}`);
                     foundPassenger = passenger;
                     break;
                 }
             }
-            if (foundPassenger)
-                break;
+        }
+        // Si pas trouvé, chercher normalement dans les plages de bagages
+        if (!foundPassenger) {
+            for (const passenger of passengers || []) {
+                const passengerBaseNum = parseInt(passenger.baggage_base_number, 10);
+                const baggageCount = passenger.baggage_count || 1;
+                if (isNaN(passengerBaseNum))
+                    continue;
+                // Verifier si le tag scanne correspond a un des bagages attendus
+                for (let i = 0; i < baggageCount; i++) {
+                    const expectedBaseNum = passengerBaseNum + i;
+                    if (tagBaseNum === expectedBaseNum) {
+                        foundPassenger = passenger;
+                        break;
+                    }
+                }
+                if (foundPassenger)
+                    break;
+            }
         }
         if (!foundPassenger) {
+            console.log(`[PASSENGER API] Passager non trouvé pour tag: ${tagBase}`);
             return res.status(404).json({
                 success: false,
                 error: 'Aucun passager trouve pour ce tag'
             });
         }
         console.log(`[PASSENGER API] Passager trouve: ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr})`);
+        // 🚨 Vérification spéciale: Si le passager a baggage_count = 0, c'est une fraude
+        if (foundPassenger.baggage_count === 0) {
+            console.log(`[PASSENGER API] 🚨 FRAUDE DÉTECTÉE: Passager ${foundPassenger.full_name} a baggage_count = 0!`);
+            return res.status(403).json({
+                success: false,
+                error: 'FRAUDE_DETECTEE',
+                message: `Le passager ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr}) n'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.`,
+                data: foundPassenger
+            });
+        }
         res.json({
             success: true,
             data: foundPassenger

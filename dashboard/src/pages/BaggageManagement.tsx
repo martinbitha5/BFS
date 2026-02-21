@@ -66,6 +66,11 @@ export default function BaggageManagement() {
     }
   }, [selectedPassenger]);
 
+  // Vérifier si l'utilisateur a des droits complets (supervisor, support, baggage_dispute)
+  const hasFullAccess = () => {
+    return user && ['supervisor', 'support', 'baggage_dispute'].includes(user.role);
+  };
+
   const loadPassengers = async () => {
     setLoading(true);
     try {
@@ -127,6 +132,9 @@ export default function BaggageManagement() {
     } catch (err: any) {
       if (err.response?.data?.requiresAuthorization) {
         setError(`Autorisation requise: ${err.response.data.error}. Le passager a déclaré ${err.response.data.declaredCount} bagages et vous essayez d'en ajouter ${err.response.data.requestedCount}.`);
+      } else if (err.response?.status === 409) {
+        // Erreur de duplication de tag RFID
+        setError(err.response.data.error || 'Ce tag RFID est déjà utilisé');
       } else {
         setError(err.response?.data?.error || 'Erreur lors de l\'ajout du bagage');
       }
@@ -162,7 +170,45 @@ export default function BaggageManagement() {
         setManualTagForm({ tag_number: '', flight_number: '', weight: '', origin: '', destination: '', notes: '' });
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erreur lors de la création de l\'étiquette');
+      if (err.response?.status === 409) {
+        // Erreur de duplication de tag RFID
+        setError(err.response.data.error || 'Ce tag RFID est déjà utilisé');
+      } else {
+        setError(err.response?.data?.error || 'Erreur lors de la création de l\'étiquette');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRequestAuthorization = async () => {
+    if (!selectedPassenger || !newBaggageForm.tag_number) return;
+
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Créer une demande d'autorisation via la route dédiée
+      const response = await api.post('/api/v1/baggage-authorization/requests/manual', {
+        pnr: selectedPassenger.pnr,
+        tag_number: newBaggageForm.tag_number,
+        additional_baggage_count: 1,
+        notes: newBaggageForm.notes || 'Demande créée depuis le dashboard'
+      });
+
+      if ((response.data as any).success) {
+        setSuccess('Demande d\'autorisation créée avec succès. Elle sera examinée par le support.');
+        setNewBaggageForm({ tag_number: '', weight: '', notes: '' });
+        // Recharger les passagers pour mettre à jour les informations
+        loadPassengers();
+      }
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        setError(err.response.data.error || 'Ce tag RFID est déjà utilisé dans une demande');
+      } else {
+        setError(err.response?.data?.error || 'Erreur lors de la création de la demande d\'autorisation');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -350,23 +396,37 @@ export default function BaggageManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Ajout en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Ajouter le bagage
-                    </>
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Ajout en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Ajouter le bagage
+                      </>
+                    )}
+                  </button>
+                  
+                  {error && error.includes('Autorisation requise') && !hasFullAccess() && (
+                    <button
+                      type="button"
+                      onClick={handleRequestAuthorization}
+                      disabled={submitting}
+                      className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    >
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      Demander une autorisation
+                    </button>
                   )}
-                </button>
+                </div>
               </form>
             )}
           </div>

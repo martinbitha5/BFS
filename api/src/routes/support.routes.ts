@@ -51,6 +51,20 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
       });
     }
 
+    // Vérifier si le tag RFID existe déjà
+    const { data: existingBaggage } = await supabase
+      .from('baggages')
+      .select('id, tag_number')
+      .eq('tag_number', tag_number)
+      .single();
+
+    if (existingBaggage) {
+      return res.status(409).json({
+        success: false,
+        error: `Le tag RFID ${tag_number} est déjà utilisé par un autre bagage. Veuillez utiliser un tag différent.`
+      });
+    }
+
     // Créer le bagage
     const { data: baggage, error: baggageError } = await supabase
       .from('baggages')
@@ -66,6 +80,13 @@ router.post('/baggages/create', requireAirportCode, async (req: Request & { user
       .single();
 
     if (baggageError) {
+      // Gérer spécifiquement l'erreur de duplication
+      if (baggageError.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          error: `Le tag RFID ${tag_number} est déjà utilisé. Veuillez utiliser un tag différent.`
+        });
+      }
       throw baggageError;
     }
 
