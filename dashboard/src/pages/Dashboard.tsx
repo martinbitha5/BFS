@@ -1,5 +1,5 @@
 import { AlertCircle, Package, Plane, RefreshCw, TrendingUp, Users } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
@@ -59,6 +59,8 @@ interface StatusData {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all';
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [departures, setDepartures] = useState<Passenger[]>([]);
@@ -66,6 +68,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
+  const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const fetchData = useCallback(async () => {
     if (!user?.airport_code) {
@@ -131,18 +135,86 @@ export default function Dashboard() {
     fetchData();
   }, [fetchData]);
 
+  const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    switch (period) {
+      case 'today':
+        return { start: today, end: tomorrow };
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return { start: yesterday, end: today };
+      case 'week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return { start: weekAgo, end: tomorrow };
+      case 'month':
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return { start: monthAgo, end: tomorrow };
+      case 'custom':
+        if (customDate) {
+          const selectedDate = new Date(customDate);
+          const nextDay = new Date(selectedDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          return { start: selectedDate, end: nextDay };
+        }
+        return null;
+      case 'all':
+        return null;
+    }
+  };
+
+  const isWithinPeriod = (dateStr: string | null, period: PeriodFilter): boolean => {
+    if (!dateStr) return false;
+    const range = getDateRange(period);
+    if (!range) return true;
+    
+    const date = new Date(dateStr);
+    return date >= range.start && date < range.end;
+  };
+
+  const getPeriodLabel = (period: PeriodFilter): string => {
+    switch (period) {
+      case 'today': return "Aujourd'hui";
+      case 'yesterday': return 'Hier';
+      case 'week': return 'Cette semaine';
+      case 'month': return 'Ce mois';
+      case 'custom': return 'Personnalisé';
+      case 'all': return 'Tout';
+    }
+  };
+
+  // Recalculer les données filtrées quand le filtre change
+  const filteredDepartures = useMemo(() => 
+    departures.filter(p => 
+      isWithinPeriod(p.checkedInAt, periodFilter) || 
+      isWithinPeriod(p.boarding_status?.[0]?.boarded_at || null, periodFilter)
+    ), [departures, periodFilter, customDate]);
+
+  const filteredArrivals = useMemo(() => 
+    arrivals.filter(p => 
+      isWithinPeriod(p.checkedInAt, periodFilter) || 
+      isWithinPeriod(p.boarding_status?.[0]?.boarded_at || null, periodFilter)
+    ), [arrivals, periodFilter, customDate]);
+
   const stats = (): DashboardStats => {
-    console.log('[DEBUG] Calcul stats - departures:', departures.length, 'arrivals:', arrivals.length);
-    const allPassengers = [...departures, ...arrivals];
+    console.log('[DEBUG] Calcul stats - departures filtrés:', filteredDepartures.length, 'arrivals filtrés:', filteredArrivals.length);
+    
+    const allPassengers = [...filteredDepartures, ...filteredArrivals];
     const allBaggages = allPassengers.flatMap(p => p.baggages || []);
     
-    console.log('[DEBUG] Total passagers:', allPassengers.length);
-    console.log('[DEBUG] Total bagages:', allBaggages.length);
-    console.log('[DEBUG] Passagers enregistrés:', allPassengers.filter(p => p.checkedInAt).length);
-    console.log('[DEBUG] Passagers embarqués:', allPassengers.filter(p => p.boarding_status?.[0]?.boarded).length);
+    console.log('[DEBUG] Total passagers filtrés:', allPassengers.length);
+    console.log('[DEBUG] Total bagages filtrés:', allBaggages.length);
+    console.log('[DEBUG] Passagers enregistrés filtrés:', allPassengers.filter(p => p.checkedInAt).length);
+    console.log('[DEBUG] Passagers embarqués filtrés:', allPassengers.filter(p => p.boarding_status?.[0]?.boarded).length);
 
     const result = {
-      totalFlights: new Set([...departures, ...arrivals].map(p => p.flightNumber)).size,
+      totalFlights: new Set([...filteredDepartures, ...filteredArrivals].map(p => p.flightNumber)).size,
       totalPassengers: allPassengers.length,
       totalBaggages: allBaggages.length,
       checkedInPassengers: allPassengers.filter(p => p.checkedInAt).length,
@@ -152,13 +224,13 @@ export default function Dashboard() {
       avgBaggagesPerPassenger: allPassengers.length > 0 ? Math.round((allBaggages.length / allPassengers.length) * 10) / 10 : 0
     };
     
-    console.log('[DEBUG] Stats calculées:', result);
+    console.log('[DEBUG] Stats calculées filtrées:', result);
     return result;
   };
 
   const flightChartData = (): FlightData[] => {
     const flightMap = new Map<string, FlightData>();
-    const allPassengers = [...departures, ...arrivals];
+    const allPassengers = [...filteredDepartures, ...filteredArrivals];
 
     allPassengers.forEach(p => {
       if (!flightMap.has(p.flightNumber)) {
@@ -174,14 +246,14 @@ export default function Dashboard() {
       data.passengers += 1;
       if (p.boarding_status?.[0]?.boarded) data.boarded += 1;
       data.baggages += (p.baggages?.length || 0);
-      data.delivered += (p.baggages?.filter(b => b.delivered_at).length || 0);
+      data.delivered += (p.baggages?.filter((baggage: any) => baggage.delivered_at).length || 0);
     });
 
     return Array.from(flightMap.values()).slice(0, 10);
   };
 
   const statusDistribution = (): StatusData[] => {
-    const allBaggages = [...departures, ...arrivals].flatMap(p => p.baggages || []);
+    const allBaggages = [...filteredDepartures, ...filteredArrivals].flatMap(p => p.baggages || []);
     const statusMap = new Map<string, number>();
 
     allBaggages.forEach(b => {
@@ -199,7 +271,7 @@ export default function Dashboard() {
   };
 
   const passengersVsBaggages = (): any[] => {
-    const allPassengers = [...departures, ...arrivals];
+    const allPassengers = [...filteredDepartures, ...filteredArrivals];
     const flightMap = new Map<string, { flight: string; passengers: number; baggages: number }>();
 
     allPassengers.forEach(p => {
@@ -219,8 +291,9 @@ export default function Dashboard() {
   };
 
   const boardingProgress = (): any[] => {
-    const boardedCount = stats().boardedPassengers;
-    const unbordedCount = stats().totalPassengers - boardedCount;
+    const allPassengers = [...filteredDepartures, ...filteredArrivals];
+    const boardedCount = allPassengers.filter(p => p.boarding_status?.[0]?.boarded).length;
+    const unbordedCount = allPassengers.length - boardedCount;
 
     return [
       { name: 'Embarqués', value: boardedCount, color: '#10b981' },
@@ -257,14 +330,40 @@ export default function Dashboard() {
             )}
           </p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={refreshing}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Actualisation...' : 'Actualiser'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Filtres de période */}
+          <div className="flex gap-2">
+            {(['today', 'yesterday', 'week', 'month', 'custom', 'all'] as const).map(period => (
+              <button
+                key={period}
+                onClick={() => setPeriodFilter(period)}
+                className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                  periodFilter === period
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white/5 text-white/70 hover:bg-white/10'
+                }`}
+              >
+                {getPeriodLabel(period)}
+              </button>
+            ))}
+            {periodFilter === 'custom' && (
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="px-3 py-1.5 rounded text-sm bg-white/5 border border-white/10 text-white"
+              />
+            )}
+          </div>
+          <button
+            onClick={fetchData}
+            disabled={refreshing}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Actualisation...' : 'Actualiser'}
+          </button>
+        </div>
       </div>
 
       {/* Error Message */}
