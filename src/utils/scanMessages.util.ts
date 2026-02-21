@@ -110,7 +110,7 @@ export const getScanResultMessage = (
 export const getScanErrorMessage = (
   role: UserRole,
   action: 'checkin' | 'boarding' | 'baggage' | 'arrival',
-  errorType: 'duplicate' | 'not_found' | 'wrong_airport' | 'not_checked_in' | 'already_processed' | 'unknown'
+  errorType: 'duplicate' | 'not_found' | 'wrong_airport' | 'not_checked_in' | 'already_processed' | 'fraud_zero_baggage' | 'fraud_pnr_mismatch' | 'unknown'
 ): ScanResultMessage => {
   switch (role) {
     case 'checkin':
@@ -152,6 +152,18 @@ export const getScanErrorMessage = (
               title: 'Déjà scanné',
               message: 'Ce tag RFID est déjà enregistré',
               type: 'warning',
+            };
+          case 'fraud_zero_baggage':
+            return {
+              title: '🚨 FRAUDE DÉTECTÉE',
+              message: 'Ce passager n\'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement. Action: Déclasser et contacter la sécurité.',
+              type: 'error',
+            };
+          case 'fraud_pnr_mismatch':
+            return {
+              title: '⚠️ FRAUDE POTENTIELLE',
+              message: 'Le PNR appartient à un passager sans bagage. Ce bagage a été imprimé frauduleusement après le check-in.',
+              type: 'error',
             };
           default:
             return {

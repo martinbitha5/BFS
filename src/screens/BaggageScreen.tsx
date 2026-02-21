@@ -244,7 +244,31 @@ export default function BaggageScreen({ navigation }: Props) {
             if (result.data) {
               console.log('[BAGGAGE] Passager trouve via API:', result.data.full_name);
               
-              // 🔴 FIX: Valider que fullName n'est pas vide avant de créer le passager
+              // � DÉTECTION DE FRAUDE: Vérifier si le passager a baggage_count = 0
+              if (result.data.baggage_count === 0) {
+                console.log('[BAGGAGE] 🚨 FRAUDE DÉTECTÉE: Passager avec baggage_count = 0 trouvé via tag!');
+                await playErrorSound();
+                setProcessing(false);
+                
+                Alert.alert(
+                  '🚨 FRAUDE DÉTECTÉE',
+                  `Le passager ${result.data.full_name} (PNR: ${result.data.pnr}) n'a AUCUN bagage autorisé (${result.data.baggage_count} bagages attendus).\n\nCe bagage a été imprimé frauduleusement après le check-in.\n\nAction requise: Déclasser ce bagage et contacter la sécurité.`,
+                  [
+                    {
+                      text: 'Compris (Déclasser)',
+                      onPress: () => {
+                        isProcessingRef.current = false;
+                        setScanned(false);
+                        setShowScanner(true);
+                      },
+                    },
+                  ],
+                  { cancelable: false }
+                );
+                return; // 🛑 Arrêter le traitement
+              }
+              
+              // � FIX: Valider que fullName n'est pas vide avant de créer le passager
               const fullName = result.data.full_name?.trim() || '';
               
               if (!fullName) {
@@ -281,6 +305,31 @@ export default function BaggageScreen({ navigation }: Props) {
                 passenger = await databaseServiceInstance.getPassengerById(passengerId);
               }
             }
+          } else if (response.status === 403) {
+            // 🚨 Erreur spéciale: Fraude détectée côté serveur
+            const errorResult = await response.json();
+            console.log('[BAGGAGE] 🚨 FRAUDE DÉTECTÉE par le serveur:', errorResult.message);
+            await playErrorSound();
+            setProcessing(false);
+            
+            Alert.alert(
+              '🚨 FRAUDE DÉTECTÉE',
+              errorResult.message || 'Ce passager n\'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.',
+              [
+                {
+                  text: 'Compris (Déclasser)',
+                  onPress: () => {
+                    isProcessingRef.current = false;
+                    setScanned(false);
+                    setShowScanner(true);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+            return; // 🛑 Arrêter le traitement
+          } else {
+            console.log(`[BAGGAGE] Passager non trouvé via API (status: ${response.status})`);
           }
         }
       } catch (apiError) {
@@ -306,21 +355,27 @@ export default function BaggageScreen({ navigation }: Props) {
         await playErrorSound();
         setProcessing(false);
         
+        // 🔍 DÉTECTION SIMPLIFIÉE: Tag non reconnu = potentiellement suspect
+        console.log(`[BAGGAGE] 🔍 Tag ${tagNumber} non reconnu - bagage suspect`);
+        
+        const alertTitle = '⚠️ TAG NON RECONNU';
+        const alertMessage = `Le tag ${tagNumber} n'appartient à aucun passager enregistré.\n\n⚠️ Ce bagage est suspect - il pourrait s'agir d'une fraude.\n\nVérifiez que le passager a bien fait son check-in.\n\nAction: Déclasser ce bagage si nécessaire.`;
+        
         Alert.alert(
-          'TAG NON RECONNU',
-          `Le tag ${tagNumber} n'appartient a aucun passager enregistre.\n\nVerifiez que le passager a bien fait son check-in.`,
-          [
-            {
-              text: 'Nouveau scan',
-              onPress: () => {
-                isProcessingRef.current = false;
-                setScanned(false);
-                setShowScanner(true);
+            alertTitle,
+            alertMessage,
+            [
+              {
+                text: 'Compris (Déclasser)',
+                onPress: () => {
+                  isProcessingRef.current = false;
+                  setScanned(false);
+                  setShowScanner(true);
+                },
               },
-            },
-          ],
-          { cancelable: false }
-        );
+            ],
+            { cancelable: false }
+          );
         return;
       }
 
@@ -360,6 +415,35 @@ export default function BaggageScreen({ navigation }: Props) {
       
       // Récupérer le nombre de bagages attendus depuis les données du passager
       const expectedBaggageCount = passenger.baggageCount || 1;
+      
+      console.log(`[BAGGAGE] 🔍 Vérification quota: passager ${passenger.fullName} (${passenger.pnr}) - baggageCount attendu: ${expectedBaggageCount}, déjà enregistrés: ${baggageCount}`);
+      
+      // 🚨 DÉTECTION FRAUDE: Passager avec baggage_count = 0 qui essaie d'enregistrer un bagage
+      if (expectedBaggageCount === 0) {
+        await playErrorSound();
+        setProcessing(false);
+        
+        Alert.alert(
+          '🚨 FRAUDE DÉTECTÉE',
+          `Le passager ${passenger.fullName} (PNR: ${passenger.pnr}) n'a AUCUN bagage autorisé (${expectedBaggageCount} bagages attendus).
+
+Ce bagage a été imprimé frauduleusement après le check-in.
+
+Action requise: Déclasser ce bagage et contacter la sécurité.`,
+          [
+            {
+              text: 'Compris (Déclasser)',
+              onPress: () => {
+                isProcessingRef.current = false;
+                setScanned(false);
+                setShowScanner(true);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
       
       // Si le passager a déjà atteint ou dépassé son quota de bagages
       if (baggageCount >= expectedBaggageCount) {

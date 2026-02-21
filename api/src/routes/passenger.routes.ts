@@ -200,6 +200,17 @@ router.get('/by-baggage-tag', requireAirportCode, async (req: Request & { userAi
     
     console.log(`[PASSENGER API] Passager trouve: ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr})`);
     
+    // 🚨 Vérification spéciale: Si le passager a baggage_count = 0, c'est une fraude
+    if (foundPassenger.baggage_count === 0) {
+      console.log(`[PASSENGER API] 🚨 FRAUDE DÉTECTÉE: Passager ${foundPassenger.full_name} a baggage_count = 0!`);
+      return res.status(403).json({
+        success: false,
+        error: 'FRAUDE_DETECTEE',
+        message: `Le passager ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr}) n'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.`,
+        data: foundPassenger
+      });
+    }
+    
     res.json({
       success: true,
       data: foundPassenger
