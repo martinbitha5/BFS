@@ -2,6 +2,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Airlines from './pages/Airlines';
+import Audit from './pages/Audit';
 import BaggageAuthorizationRequests from './pages/BaggageAuthorizationRequests';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -106,6 +107,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <BaggageAuthorizationRequests />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Journal d'Audit */}
+          <Route
+            path="/audit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Audit />
                 </Layout>
               </ProtectedRoute>
             }

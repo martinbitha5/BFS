@@ -58,24 +58,7 @@ const AIRPORTS = [
   { code: 'JNB', name: 'Johannesburg' },
 ];
 
-const AIRLINES = [
-  { code: 'ET', name: 'Ethiopian Airlines' },
-  { code: 'KQ', name: 'Kenya Airways' },
-  { code: 'TP', name: 'TAP Air Portugal' },
-  { code: 'AF', name: 'Air France' },
-  { code: 'BA', name: 'British Airways' },
-  { code: 'LH', name: 'Lufthansa' },
-  { code: 'MS', name: 'EgyptAir' },
-  { code: 'ZA', name: 'Precision Air' },
-  { code: 'TC', name: 'Air Tanzania' },
-  { code: 'RA', name: 'Royal Air Maroc' },
-  { code: 'SA', name: 'South African Airways' },
-  { code: 'CW', name: 'Brussels Airlines' },
-  { code: 'SN', name: 'Brussels Airlines' },
-  { code: 'DL', name: 'Delta Air Lines' },
-  { code: 'UA', name: 'United Airlines' },
-  { code: 'AA', name: 'American Airlines' },
-];
+
 
 export default function Users() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -131,6 +114,11 @@ export default function Users() {
 
     if (newUser.role === 'supervisor' && !newUser.airline_code) {
       setError('Le code de compagnie aérienne est requis pour les superviseurs');
+      return;
+    }
+
+    if (newUser.role === 'supervisor' && newUser.airline_code && !/^[A-Z]{2}$/.test(newUser.airline_code)) {
+      setError('Le code compagnie doit contenir exactement 2 lettres majuscules (ex: AF, KQ, LH)');
       return;
     }
 
@@ -421,18 +409,13 @@ export default function Users() {
               {newUser.role === 'supervisor' && (
                 <div>
                   <label className="block text-white/80 text-sm mb-1">Compagnie Aérienne *</label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Ex: AF, KQ, LH ou code personnalisé"
                     value={newUser.airline_code}
-                    onChange={(e) => setNewUser({ ...newUser, airline_code: e.target.value })}
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                  >
-                    <option value="" className="bg-slate-800">Sélectionner une compagnie</option>
-                    {AIRLINES.map(airline => (
-                      <option key={airline.code} value={airline.code} className="bg-slate-800">
-                        {airline.code} - {airline.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) => setNewUser({ ...newUser, airline_code: e.target.value.toUpperCase() })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40"
+                  />
                 </div>
               )}
             </div>

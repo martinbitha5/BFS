@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Support Portal - Formulaire Utilisateur</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .role-section { background: #f9f9f9; padding: 15px; border-radius: 4px; margin-top: 10px; }
+        .hidden { display: none; }
+        .validation { color: #d32f2f; font-size: 14px; margin-top: 5px; }
+        .success { color: #388e3c; font-size: 14px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Formulaire Support Portal</h1>
+        <p>Ce formulaire simule le nouveau champ compagnie avec saisie libre.</p>
+        
+        <form id="userForm">
+            <div class="form-group">
+                <label for="role">Rôle *</label>
+                <select id="role" required>
+                    <option value="">Sélectionner un rôle</option>
+                    <option value="supervisor">Superviseur</option>
+                    <option value="baggage_dispute">Litige Bagage</option>
+                    <option value="support">Support</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="airport">Aéroport *</label>
+                <select id="airport" required>
+                    <option value="">Sélectionner un aéroport</option>
+                    <option value="FIH">FIH - Kinshasa N'Djili</option>
+                    <option value="FBM">FBM - Lubumbashi</option>
+                    <option value="CDG">CDG - Paris Charles de Gaulle</option>
+                </select>
+            </div>
+            
+            <div id="airlineSection" class="role-section hidden">
+                <div class="form-group">
+                    <label for="airline">Compagnie Aérienne *</label>
+                    <input type="text" id="airline" placeholder="Ex: AF, KQ, LH ou code personnalisé" maxlength="2">
+                    <div id="airlineValidation" class="validation"></div>
+                </div>
+            </div>
+            
+            <button type="submit">Créer Utilisateur</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const roleSelect = document.getElementById('role');
+        const airportSelect = document.getElementById('airport');
+        const airlineInput = document.getElementById('airline');
+        const airlineSection = document.getElementById('airlineSection');
+        const airlineValidation = document.getElementById('airlineValidation');
+        const result = document.getElementById('result');
+        const form = document.getElementById('userForm');
+
+        function validateAirlineCode(code) {
+            if (!code) return false;
+            return /^[A-Z]{2}$/.test(code);
+        }
+
+        function updateForm() {
+            const role = roleSelect.value;
+            
+            if (role === 'supervisor') {
+                airlineSection.classList.remove('hidden');
+                airlineInput.required = true;
+            } else {
+                airlineSection.classList.add('hidden');
+                airlineInput.required = false;
+                airlineValidation.textContent = '';
+            }
+        }
+
+        roleSelect.addEventListener('change', updateForm);
+
+        airlineInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+            const code = this.value;
+            
+            if (code.length === 2) {
+                if (validateAirlineCode(code)) {
+                    airlineValidation.textContent = `✓ Code valide: ${code}`;
+                    airlineValidation.className = 'success';
+                } else {
+                    airlineValidation.textContent = '✗ Le code doit contenir exactement 2 lettres majuscules';
+                    airlineValidation.className = 'validation';
+                }
+            } else if (code.length > 0) {
+                airlineValidation.textContent = 'Code invalide - 2 lettres requises';
+                airlineValidation.className = 'validation';
+            } else {
+                airlineValidation.textContent = '';
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const role = roleSelect.value;
+            const airport = airportSelect.value;
+            const airline = airlineInput.value;
+            
+            if (role === 'supervisor' && !validateAirlineCode(airline)) {
+                result.innerHTML = '<div class="validation">Erreur: Le code compagnie doit être valide (2 lettres majuscules)</div>';
+                return;
+            }
+            
+            result.innerHTML = `
+                <div class="success">
+                    <strong>Utilisateur créé avec succès!</strong><br>
+                    Rôle: ${role}<br>
+                    Aéroport: ${airport}<br>
+                    Compagnie: ${airline || 'N/A'}
+                </div>
+            `;
+        });
+
+        // Initialisation
+        updateForm();
+    </script>
+</body>
+</html>

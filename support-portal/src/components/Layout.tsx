@@ -1,4 +1,4 @@
-import { Briefcase, Building2, LogOut, Menu, Package, Settings, Users, X } from 'lucide-react';
+import { Activity, Briefcase, Building2, LogOut, Menu, Package, Settings, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/airlines', label: 'Compagnies', icon: Building2 },
     { path: '/passengers', label: 'Passagers & Bagages', icon: Briefcase },
     { path: '/baggage-authorization', label: 'Autorisations Bagages', icon: Package },
+    { path: '/audit', label: 'Journal d\'Audit', icon: Activity },
   ];
 
   const isActive = (path: string) => location.pathname === path;
