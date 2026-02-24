@@ -32,31 +32,10 @@ export class AuditService {
       const response = await api.get(`/api/v1/audit?${params}`);
       const responseData = response.data as AuditResponse;
       
-      // Filtrer automatiquement les actions du support (sauf superviseur)
-      const filteredData = responseData.data.filter((log: AuditLog) => {
-        // Garder uniquement :
-        // 1. Les actions de superviseur (user_role = 'supervisor')
-        // 2. Les actions des utilisateurs de l'application mobile (user_role = 'agent', 'user', etc.)
-        // 3. Exclure les actions du support staff (user_role = 'support', 'admin')
-        
-        if (log.user_role === 'support' || log.user_role === 'admin') {
-          return false; // Exclure le support staff
-        }
-        
-        // Si c'est un superviseur ou un agent/utilisateur, on garde
-        return ['supervisor', 'agent', 'user', 'passenger'].includes(log.user_role || '');
-      });
-
-      // Mettre à jour la réponse avec les données filtrées
-      return {
-        ...responseData,
-        data: filteredData,
-        pagination: {
-          ...responseData.pagination,
-          total: filteredData.length,
-          totalPages: Math.ceil(filteredData.length / limit)
-        }
-      };
+      // Pour l'instant, on retourne tous les logs sans filtrer par rôle
+      // car le rôle n'est pas disponible dans la base de données audit_logs
+      // Le filtrage pourra être ajouté plus tard si nécessaire
+      return responseData;
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       throw error;
@@ -87,20 +66,10 @@ export class AuditService {
       const response = await api.get(`/api/v1/audit?${params}`);
       const responseData = response.data as AuditResponse;
       
-      // Filtrer automatiquement les actions du support (sauf superviseur)
-      const filteredData = responseData.data.filter((log: AuditLog) => {
-        // Garder uniquement :
-        // 1. Les actions de superviseur (user_role = 'supervisor')
-        // 2. Les actions des utilisateurs de l'application mobile (user_role = 'agent', 'user', etc.)
-        // 3. Exclure les actions du support staff (user_role = 'support', 'admin')
-        
-        if (log.user_role === 'support' || log.user_role === 'admin') {
-          return false; // Exclure le support staff
-        }
-        
-        // Si c'est un superviseur ou un agent/utilisateur, on garde
-        return ['supervisor', 'agent', 'user', 'passenger'].includes(log.user_role || '');
-      });
+      // Pour l'instant, on retourne tous les logs sans filtrer par rôle
+      // car le rôle n'est pas disponible dans la base de données audit_logs
+      // Le filtrage pourra être ajouté plus tard si nécessaire
+      const filteredData = responseData.data;
 
       return filteredData;
     } catch (error) {

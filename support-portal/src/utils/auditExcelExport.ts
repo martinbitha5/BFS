@@ -20,20 +20,9 @@ export const exportAuditLogsToExcel = async (
     throw new Error('Aucun log d\'audit à exporter');
   }
 
-  // Filtrer les logs pour exclure les actions du support (sauf superviseur)
-  const filteredLogs = auditLogs.filter(log => {
-    // Garder uniquement :
-    // 1. Les actions de superviseur (user_role = 'supervisor')
-    // 2. Les actions des utilisateurs de l'application mobile (user_role = 'agent', 'user', etc.)
-    // 3. Exclure les actions du support staff (user_role = 'support')
-    
-    if (log.user_role === 'support' || log.user_role === 'admin') {
-      return false; // Exclure le support staff
-    }
-    
-    // Si c'est un superviseur ou un agent/utilisateur, on garde
-    return ['supervisor', 'agent', 'user', 'passenger'].includes(log.user_role || '');
-  });
+  // Pour l'instant, on exporte tous les logs sans filtrer par rôle
+  // car le rôle n'est pas disponible dans la base de données audit_logs
+  const filteredLogs = auditLogs;
 
   if (filteredLogs.length === 0) {
     throw new Error('Aucun log pertinent à exporter (seul le superviseur et les utilisateurs de l\'application sont visibles)');
@@ -127,11 +116,11 @@ export const exportAuditLogsToExcel = async (
   infoSheet.getCell('A14').value = 'STATISTIQUES D\'AUDIT';
   infoSheet.getCell('A14').font = { bold: true, size: 14, color: { argb: 'FF2563EB' } };
 
-  // Calculer les statistiques
+  // Calculer les statistiques (sans filtrage par rôle)
   const totalLogs = filteredLogs.length;
-  const supervisorLogs = filteredLogs.filter(log => log.user_role === 'supervisor').length;
-  const agentLogs = filteredLogs.filter(log => log.user_role === 'agent').length;
-  const userLogs = filteredLogs.filter(log => log.user_role === 'user').length;
+  const supervisorLogs = 0; // Non disponible sans user_role
+  const agentLogs = 0; // Non disponible sans user_role
+  const userLogs = 0; // Non disponible sans user_role
   
   const uniqueUsers = new Set(filteredLogs.map(log => log.user_id)).size;
   const uniqueActions = new Set(filteredLogs.map(log => log.action)).size;
@@ -168,18 +157,15 @@ export const exportAuditLogsToExcel = async (
     properties: { tabColor: { argb: 'FF22C55E' } }
   });
 
-  // En-têtes
+  // En-têtes (sans colonnes non disponibles)
   const headers = [
     'Date & Heure',
     'Utilisateur',
-    'Rôle',
     'Action',
     'Type d\'Entité',
     'Entité ID',
     'Description',
-    'Détails',
-    'Aéroport',
-    'Adresse IP'
+    'Aéroport'
   ];
   logsSheet.addRow(headers);
 
@@ -194,49 +180,27 @@ export const exportAuditLogsToExcel = async (
   headerRow.height = 30;
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-  // Ajouter les données
+  // Ajouter les données (sans colonnes non disponibles)
   filteredLogs.forEach((log) => {
-    const row = logsSheet.addRow([
+    logsSheet.addRow([
       new Date(log.created_at).toLocaleString('fr-FR'),
       log.user_name || log.user_email || 'Utilisateur inconnu',
-      log.user_role || '-',
       log.action,
       log.entity_type || '-',
       log.entity_id || '-',
       log.description || '-',
-      log.details ? JSON.stringify(log.details, null, 2) : '-',
-      log.airport_code || '-',
-      log.ip_address || '-'
+      log.airport_code || '-'
     ]);
-
-    // Appliquer des couleurs selon le rôle
-    const roleCell = row.getCell(3); // Colonne Rôle
-    if (log.user_role === 'supervisor') {
-      roleCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF90EE90' } // Vert clair pour superviseur
-      };
-    } else if (log.user_role === 'agent') {
-      roleCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFFFF99' } // Jaune clair pour agents
-      };
-    }
   });
 
-  // Largeurs de colonnes optimisées
+  // Largeurs de colonnes optimisées (sans colonnes supprimées)
   logsSheet.getColumn(1).width = 20;  // Date & Heure
   logsSheet.getColumn(2).width = 25;  // Utilisateur
-  logsSheet.getColumn(3).width = 15;  // Rôle
-  logsSheet.getColumn(4).width = 20;  // Action
-  logsSheet.getColumn(5).width = 20;  // Type d'Entité
-  logsSheet.getColumn(6).width = 15;  // Entité ID
-  logsSheet.getColumn(7).width = 35;  // Description
-  logsSheet.getColumn(8).width = 40;  // Détails
-  logsSheet.getColumn(9).width = 12;  // Aéroport
-  logsSheet.getColumn(10).width = 15; // Adresse IP
+  logsSheet.getColumn(3).width = 20;  // Action
+  logsSheet.getColumn(4).width = 20;  // Type d'Entité
+  logsSheet.getColumn(5).width = 15;  // Entité ID
+  logsSheet.getColumn(6).width = 35;  // Description
+  logsSheet.getColumn(7).width = 12;  // Aéroport
 
   // Bordures et alignement
   logsSheet.eachRow((row, rowNumber) => {
@@ -258,26 +222,17 @@ export const exportAuditLogsToExcel = async (
     properties: { tabColor: { argb: 'FFF59E0B' } }
   });
 
-  // Calculer les statistiques par rôle
-  const roleStats = filteredLogs.reduce((acc, log) => {
-    const role = log.user_role || 'Inconnu';
-    if (!acc[role]) {
-      acc[role] = {
-        count: 0,
-        actions: new Set<string>(),
-        entities: new Set<string>(),
-        users: new Set<string>()
-      };
-    }
-    acc[role].count++;
-    acc[role].actions.add(log.action);
-    if (log.entity_type) acc[role].entities.add(log.entity_type);
-    if (log.user_id) acc[role].users.add(log.user_id);
+  // Calculer les statistiques globales (sans rôle)
+  const globalStats = filteredLogs.reduce((acc, log) => {
+    acc.count++;
+    acc.actions.add(log.action);
+    if (log.entity_type) acc.entities.add(log.entity_type);
+    if (log.user_id) acc.users.add(log.user_id);
     return acc;
-  }, {} as Record<string, { count: number; actions: Set<string>; entities: Set<string>; users: Set<string> }>);
+  }, { count: 0, actions: new Set<string>(), entities: new Set<string>(), users: new Set<string>() });
 
-  // En-têtes du résumé
-  summarySheet.addRow(['Rôle', 'Nombre d\'actions', 'Actions différentes', 'Types d\'entités', 'Utilisateurs uniques']);
+  // En-têtes du résumé (sans colonne rôle)
+  summarySheet.addRow(['Nombre d\'actions', 'Actions différentes', 'Types d\'entités', 'Utilisateurs uniques']);
   const summaryHeaderRow = summarySheet.getRow(1);
   summaryHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
   summaryHeaderRow.fill = {
@@ -288,39 +243,19 @@ export const exportAuditLogsToExcel = async (
   summaryHeaderRow.height = 25;
   summaryHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-  // Données du résumé
-  Object.entries(roleStats).forEach(([role, stats]) => {
-    const row = summarySheet.addRow([
-      role,
-      stats.count,
-      stats.actions.size,
-      stats.entities.size,
-      stats.users.size
-    ]);
-
-    // Colorer selon le rôle
-    const roleCell = row.getCell(1);
-    if (role === 'supervisor') {
-      roleCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF90EE90' }
-      };
-    } else if (role === 'agent') {
-      roleCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFFFF99' }
-      };
-    }
-  });
+  // Données du résumé (statistiques globales)
+  summarySheet.addRow([
+    globalStats.count,
+    globalStats.actions.size,
+    globalStats.entities.size,
+    globalStats.users.size
+  ]);
 
   // Largeurs et style
-  summarySheet.getColumn(1).width = 20; // Rôle
-  summarySheet.getColumn(2).width = 20; // Nombre d'actions
-  summarySheet.getColumn(3).width = 20; // Actions différentes
-  summarySheet.getColumn(4).width = 20; // Types d'entités
-  summarySheet.getColumn(5).width = 20; // Utilisateurs uniques
+  summarySheet.getColumn(1).width = 20; // Nombre d'actions
+  summarySheet.getColumn(2).width = 20; // Actions différentes
+  summarySheet.getColumn(3).width = 20; // Types d'entités
+  summarySheet.getColumn(4).width = 20; // Utilisateurs uniques
 
   summarySheet.eachRow((row, rowNumber) => {
     if (rowNumber > 1) {

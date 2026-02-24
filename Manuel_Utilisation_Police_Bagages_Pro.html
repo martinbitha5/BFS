@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manuel d'Utilisation - Police Bagages</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            font-weight: 300;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .roles-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .role-badge {
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .role-badge:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 50px 40px;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            border-left: 4px solid #3498db;
+        }
+
+        .toc h3 {
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .toc ul {
+            list-style: none;
+            columns: 2;
+            column-gap: 30px;
+        }
+
+        .toc li {
+            margin-bottom: 12px;
+            break-inside: avoid;
+        }
+
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+            display: block;
+            padding: 5px 0;
+        }
+
+        .toc a:hover {
+            color: #2980b9;
+        }
+
+        .section {
+            margin-bottom: 60px;
+            scroll-margin-top: 20px;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            font-weight: 400;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+            position: relative;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: #3498db;
+        }
+
+        .section h3 {
+            color: #34495e;
+            font-size: 1.3em;
+            font-weight: 500;
+            margin: 25px 0 15px 0;
+        }
+
+        .screen-showcase {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .screen-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .screen-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .screen-info h4 {
+            color: #2c3e50;
+            font-size: 1.2em;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .screen-info p {
+            color: #7f8c8d;
+            font-size: 0.95em;
+        }
+
+        .phone-mockup {
+            background: #1a1a1a;
+            border-radius: 25px;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 280px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .phone-screen {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .app-content {
+            padding: 10px 0;
+        }
+
+        .feature-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #3498db;
+            font-size: 0.9em;
+        }
+
+        .navigation-arrow {
+            text-align: center;
+            margin: 20px 0;
+            color: #3498db;
+            font-size: 1.5em;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content strong {
+            color: #2c3e50;
+        }
+
+        .info-box {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .info-box.important {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .info-box.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .info-box.note {
+            background: #e2e3e5;
+            border-color: #6c757d;
+        }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .flow-step {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+            color: #2c3e50;
+            font-weight: 500;
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .flow-arrow {
+            color: #3498db;
+            font-size: 1.2em;
+            margin: 0 10px;
+        }
+
+        .support-section {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        .support-section h3 {
+            color: white;
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+
+        .support-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .support-item {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .support-item strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .feature-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .feature-card h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .feature-card p {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .role-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .role-checkin { background: #e3f2fd; color: #1976d2; }
+        .role-baggage { background: #e8f5e8; color: #388e3c; }
+        .role-boarding { background: #e0f2f1; color: #00796b; }
+        .role-arrival { background: #fff3e0; color: #f57c00; }
+        .role-rush { background: #ffebee; color: #d32f2f; }
+        .role-delivery { background: #f3e5f5; color: #7b1fa2; }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 40px 20px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .toc ul {
+                columns: 1;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manuel d'Utilisation</h1>
+            <div class="subtitle">Police Bagages - Système de Gestion des Bagages Aéroportuaires</div>
+            <div class="roles-container">
+                <span class="role-badge">Check-in</span>
+                <span class="role-badge">Bagages</span>
+                <span class="role-badge">Embarquement</span>
+                <span class="role-badge">Arrivée</span>
+                <span class="role-badge">RUSH</span>
+                <span class="role-badge">Livraison</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="toc">
+                <h3>Table des Matières</h3>
+                <ul>
+                    <li><a href="#introduction">1. Introduction</a></li>
+                    <li><a href="#connexion">2. Écran de Connexion</a></li>
+                    <li><a href="#accueil">3. Écran d'Accueil</a></li>
+                    <li><a href="#checkin">4. Module Check-in</a></li>
+                    <li><a href="#bagages">5. Module Gestion des Bagages</a></li>
+                    <li><a href="#boarding">6. Module Embarquement</a></li>
+                    <li><a href="#arrivee">7. Module Arrivée des Bagages</a></li>
+                    <li><a href="#rush">8. Module Gestion RUSH</a></li>
+                    <li><a href="#livraison">9. Module Livraison</a></li>
+                    <li><a href="#parametres">10. Paramètres</a></li>
+                    <li><a href="#synchronisation">11. Synchronisation</a></li>
+                    <li><a href="#scenarios">12. Scénarios d'Utilisation</a></li>
+                    <li><a href="#depannage">13. Dépannage</a></li>
+                </ul>
+            </div>
+
+            <div class="section" id="introduction">
+                <h2>1. Introduction</h2>
+                <p>L'application <strong>Police Bagages</strong> est un système complet de gestion des bagages aéroportuaires conçu pour optimiser et sécuriser le traitement des bagages dans les aéroports.</p>
+                
+                <div class="info-box important">
+                    <strong>Objectif :</strong> Assurer la traçabilité complète des bagages depuis l'enregistrement jusqu'à la livraison, en passant par l'embarquement et l'arrivée.
+                </div>
+
+                <h3>Rôles et Permissions</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Gestion des Rôles</h4>
+                        <span class="role-indicator role-checkin">Check-in</span>
+                        <p>Enregistrement des passagers et validation des informations de vol</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Traçabilité RFID</h4>
+                        <span class="role-indicator role-baggage">Bagages</span>
+                        <p>Scan et enregistrement des bagages avec tags RFID</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Contrôle d'Accès</h4>
+                        <span class="role-indicator role-boarding">Embarquement</span>
+                        <p>Validation de l'embarquement des passagers</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Gestion des Arrivées</h4>
+                        <span class="role-indicator role-arrival">Arrivée</span>
+                        <p>Confirmation de l'arrivée des bagages</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Traitement Prioritaire</h4>
+                        <span class="role-indicator role-rush">RUSH</span>
+                        <p>Gestion des bagages urgents et prioritaires</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Finalisation</h4>
+                        <span class="role-indicator role-delivery">Livraison</span>
+                        <p>Confirmation de la récupération des bagages</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="connexion">
+                <h2>2. Écran de Connexion</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">🔐</div>
+                        <div class="screen-info">
+                            <h4>Interface d'Authentification</h4>
+                            <p>Point d'entrée sécurisé de l'application</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Police Bagages
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Logo de l'application</div>
+                                <div class="feature-item">Champ Email</div>
+                                <div class="feature-item">Champ Mot de passe</div>
+                                <div class="feature-item">Bouton Connexion</div>
+                                <div class="feature-item">Lien Mot de passe oublié</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Saisie des identifiants</strong><br>
+                            Entrez votre email professionnel et votre mot de passe (minimum 6 caractères)
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Validation</strong><br>
+                            Cliquez sur "Se connecter" pour accéder à l'application
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Redirection</strong><br>
+                            Accès à l'écran d'accueil avec vos modules disponibles
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <strong>Sécurité :</strong> En cas d'erreur de connexion, un message d'erreur s'affiche. Après 3 tentatives échouées, contactez votre administrateur système.
+                </div>
+            </div>
+
+            <div class="section" id="accueil">
+                <h2>3. Écran d'Accueil</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">🏠</div>
+                        <div class="screen-info">
+                            <h4>Tableau de Bord Personnel</h4>
+                            <p>Vue d'ensemble personnalisée selon votre rôle</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Tableau de Bord
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Photo de profil</div>
+                                <div class="feature-item">Nom et prénom</div>
+                                <div class="feature-item">Rôles attribués</div>
+                                <div class="feature-item">Aéroport assigné</div>
+                                <div class="feature-item">Statut de connexion</div>
+                                <div class="feature-item">Modules disponibles</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Navigation vers les modules</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Identification du module</strong><br>
+                            Repérez le module correspondant à votre rôle (Check-in, Bagages, etc.)
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Accès au module</strong><br>
+                            Cliquez sur la carte du module pour ouvrir l'interface dédiée
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Interface spécialisée</strong><br>
+                            Accès aux fonctionnalités spécifiques à votre rôle opérationnel
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="checkin">
+                <h2>4. Module Check-in</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">✈️</div>
+                        <div class="screen-info">
+                            <h4>Enregistrement des Passagers</h4>
+                            <p>Gestion de l'embarquement et validation des billets</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Check-in Passagers
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Scan du billet électronique</div>
+                                <div class="feature-item">Informations passager</div>
+                                <div class="feature-item">Détails du vol</div>
+                                <div class="feature-item">Siège attribué</div>
+                                <div class="feature-item">Bagages enregistrés</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Processus d'enregistrement</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Scan du billet</strong><br>
+                            Positionnez le code-barres du billet devant la caméra pour lecture automatique
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Vérification des données</strong><br>
+                            Confirmez les informations du passager et du vol affichées
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Validation finale</strong><br>
+                            Confirmez l'enregistrement pour finaliser le processus
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box important">
+                    <strong>Support multi-format :</strong> Le système accepte les billets électroniques, cartes d'embarquement et codes QR.
+                </div>
+            </div>
+
+            <div class="section" id="bagages">
+                <h2>5. Module Gestion des Bagages</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">🧳</div>
+                        <div class="screen-info">
+                            <h4>Traçabilité RFID des Bagages</h4>
+                            <p>Gestion complète du cycle de vie des bagages</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Gestion Bagages
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Scan RFID du tag bagage</div>
+                                <div class="feature-item">Association passager-bagage</div>
+                                <div class="feature-item">Poids et dimensions</div>
+                                <div class="feature-item">Statut de traitement</div>
+                                <div class="feature-item">Historique des mouvements</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Processus de traitement</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Scan RFID</strong><br>
+                            Utilisez le scanner pour lire le tag RFID attaché au bagage
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Association</strong><br>
+                            Liez le bagage au passager correspondant via son billet
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Validation</strong><br>
+                            Confirmez les informations et le statut du bagage
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box note">
+                    <strong>Support PDA :</strong> Le module supporte les scanners laser PDA pour une saisie rapide et efficace des tags bagages.
+                </div>
+            </div>
+
+            <div class="section" id="boarding">
+                <h2>6. Module Embarquement</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">✈️</div>
+                        <div class="screen-info">
+                            <h4>Contrôle d'Embarquement</h4>
+                            <p>Validation finale avant l'accès à l'avion</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Contrôle Embarquement
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Scan boarding pass</div>
+                                <div class="feature-item">Vérification identité</div>
+                                <div class="feature-item">Statut passager</div>
+                                <div class="feature-item">Validation finale</div>
+                                <div class="feature-item">Confirmation d'embarquement</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Procédure d'embarquement</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Scan du boarding pass</strong><br>
+                            Scanner le code-barres du boarding pass du passager
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Vérification croisée</strong><br>
+                            Confirmez l'identité et les informations de vol
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Validation et boardage</strong><br>
+                            Marquez le passager comme "embarqué" dans le système
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <strong>Sécurité aéroportuaire :</strong> Chaque passager doit être scanné individuellement pour garantir la sécurité du vol.
+                </div>
+            </div>
+
+            <div class="section" id="arrivee">
+                <h2>7. Module Arrivée des Bagages</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">📍</div>
+                        <div class="screen-info">
+                            <h4>Gestion de l'Arrivée des Bagages</h4>
+                            <p>Confirmation de la réception à destination</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Arrivée Bagages
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Scan d'arrivée des bagages</div>
+                                <div class="feature-item">Zone de récupération</div>
+                                <div class="feature-item">Statut de traitement</div>
+                                <div class="feature-item">Alertes bagages manquants</div>
+                                <div class="feature-item">Confirmation de réception</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Processus d'arrivée</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Réception physique</strong><br>
+                            Scanner les bagages à mesure de leur arrivée sur le tapis
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Localisation</strong><br>
+                            Assignez la zone de récupération appropriée
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Confirmation</strong><br>
+                            Validez l'arrivée et mettez à jour le statut dans le système
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="rush">
+                <h2>8. Module Gestion RUSH</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">⚡</div>
+                        <div class="screen-info">
+                            <h4>Traitement Prioritaire RUSH</h4>
+                            <p>Gestion des bagages urgents et correspondances rapides</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Gestion RUSH
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Identification bagages urgents</div>
+                                <div class="feature-item">File de traitement prioritaire</div>
+                                <div class="feature-item">Alertes temps réel</div>
+                                <div class="feature-item">Suivi accéléré</div>
+                                <div class="feature-item">Confirmation prioritaire</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Gestion des priorités</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Identification RUSH</strong><br>
+                            Identifiez les bagages marqués comme urgents dans le système
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Traitement prioritaire</strong><br>
+                            Traitez ces bagages en priorité dans la file d'attente
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Suivi spécial</strong><br>
+                            Surveillez le statut et assurez le respect des délais
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <strong>Priorité absolue :</strong> Les bagages RUSH doivent être traités immédiatement pour respecter les délais de correspondance.
+                </div>
+            </div>
+
+            <div class="section" id="livraison">
+                <h2>9. Module Livraison</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">✅</div>
+                        <div class="screen-info">
+                            <h4>Confirmation de Livraison</h4>
+                            <p>Finalisation du processus bagage</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Livraison Bagages
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Vérification identité passager</div>
+                                <div class="feature-item">Confirmation bagages</div>
+                                <div class="feature-item">Signature électronique</div>
+                                <div class="feature-item">Photo optionnelle</div>
+                                <div class="feature-item">Clôture du dossier</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="navigation-arrow">↓</div>
+
+                    <h4>Procédure de remise</h4>
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Vérification d'identité</strong><br>
+                            Confirmez l'identité du passager avec sa carte de récupération
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Remise des bagages</strong><br>
+                            Remettez physiquement les bagages au passager
+                        </div>
+                    </div>
+
+                    <div class="step-indicator">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Confirmation finale</strong><br>
+                            Obtenez la signature et marquez le bagage comme "livré"
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box important">
+                    <strong>Finalisation :</strong> Cette étape clôture le cycle de vie complet du bagage dans le système de traçabilité.
+                </div>
+            </div>
+
+            <div class="section" id="parametres">
+                <h2>10. Paramètres</h2>
+                <div class="screen-showcase">
+                    <div class="screen-header">
+                        <div class="screen-icon">⚙️</div>
+                        <div class="screen-info">
+                            <h4>Configuration de l'Application</h4>
+                            <p>Personnalisation et préférences utilisateur</p>
+                        </div>
+                    </div>
+
+                    <div class="phone-mockup">
+                        <div class="phone-screen">
+                            <div class="app-header">
+                                Paramètres
+                            </div>
+                            <div class="app-content">
+                                <div class="feature-item">Mode thème (Clair/Sombre)</div>
+                                <div class="feature-item">Notifications push</div>
+                                <div class="feature-item">Langue d'interface</div>
+                                <div class="feature-item">Paramètres de synchronisation</div>
+                                <div class="feature-item">Informations système</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="synchronisation">
+                <h2>11. Synchronisation</h2>
+                <p>La synchronisation assure la cohérence des données entre l'application mobile et le serveur central.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Synchronisation Automatique</h4>
+                        <p>Les données sont synchronisées automatiquement toutes les 5 minutes en arrière-plan</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Synchronisation Manuelle</h4>
+                        <p>Pull-to-refresh disponible pour une synchronisation immédiate sur demande</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Mode Hors Ligne</h4>
+                        <p>Mode dégradé avec stockage local et synchronisation différée à la reconnexion</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Indicateur de Sync</h4>
+                        <p>Badges visuels affichent le nombre d'éléments en attente de synchronisation</p>
+                    </div>
+                </div>
+
+                <div class="info-box note">
+                    <strong>Indicateur de synchronisation :</strong> Un badge affiche le nombre d'éléments en attente de synchronisation sur l'écran d'accueil pour un suivi en temps réel.
+                </div>
+            </div>
+
+            <div class="section" id="scenarios">
+                <h2>12. Scénarios d'Utilisation</h2>
+
+                <div class="screen-showcase">
+                    <h4>Scénario 1 : Vol complet - Du check-in à la livraison</h4>
+                    <div class="flow-diagram">
+                        <div class="flow-step">Check-in</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step">Bagages</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step">Embarquement</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step">Arrivée</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-step">Livraison</div>
+                    </div>
+                    <p><strong>Contexte :</strong> Traitement complet d'un passager et de ses bagages par différents agents</p>
+                </div>
+
+                <div class="screen-showcase">
+                    <h4>Scénario 2 : Bagage RUSH - Traitement prioritaire</h4>
+                    <p><strong>Contexte :</strong> Un passager a une correspondance courte et nécessite un traitement prioritaire</p>
+                    <div class="step-indicator">
+                        <div class="step-number">!</div>
+                        <div class="step-content">
+                            <strong>Identification prioritaire</strong><br>
+                            Le bagage est automatiquement marqué comme RUSH dans le système
+                        </div>
+                    </div>
+                    <div class="step-indicator">
+                        <div class="step-number">⚡</div>
+                        <div class="step-content">
+                            <strong>Traitement accéléré</strong><br>
+                            File prioritaire et processus optimisé pour respecter les délais
+                        </div>
+                    </div>
+                </div>
+
+                <div class="screen-showcase">
+                    <h4>Scénario 3 : Mode hors ligne - Synchronisation différée</h4>
+                    <p><strong>Contexte :</strong> Perte de connexion réseau temporaire</p>
+                    <div class="step-indicator">
+                        <div class="step-number">📱</div>
+                        <div class="step-content">
+                            <strong>Mode dégradé</strong><br>
+                            L'application bascule automatiquement en mode hors ligne avec stockage local
+                        </div>
+                    </div>
+                    <div class="step-indicator">
+                        <div class="step-number">🔄</div>
+                        <div class="step-content">
+                            <strong>Reprise automatique</strong><br>
+                            Synchronisation automatique dès la reconnexion au réseau
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="depannage">
+                <h2>13. Dépannage</h2>
+
+                <div class="screen-showcase">
+                    <h4>Problèmes courants et solutions</h4>
+
+                    <div class="info-box warning">
+                        <h5>Impossible de se connecter</h5>
+                        <ul>
+                            <li>Vérifiez votre email et mot de passe</li>
+                            <li>Confirmez la connexion réseau de votre appareil</li>
+                            <li>Contactez l'administrateur système si le problème persiste</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box warning">
+                        <h5>Scan ne fonctionne pas</h5>
+                        <ul>
+                            <li>Vérifiez les permissions caméra dans les paramètres</li>
+                            <li>Nettoyez l'objectif de la caméra</li>
+                            <li>Essayez avec un éclairage différent</li>
+                            <li>Utilisez le mode manuel si nécessaire</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box warning">
+                        <h5>Synchronisation échouée</h5>
+                        <ul>
+                            <li>Vérifiez la connexion réseau</li>
+                            <li>Réessayez la synchronisation manuelle</li>
+                            <li>Consultez le statut du serveur central</li>
+                            <li>Vérifiez vos identifiants de connexion</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box warning">
+                        <h5>Données manquantes ou incomplètes</h5>
+                        <ul>
+                            <li>Vérifiez la sélection du vol actif</li>
+                            <li>Actualisez la liste des passagers/bagages</li>
+                            <li>Contactez le support technique pour assistance</li>
+                            <li>Vérifiez la synchronisation des données</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="info-box important">
+                    <strong>Support technique :</strong> En cas de problème persistant, contactez le support technique avec les détails de l'erreur, le contexte d'utilisation et les étapes pour reproduire le problème.
+                </div>
+            </div>
+        </div>
+
+        <div class="support-section">
+            <h3>Support et Assistance Technique</h3>
+            <p>Pour toute question ou assistance technique concernant l'application Police Bagages</p>
+            
+            <div class="support-info">
+                <div class="support-item">
+                    <strong>Email Support</strong>
+                    support@brsats.com
+                </div>
+                <div class="support-item">
+                    <strong>Support Téléphonique</strong>
+                    243827241919
+                </div>
+                <div class="support-item">
+                    <strong>Horaires d'Ouverture</strong>
+                    Lundi - Vendredi : 8h00 - 18h00
+                </div>
+                <div class="support-item">
+                    <strong>Documentation</strong>
+                    Manuel utilisateur et FAQ disponibles
+                </div>
+            </div>
+            
+            <p style="margin-top: 30px; opacity: 0.8; font-size: 0.9em;">
+                <em>Manuel généré le 23 février 2025 - Version 1.0</em><br>
+                <em>Police Bagages - Système de Gestion des Bagages Aéroportuaires</em>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

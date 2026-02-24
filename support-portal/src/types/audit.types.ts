@@ -7,9 +7,6 @@ export interface AuditLog {
   user_id?: string;
   user_name?: string;
   user_email?: string;
-  user_role?: string;
-  ip_address?: string;
-  details?: Record<string, any>;
   airport_code: string;
   metadata?: Record<string, any>;
   created_at: string;
