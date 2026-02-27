@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
+import { getBagJourneyService } from '../services/bagjourney.service';
+import { mapBagJourneyStatusToBFS } from '../utils/bagjourney-status.util';
 
 const router = Router();
 
@@ -404,7 +406,55 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
       }
     }
 
-    // 4. Aucun bagage trouvé
+    // 4. Rechercher dans BagJourney si aucun résultat local et recherche par tag
+    if (allBaggages.length === 0 && normalizedTag) {
+      console.log('[TRACK] Aucun bagage local trouvé, recherche dans BagJourney...');
+      
+      try {
+        const bagJourneyService = getBagJourneyService();
+        
+        if (bagJourneyService.isConfigured()) {
+          const bagJourneyResponse = await bagJourneyService.getBagHistory(normalizedTag);
+          
+          if (bagJourneyResponse.success && bagJourneyResponse.data) {
+            console.log('[TRACK] Bagage trouvé dans BagJourney');
+            
+            const bagData = bagJourneyResponse.data;
+            const currentEvent = bagData.events[bagData.events.length - 1];
+            
+            // Créer les infos passager à partir des données BagJourney
+            passengerInfo = {
+              passenger_name: 'Passager BagJourney', // BagJourney ne fournit pas toujours le nom
+              pnr: 'BAGJOURNEY', // Identifiant spécial pour BagJourney
+              flight_number: currentEvent?.flightNumber || 'Unknown',
+              origin: bagData.events.find(e => e.code === 'CHECKED_IN')?.airportCode || 'Unknown',
+              destination: bagData.events.find(e => e.code === 'EXPECTED')?.airportCode || 'Unknown'
+            };
+            
+            // Convertir le format BagJourney au format BFS local
+            allBaggages.push({
+              bag_id: bagData.tagNumber,
+              status: mapBagJourneyStatusToBFS(bagData.currentStatus.code),
+              current_location: bagData.currentStatus.location,
+              last_scanned_at: bagData.currentStatus.timestamp,
+              baggage_type: 'international', // BagJourney est principalement pour les vols internationaux
+              origin: passengerInfo.origin,
+              destination: passengerInfo.destination,
+              notes: `BagJourney: ${bagData.currentStatus.description}`
+            });
+          } else {
+            console.log('[TRACK] Aucun bagage trouvé dans BagJourney:', bagJourneyResponse.error);
+          }
+        } else {
+          console.log('[TRACK] Service BagJourney non configuré');
+        }
+      } catch (error) {
+        console.error('[TRACK] Erreur lors de la recherche BagJourney:', error);
+        // Ne pas échouer la requête si BagJourney échoue, continuer avec l'erreur 404
+      }
+    }
+
+    // 5. Aucun bagage trouvé
     console.log('[TRACK] Total bagages trouvés:', allBaggages.length);
     if (allBaggages.length === 0) {
       return res.status(404).json({

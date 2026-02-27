@@ -223,6 +223,7 @@ export default function BaggageScreen({ navigation }: Props) {
             headers: {
               'x-api-key': apiKey,
               'x-airport-code': user.airportCode,
+              ...(user.airlineCode && { 'x-airline-code': user.airlineCode }),
               'Content-Type': 'application/json',
             },
           });
@@ -234,6 +235,7 @@ export default function BaggageScreen({ navigation }: Props) {
               headers: {
                 'x-api-key': apiKey,
                 'x-airport-code': user.airportCode,
+              ...(user.airlineCode && { 'x-airline-code': user.airlineCode }),
                 'Content-Type': 'application/json',
               },
             });

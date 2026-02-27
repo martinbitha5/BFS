@@ -20,8 +20,6 @@ import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Boarding'>;
 
-
-
 export default function BoardingScreen({ navigation }: Props) {
 
   const { colors } = useTheme();
@@ -801,10 +799,6 @@ export default function BoardingScreen({ navigation }: Props) {
 
       />
 
-      
-
-
-
       {processing ? (
 
         <View style={styles.processingContainer}>
@@ -1050,7 +1044,6 @@ export default function BoardingScreen({ navigation }: Props) {
         </View>
 
       ) : null}
-
     </View>
 
   );
@@ -1066,6 +1059,8 @@ const styles = StyleSheet.create({
     flex: 1,
 
   },
+
+
 
   // TextInput invisible pour le scanner PDA
   pdaInput: {

@@ -291,6 +291,89 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
+router.post('/offload', requireAirportCode, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { passenger_id, pnr } = req.body;
+    const airport = req.query.airport as string || req.headers['x-airport-code'];
+
+    if (!airport) {
+      return res.status(400).json({
+        success: false,
+        error: 'Code aéroport requis (header x-airport-code ou query airport)'
+      });
+    }
+
+    let passengerId: string | null = null;
+
+    if (passenger_id) {
+      passengerId = passenger_id;
+    } else if (pnr) {
+      const pnrClean = String(pnr).trim().toUpperCase();
+      const { data: passenger, error: passengerError } = await supabase
+        .from('passengers')
+        .select('id, airport_code')
+        .eq('pnr', pnrClean)
+        .eq('airport_code', airport)
+        .single();
+
+      if (passengerError || !passenger) {
+        return res.status(404).json({
+          success: false,
+          error: `Passager non trouvé avec PNR: ${pnrClean}`
+        });
+      }
+      passengerId = passenger.id;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'passenger_id ou pnr requis'
+      });
+    }
+
+    const { data: passenger, error: passengerError } = await supabase
+      .from('passengers')
+      .select('id, airport_code')
+      .eq('id', passengerId)
+      .single();
+
+    if (passengerError || !passenger) {
+      return res.status(404).json({
+        success: false,
+        error: 'Passager non trouvé'
+      });
+    }
+
+    if (passenger.airport_code !== airport) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ce passager n\'appartient pas à votre aéroport'
+      });
+    }
+
+    const updateData: any = {
+      boarded: false,
+      boarded_at: null,
+      boarded_by: null,
+    };
+
+    const { data, error } = await supabase
+      .from('boarding_status')
+      .upsert({
+        passenger_id: passengerId,
+        boarded: false,
+        boarded_at: null,
+        boarded_by: null,
+      }, { onConflict: 'passenger_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data, message: 'Passager débarqué' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 /**
  * POST /api/v1/boarding/sync-hash
  * Synchroniser l'embarquement avec le checksum du boarding pass

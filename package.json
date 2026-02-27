@@ -13,6 +13,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:flow": "tsx scripts/test-full-flow.ts",
+    "migrate:bagjourney-status": "tsx scripts/run-migration-bagjourney-status.ts",
     "test:birs": "tsx test/birs-system-test.ts",
     "test:birs-demo": "tsx test/birs-demo-test.ts",
     "test:birs-real": "tsx test/test-real-birs-formats.ts",

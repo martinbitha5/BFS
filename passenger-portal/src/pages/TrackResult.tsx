@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AlertCircle, CheckCircle, Clock, MapPin, Package, Plane, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Globe, MapPin, Package, Plane, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import FooterComponent from '../components/FooterComponent';
@@ -46,6 +46,7 @@ export default function TrackResult() {
   const [searchParams] = useSearchParams();
   const pnr = searchParams.get('pnr');
   const tag = searchParams.get('tag');
+  const source = searchParams.get('source');
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,15 +54,19 @@ export default function TrackResult() {
 
   useEffect(() => {
     fetchBaggageInfo();
-  }, [pnr, tag]);
+  }, [pnr, tag, source]);
 
   const fetchBaggageInfo = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const searchParam = pnr ? `pnr=${pnr}` : `tag=${tag}`;
-      const response = await axios.get(`${API_URL}/api/v1/public/track?${searchParam}`);
+      const params = new URLSearchParams();
+      if (pnr) params.append('pnr', pnr);
+      if (tag) params.append('tag', tag);
+      if (source) params.append('source', source);
+      
+      const response = await axios.get(`${API_URL}/api/v1/public/track?${params.toString()}`);
       
       const apiData = (response.data as { data: any }).data;
       
@@ -160,13 +165,23 @@ export default function TrackResult() {
           progress: 50,
           description: 'Votre bagage est en cours de réacheminement prioritaire',
         };
-      case 'scanned':
+      case 'lost':
         return {
-          label: 'Scanné',
+          label: t('status.lost'),
+          color: 'text-red-400',
+          bgColor: 'bg-red-900/40',
+          icon: AlertCircle,
+          progress: 0,
+          description: 'Votre bagage est signalé comme perdu ou non localisé',
+        };
+      case 'scanned':
+      case 'sorted':
+        return {
+          label: t('status.checked'),
           color: 'text-blue-400',
           bgColor: 'bg-blue-900/40',
           icon: Package,
-          progress: 30,
+          progress: 25,
           description: 'Votre bagage a été scanné et est en cours de traitement',
         };
       case 'reconciled':
@@ -258,6 +273,12 @@ export default function TrackResult() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-4xl font-bold text-white">{t('track.title')}</h1>
+                  {source === 'bagjourney' && (
+                    <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-3 py-1">
+                      <Globe className="w-4 h-4 text-blue-300" />
+                      <span className="text-sm text-blue-300 font-medium">BagJourney (SITA)</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-white/70">
                   {trackingData.pnr !== 'MANUAL' && (
@@ -277,6 +298,12 @@ export default function TrackResult() {
                     <>
                       <span>•</span>
                       <span className="text-orange-300 font-semibold">Bagage Manuel</span>
+                    </>
+                  )}
+                  {trackingData.pnr === 'BAGJOURNEY' && (
+                    <>
+                      <span>•</span>
+                      <span className="text-blue-300 font-semibold">Bagage BagJourney (SITA)</span>
                     </>
                   )}
                 </div>

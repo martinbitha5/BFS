@@ -5,8 +5,8 @@ import { AIRPORTS as AIRPORTS_DATA } from '../../constants/airports';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import SelectField from '../components/SelectField';
+import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
 import { Colors, Spacing } from '../theme';
 import { UserRole } from '../types/user.types';
 
@@ -28,12 +28,14 @@ const AIRPORTS = AIRPORTS_DATA.map((airport) => ({
 }));
 
 export default function RegisterScreen({ navigation }: Props) {
+  const { register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [airportCode, setAirportCode] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
+  const [airlineCode, setAirlineCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -68,6 +70,15 @@ export default function RegisterScreen({ navigation }: Props) {
       newErrors.role = 'Le rôle est requis';
     }
 
+    if (role === 'baggage') {
+      const code = airlineCode.trim().toUpperCase();
+      if (!code) {
+        newErrors.airlineCode = 'Le code compagnie est requis (ex: ET, KQ, 9U)';
+      } else if (code.length < 2 || code.length > 3) {
+        newErrors.airlineCode = 'Code compagnie invalide (2-3 caractères)';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -79,12 +90,13 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      const session = await authServiceInstance.register(
+      await register(
         email.trim(),
         password,
         fullName.trim(),
         airportCode,
-        role as UserRole
+        role as UserRole,
+        role === 'baggage' ? airlineCode.trim().toUpperCase() : undefined
       );
       
       Alert.alert(
@@ -214,15 +226,36 @@ export default function RegisterScreen({ navigation }: Props) {
             selectedValue={role}
             onSelect={(value) => {
               setRole(value as UserRole);
-              if (errors.role) {
+              if (value !== 'baggage') setAirlineCode('');
+              if (errors.role || errors.airlineCode) {
                 const newErrors = { ...errors };
                 delete newErrors.role;
+                delete newErrors.airlineCode;
                 setErrors(newErrors);
               }
             }}
             error={errors.role}
             required
           />
+
+          {role === 'baggage' && (
+            <Input
+              label="Code compagnie"
+              placeholder="Ex: ET, KQ, 9U"
+              value={airlineCode}
+              onChangeText={(text) => {
+                setAirlineCode(text.toUpperCase());
+                if (errors.airlineCode) {
+                  const newErrors = { ...errors };
+                  delete newErrors.airlineCode;
+                  setErrors(newErrors);
+                }
+              }}
+              error={errors.airlineCode}
+              autoCapitalize="characters"
+              maxLength={3}
+            />
+          )}
 
           <Button
             title="S'inscrire"

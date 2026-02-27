@@ -5,6 +5,7 @@ import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Badge from '../components/Badge';
 import Card from '../components/Card';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { authServiceInstance, settingsService } from '../services';
@@ -32,6 +33,7 @@ const ROLE_COLORS: Record<string, 'primary' | 'success' | 'info' | 'warning' | '
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, mode, setMode } = useTheme();
+  const { logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<User | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -178,19 +180,15 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const handleLogout = async () => {
-    try {
-      const { logAudit } = await import('../utils/audit.util');
-      await logAudit(
-        'LOGOUT',
-        'system',
-        `Déconnexion de l&apos;agent: ${user?.fullName} (${user?.email})`
-      );
-    } catch (error) {
-      console.error('Error logging logout:', error);
-    }
-    
-    await authServiceInstance.logout();
+    const userForAudit = user;
+    logout();
     navigation.replace('Login');
+    // Audit en arrière-plan (ne bloque pas l'affichage)
+    import('../utils/audit.util').then(({ logAudit }) =>
+      logAudit('LOGOUT', 'system', `Déconnexion de l'agent: ${userForAudit?.fullName} (${userForAudit?.email})`).catch((e) =>
+        console.error('Error logging logout:', e)
+      )
+    );
   };
 
   if (!user || isLoading) {

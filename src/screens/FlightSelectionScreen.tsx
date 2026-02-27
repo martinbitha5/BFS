@@ -53,7 +53,8 @@ export default function FlightSelectionScreen({ navigation, route }: Props) {
       console.log('[FlightSelection] 🔍 Chargement des vols pour:', currentUser.airportCode);
       
       // Charger les vols disponibles
-      const availableFlights = await flightService.getAvailableFlights(currentUser.airportCode);
+      const airlineCode = currentUser.role === 'baggage' ? currentUser.airlineCode : undefined;
+      const availableFlights = await flightService.getAvailableFlights(currentUser.airportCode, undefined, airlineCode);
       
       console.log('[FlightSelection] ✅ Vols chargés:', availableFlights.length);
       console.log('[FlightSelection] 📋 Détails:', JSON.stringify(availableFlights, null, 2));

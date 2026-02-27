@@ -100,6 +100,7 @@ const translations: Record<Language, Record<string, string>> = {
     'status.arrived': 'Arrivé à destination',
     'status.delivered': 'Livré et récupéré',
     'status.rush': 'En réacheminement prioritaire',
+    'status.lost': 'Perdu ou non localisé',
     
     // Footer
     'footer.about.title': 'À PROPOS',
@@ -291,6 +292,7 @@ const translations: Record<Language, Record<string, string>> = {
     'status.arrived': 'Arrived',
     'status.delivered': 'Delivered',
     'status.rush': 'Rush rerouting',
+    'status.lost': 'Lost or not located',
     
     // Footer
     'footer.about.title': 'ABOUT',

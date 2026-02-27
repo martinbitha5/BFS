@@ -13,6 +13,7 @@ import auditRoutes from './routes/audit.routes';
 import authRoutes from './routes/auth.routes';
 import baggageAuthorizationRoutes from './routes/baggage-authorization.routes';
 import baggageRoutes from './routes/baggage.routes';
+import bagJourneyRoutes from './routes/bagjourney.routes';
 import birsHistoryRoutes from './routes/birs-history.routes';
 import birsRoutes from './routes/birs.routes';
 import boardingRoutes from './routes/boarding.routes';
@@ -32,6 +33,20 @@ import userApprovalRoutes from './routes/user-approval.routes';
 import usersRoutes from './routes/users.routes';
 
 dotenv.config();
+
+// Initialiser le service BagJourney si configuré
+if (process.env.BAGJOURNEY_API_KEY && process.env.BAGJOURNEY_BASE_URL) {
+  try {
+    initializeBagJourneyService({
+      apiKey: process.env.BAGJOURNEY_API_KEY,
+      baseUrl: process.env.BAGJOURNEY_BASE_URL,
+      timeout: Number(process.env.BAGJOURNEY_TIMEOUT) || 30000,
+    });
+    console.log('✅ BagJourney service initialized');
+  } catch (error) {
+    console.warn('⚠️  Failed to initialize BagJourney service:', error);
+  }
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -112,6 +127,7 @@ app.use('/api/v1/audit', apiKeyAuth, auditRoutes); // ✅ NEW: Logs d'audit
 app.use('/api/v1/support', apiKeyAuth, supportRoutes); // ✅ NEW: Routes support (bagages, utilisateurs, stats)
 app.use('/api/v1/airports', airportsRoutes); // Endpoint public
 app.use('/api/v1/realtime', realtimeRoutes); // ✅ NEW: SSE temps réel (auth via query params pour EventSource)
+app.use('/api/v1/bagjourney', apiKeyAuth, bagJourneyRoutes); // ✅ NEW: Intégration BagJourney SITA
 
 // 404 handler (must come before error handler)
 app.use((req, res) => {

@@ -155,41 +155,109 @@ export default function HomeScreen({ navigation }: Props) {
           )}
 
           {user.role === 'baggage' && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('Baggage')}>
-              <Card style={styles.menuCard} elevated>
-                <View style={styles.menuCardContent}>
-                  <View style={[styles.iconContainer, { backgroundColor: colors.success.light + '15' }]}>
-                    <Ionicons name="bag" size={28} color={colors.success.main} />
+            <>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('Baggage')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.success.light + '15' }]}>
+                      <Ionicons name="bag" size={28} color={colors.success.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Bagages</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Scan et enregistrement des bagages</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                   </View>
-                  <View style={styles.menuCardText}>
-                    <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Gestion des Bagages</Text>
-                    <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Scan et enregistrement des bagages</Text>
+                </Card>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('ManualBaggage')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.primary.light + '15' }]}>
+                      <Ionicons name="create-outline" size={28} color={colors.primary.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Manuel</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Saisie manuelle du tag (si scan flou)</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                   </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
+                </Card>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('OffloadBaggage')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.warning.light + '15' }]}>
+                      <Ionicons name="log-out-outline" size={28} color={colors.warning.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Offload</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Débarquement des bagages</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('ConfirmLoad')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.info.light + '15' }]}>
+                      <Ionicons name="airplane" size={28} color={colors.info.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Chargement</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Confirmer le chargement des bagages à bord</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            </>
           )}
 
           {user.role === 'boarding' && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('Boarding')}>
-              <Card style={styles.menuCard} elevated>
-                <View style={styles.menuCardContent}>
-                  <View style={[styles.iconContainer, { backgroundColor: colors.info.light + '15' }]}>
-                    <Ionicons name="airplane" size={28} color={colors.info.main} />
+            <>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('Boarding')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.info.light + '15' }]}>
+                      <Ionicons name="airplane" size={28} color={colors.info.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Embarquement</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Validation de l'embarquement</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                   </View>
-                  <View style={styles.menuCardText}>
-                    <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Embarquement</Text>
-                    <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Validation de l'embarquement</Text>
+                </Card>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('OffloadBoarding')}>
+                <Card style={styles.menuCard} elevated>
+                  <View style={styles.menuCardContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.warning.light + '15' }]}>
+                      <Ionicons name="log-out-outline" size={28} color={colors.warning.main} />
+                    </View>
+                    <View style={styles.menuCardText}>
+                      <Text style={[styles.menuCardTitle, { color: colors.text.primary }]}>Offload</Text>
+                      <Text style={[styles.menuCardDescription, { color: colors.text.secondary }]}>Débarquement des passagers</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                   </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
+                </Card>
+              </TouchableOpacity>
+            </>
           )}
 
           {user.role === 'rush' && (

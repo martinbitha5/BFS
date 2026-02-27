@@ -29,7 +29,8 @@ class AuthService {
     password: string,
     fullName: string,
     airportCode: string,
-    role: UserRole
+    role: UserRole,
+    airlineCode?: string
   ): Promise<UserSession> {
     if (!this.supabase) {
       throw new Error('Supabase not configured');
@@ -50,15 +51,18 @@ class AuthService {
     }
 
     // Créer le profil dans la table users
+    const insertData: Record<string, unknown> = {
+      id: authData.user.id,
+      email,
+      full_name: fullName,
+      airport_code: airportCode,
+      role,
+    };
+    if (airlineCode) insertData.airline_code = airlineCode;
+
     const { data: userData, error: userError } = await this.supabase
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email,
-        full_name: fullName,
-        airport_code: airportCode,
-        role,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -73,6 +77,7 @@ class AuthService {
       email: userData.email,
       fullName: userData.full_name,
       airportCode: userData.airport_code,
+      airlineCode: userData.airline_code,
       role: userData.role,
       createdAt: userData.created_at,
       updatedAt: userData.updated_at,
@@ -140,6 +145,7 @@ class AuthService {
       email: userData.email,
       fullName: userData.full_name,
       airportCode: userData.airport_code,
+      airlineCode: userData.airline_code,
       role: userData.role,
       createdAt: userData.created_at,
       updatedAt: userData.updated_at,

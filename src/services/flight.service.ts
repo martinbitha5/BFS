@@ -39,44 +39,32 @@ class FlightService {
    * Récupère tous les vols disponibles pour un aéroport
    * Source : 1) Vols programmés (dashboard), 2) Passagers enregistrés
    */
-  async getAvailableFlights(airportCode: string, date?: string): Promise<AvailableFlight[]> {
+  async getAvailableFlights(airportCode: string, date?: string, airlineCode?: string): Promise<AvailableFlight[]> {
     const today = date || new Date().toISOString().split('T')[0];
     const flights = new Map<string, AvailableFlight>();
 
-    // 1. Charger les vols programmés depuis le dashboard (API)
-    try {
-      const scheduledFlights = await this.getScheduledFlights(airportCode, today);
-      for (const flight of scheduledFlights) {
-        // Utiliser le numéro normalisé comme clé pour éviter les doublons
-        const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
+    const [scheduledFlights, passengersFlights] = await Promise.all([
+      this.getScheduledFlights(airportCode, today, airlineCode),
+      this.getFlightsFromPassengers(airportCode, today, airlineCode),
+    ]);
+
+    for (const flight of scheduledFlights) {
+      const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
+      flights.set(normalizedKey, { ...flight, flightNumber: normalizedKey });
+    }
+
+    for (const flight of passengersFlights) {
+      const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
+      if (flights.has(normalizedKey)) {
+        const existingFlight = flights.get(normalizedKey)!;
+        existingFlight.passengerCount = flight.passengerCount;
+        existingFlight.baggageCount = flight.baggageCount;
+      } else {
         flights.set(normalizedKey, { ...flight, flightNumber: normalizedKey });
       }
-      console.log(`[FlightService] ${scheduledFlights.length} vols programmés chargés`);
-    } catch (error) {
-      console.error('[FlightService] Erreur lors de la récupération des vols programmés:', error);
     }
 
-    // 2. Charger les vols depuis les passagers enregistrés (mise à jour compteurs)
-    try {
-      const passengersFlights = await this.getFlightsFromPassengers(airportCode, today);
-      for (const flight of passengersFlights) {
-        const normalizedKey = this.normalizeFlightNumber(flight.flightNumber);
-        if (flights.has(normalizedKey)) {
-          // Mettre à jour les compteurs du vol programmé
-          const existingFlight = flights.get(normalizedKey)!;
-          existingFlight.passengerCount = flight.passengerCount;
-          existingFlight.baggageCount = flight.baggageCount;
-        } else {
-          // Vol non programmé mais avec passagers (cas exceptionnel)
-          flights.set(normalizedKey, { ...flight, flightNumber: normalizedKey });
-        }
-      }
-      console.log(`[FlightService] ${passengersFlights.length} vols avec passagers chargés`);
-    } catch (error) {
-      console.error('[FlightService] Erreur lors de la récupération des vols passagers:', error);
-    }
-
-    return Array.from(flights.values()).sort((a, b) => 
+    return Array.from(flights.values()).sort((a, b) =>
       a.flightNumber.localeCompare(b.flightNumber)
     );
   }
@@ -86,7 +74,8 @@ class FlightService {
    */
   private async getScheduledFlights(
     airportCode: string,
-    date: string
+    date: string,
+    airlineCode?: string
   ): Promise<AvailableFlight[]> {
     try {
       const apiUrl = await AsyncStorage.getItem(STORAGE_KEYS.API_URL);
@@ -104,15 +93,14 @@ class FlightService {
         return [];
       }
 
-      const url = `${apiUrl}/api/v1/flights?airport=${airportCode}&date=${date}`;
-      console.log('[FlightService] 📡 Appel API:', url);
-
-      const response = await fetch(url, {
-        headers: {
-          'x-api-key': apiKey || '',
-          'Content-Type': 'application/json',
-        },
-      });
+      let url = `${apiUrl}/api/v1/flights?airport=${airportCode}&date=${date}`;
+      if (airlineCode) url += `&airline_code=${airlineCode}`;
+      const headers: Record<string, string> = {
+        'x-api-key': apiKey || '',
+        'Content-Type': 'application/json',
+      };
+      if (airlineCode) headers['x-airline-code'] = airlineCode;
+      const response = await fetch(url, { headers });
 
       console.log('[FlightService] 📥 Réponse API:', response.status, response.statusText);
 
@@ -156,7 +144,8 @@ class FlightService {
    */
   private async getFlightsFromPassengers(
     airportCode: string,
-    date: string
+    date: string,
+    airlineCode?: string
   ): Promise<AvailableFlight[]> {
     // ✅ ÉTAPE 1: Essayer d'abord via l'API (Supabase)
     try {
@@ -166,13 +155,14 @@ class FlightService {
       if (apiUrl && apiKey) {
         console.log('[FlightService] 📡 Chargement des passagers depuis API...');
         
-        const url = `${apiUrl}/api/v1/passengers?airport=${airportCode}&date=${date}`;
-        const response = await fetch(url, {
-          headers: {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-          },
-        });
+        let url = `${apiUrl}/api/v1/passengers?airport=${airportCode}&date=${date}`;
+        if (airlineCode) url += `&airline_code=${airlineCode}`;
+        const headers: Record<string, string> = {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+        };
+        if (airlineCode) headers['x-airline-code'] = airlineCode;
+        const response = await fetch(url, { headers });
 
         if (response.ok) {
           const result = await response.json();
@@ -200,8 +190,8 @@ class FlightService {
             }
 
             const flight = flightsMap.get(key)!;
-            flight.passengerCount++;
-            flight.baggageCount += passenger.baggageCount || 0;
+            flight.passengerCount = (flight.passengerCount ?? 0) + 1;
+            flight.baggageCount = (flight.baggageCount ?? 0) + (passenger.baggageCount || 0);
           }
 
           const flights = Array.from(flightsMap.values());

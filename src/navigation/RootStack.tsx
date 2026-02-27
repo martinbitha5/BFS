@@ -1,5 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../theme';
 
 import ArrivalScreen from '../screens/ArrivalScreen';
@@ -7,7 +9,11 @@ import BagageDetailScreen from '../screens/BagageDetailScreen';
 import BagageListScreen from '../screens/BagageListScreen';
 import BaggageScreen from '../screens/BaggageScreen';
 import BoardingScreen from '../screens/BoardingScreen';
+import ManualBaggageScreen from '../screens/ManualBaggageScreen';
+import OffloadBaggageScreen from '../screens/OffloadBaggageScreen';
+import OffloadBoardingScreen from '../screens/OffloadBoardingScreen';
 import CheckinScreen from '../screens/CheckinScreen';
+import ConfirmLoadScreen from '../screens/ConfirmLoadScreen';
 import CreditsScreen from '../screens/CreditsScreen';
 import DeliveryScreen from '../screens/DeliveryScreen';
 import FAQScreen from '../screens/FAQScreen';
@@ -38,14 +44,29 @@ export type RootStackParamList = {
   Credits: undefined;
   Rush: undefined;
   Delivery: undefined;
+  OffloadBoarding: undefined;
+  ManualBaggage: undefined;
+  OffloadBaggage: undefined;
+  ConfirmLoad: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStack() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background.default }}>
+        <ActivityIndicator size="large" color={Colors.primary.main} />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      key={isAuthenticated ? 'main' : 'auth'}
+      initialRouteName={isAuthenticated ? 'Home' : 'Login'}
       screenOptions={{
         headerStyle: {
           backgroundColor: Colors.primary.main,
@@ -57,7 +78,7 @@ export default function RootStack() {
         headerShadowVisible: true,
       }}>
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Inscription' }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="FlightSelection" component={FlightSelectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Checkin" component={CheckinScreen} options={{ headerShown: false }} />
@@ -73,6 +94,10 @@ export default function RootStack() {
       <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Rush" component={RushScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Delivery" component={DeliveryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="OffloadBoarding" component={OffloadBoardingScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ManualBaggage" component={ManualBaggageScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="OffloadBaggage" component={OffloadBaggageScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ConfirmLoad" component={ConfirmLoadScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

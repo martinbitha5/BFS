@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, AppStateStatus } from 'react-native';
 import { SyncQueueItem } from '../types/sync.types';
 import { databaseService } from './database.service';
 
@@ -8,15 +9,22 @@ const STORAGE_KEYS = {
     API_KEY: '@bfs:api_key',
 };
 
+/** Concurrence : nombre de requêtes envoyées en parallèle */
+const PARALLEL_CONCURRENCY = 8;
+
 /**
  * Service de synchronisation automatique avec Supabase
  * Traite la queue de synchronisation et envoie les données vers l'API
+ * - Sync instantanée : intervalle 2s quand données en attente, 30s sinon
+ * - Sync au retour de l'app (AppState)
+ * - Traitement en parallèle (8 requêtes simultanées)
  */
 class SyncService {
     private isSyncing: boolean = false;
-    private syncInterval: ReturnType<typeof setInterval> | null = null;
-    private readonly SYNC_INTERVAL_MS = 30000; // 30 secondes
-    private readonly MAX_RETRIES_BEFORE_SLOWDOWN = 50; // Basculer à un intervalle plus long après 50 tentatives
+    private syncTimeout: ReturnType<typeof setTimeout> | null = null;
+    private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+    private readonly SYNC_INTERVAL_WHEN_PENDING_MS = 2000; // 2 secondes quand il y a des données
+    private readonly SYNC_INTERVAL_WHEN_EMPTY_MS = 30000; // 30 secondes quand la file est vide
     
     // ✅ CACHE pour éviter les appels répétés à AsyncStorage
     private cachedApiUrl: string | null = null;
@@ -35,106 +43,127 @@ class SyncService {
     }
 
     /**
+     * Planifie la prochaine synchronisation (intervalle adaptatif)
+     */
+    private scheduleNextSync(): void {
+        if (this.syncTimeout) clearTimeout(this.syncTimeout);
+        this.syncTimeout = setTimeout(async () => {
+            const result = await this.syncPendingItems();
+            const pending = await this.getPendingCount();
+            const delay = pending > 0 || result.success > 0
+                ? this.SYNC_INTERVAL_WHEN_PENDING_MS
+                : this.SYNC_INTERVAL_WHEN_EMPTY_MS;
+            this.syncTimeout = setTimeout(() => this.scheduleNextSync(), delay);
+        }, 0);
+    }
+
+    /**
      * Démarre la synchronisation automatique
      */
     async startAutoSync(): Promise<void> {
-        // Vérifier si l'auto-sync est activée
         const autoSyncEnabled = await AsyncStorage.getItem(STORAGE_KEYS.AUTO_SYNC_ENABLED);
         if (autoSyncEnabled === 'false') {
             console.log('[Sync] Auto-sync désactivée');
             return;
         }
 
-        // Arrêter l'intervalle existant
         this.stopAutoSync();
 
-        console.log('[Sync] Démarrage de la synchronisation automatique');
+        console.log('[Sync] Démarrage de la synchronisation automatique (instantanée)');
 
-        // Première synchronisation immédiate
+        // Première sync immédiate
         await this.syncPendingItems();
 
-        // Synchronisation périodique
-        this.syncInterval = setInterval(async () => {
-            await this.syncPendingItems();
-        }, this.SYNC_INTERVAL_MS);
+        // Sync au retour de l'app (AppState)
+        this.appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+            if (state === 'active') {
+                console.log('[Sync] App au premier plan → sync immédiate');
+                this.syncPendingItems().catch((e) => console.warn('[Sync] Erreur sync au focus:', e));
+            }
+        });
+
+        // Intervalle adaptatif : 2s si données en attente, 30s sinon
+        const pending = await this.getPendingCount();
+        const delay = pending > 0 ? this.SYNC_INTERVAL_WHEN_PENDING_MS : this.SYNC_INTERVAL_WHEN_EMPTY_MS;
+        this.syncTimeout = setTimeout(() => this.scheduleNextSync(), delay);
     }
 
     /**
      * Arrête la synchronisation automatique
      */
     stopAutoSync(): void {
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-            this.syncInterval = null;
-            console.log('[Sync] Synchronisation automatique arrêtée');
+        if (this.syncTimeout) {
+            clearTimeout(this.syncTimeout);
+            this.syncTimeout = null;
         }
+        if (this.appStateSubscription) {
+            this.appStateSubscription.remove();
+            this.appStateSubscription = null;
+        }
+        console.log('[Sync] Synchronisation automatique arrêtée');
     }
 
     /**
-     * Synchronise les éléments en attente
+     * Traite un lot d'items en parallèle (concurrence limitée)
      */
-    async syncPendingItems(): Promise<{ success: number; failed: number }> {
-        if (this.isSyncing) {
-            console.log('[Sync] Synchronisation déjà en cours...');
-            return { success: 0, failed: 0 };
-        }
-
-        this.isSyncing = true;
-        let successCount = 0;
-        let failedCount = 0;
-
-        try {
-            const pendingItems = await databaseService.getPendingSyncItems(50);
-            
-            if (pendingItems.length === 0) {
-                // console.log('[Sync] Aucun élément à synchroniser');
-                return { success: 0, failed: 0 };
-            }
-
-            console.log(`[Sync] ${pendingItems.length} élément(s) à synchroniser`);
-
-            for (const item of pendingItems) {
+    private async processChunk(chunk: SyncQueueItem[]): Promise<{ success: number; failed: number }> {
+        const results = await Promise.allSettled(
+            chunk.map(async (item) => {
+                if (!item.tableName || String(item.tableName) === 'undefined') {
+                    await databaseService.removeSyncQueueItem(item.id);
+                    return { success: true };
+                }
                 try {
-                    // ✅ VALIDATION : Ignorer les items corrompus (tableName undefined)
-                    if (!item.tableName || String(item.tableName) === 'undefined') {
-                        console.warn(`[Sync] ⚠️ Item corrompu détecté (tableName=${item.tableName}), suppression...`);
-                        await databaseService.removeSyncQueueItem(item.id);
-                        continue;
-                    }
-                    
-                    console.log(`[Sync] Tentative sync: ${item.tableName}/${item.recordId} (${item.operation})`);
                     await this.syncItem(item);
                     await databaseService.removeSyncQueueItem(item.id);
-                    successCount++;
+                    return { success: true };
                 } catch (error: any) {
-                    failedCount++;
                     const newRetryCount = item.retryCount + 1;
-                    const backoffDelay = this.getBackoffDelay(item.retryCount);
-                    
-                    // ✅ LOG DÉTAILLÉ DE L'ERREUR
-                    console.error(`[Sync] ❌ ÉCHEC ${item.tableName}/${item.recordId}:`);
-                    console.error(`[Sync]    → Erreur: ${error.message}`);
-                    console.error(`[Sync]    → Tentative: #${newRetryCount}`);
-                    console.error(`[Sync]    → Prochain retry dans: ${(backoffDelay / 1000).toFixed(1)}s`);
-                    if (error.stack) {
-                        console.error(`[Sync]    → Stack:`, error.stack);
-                    }
-                    
-                    // 🔄 RETRY INDÉFINI: Toujours garder l'item, juste incrémenter retry_count
-                    // avec backoff exponentiel
                     await databaseService.updateSyncQueueItem(
                         item.id,
                         newRetryCount,
                         `${error.message} (${new Date().toISOString()})`
                     );
+                    console.error(`[Sync] ❌ ${item.tableName}/${item.recordId}: ${error.message}`);
+                    return { success: false };
                 }
+            })
+        );
+        const success = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+        const failed = results.length - success;
+        return { success, failed };
+    }
+
+    /**
+     * Synchronise les éléments en attente (traitement en parallèle)
+     */
+    async syncPendingItems(): Promise<{ success: number; failed: number }> {
+        if (this.isSyncing) {
+            return { success: 0, failed: 0 };
+        }
+
+        this.isSyncing = true;
+        let totalSuccess = 0;
+        let totalFailed = 0;
+
+        try {
+            const pendingItems = await databaseService.getPendingSyncItems(100);
+
+            if (pendingItems.length === 0) {
+                return { success: 0, failed: 0 };
             }
 
-            if (successCount > 0) {
-                console.log(`[Sync] ✓ ${successCount} élément(s) synchronisé(s)`);
+            console.log(`[Sync] ${pendingItems.length} élément(s) à synchroniser (parallèle x${PARALLEL_CONCURRENCY})`);
+
+            for (let i = 0; i < pendingItems.length; i += PARALLEL_CONCURRENCY) {
+                const chunk = pendingItems.slice(i, i + PARALLEL_CONCURRENCY);
+                const { success, failed } = await this.processChunk(chunk);
+                totalSuccess += success;
+                totalFailed += failed;
             }
-            if (failedCount > 0) {
-                console.log(`[Sync] ✗ ${failedCount} élément(s) échoué(s)`);
+
+            if (totalSuccess > 0 || totalFailed > 0) {
+                console.log(`[Sync] ✓ ${totalSuccess} OK, ✗ ${totalFailed} échoué(s)`);
             }
         } catch (error) {
             console.error('[Sync] Erreur lors de la synchronisation:', error);
@@ -142,7 +171,7 @@ class SyncService {
             this.isSyncing = false;
         }
 
-        return { success: successCount, failed: failedCount };
+        return { success: totalSuccess, failed: totalFailed };
     }
 
     /**

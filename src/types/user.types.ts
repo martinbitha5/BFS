@@ -5,6 +5,7 @@ export interface User {
   email: string;
   fullName: string;
   airportCode: string;
+  airlineCode?: string;
   role: UserRole;
   isApproved?: boolean;
   approvedAt?: string;

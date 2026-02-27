@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Globe, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import FooterComponent from '../components/FooterComponent';
@@ -10,14 +10,23 @@ export default function Home() {
   const { t } = useLanguage();
   const [pnr, setPnr] = useState('');
   const [tagNumber, setTagNumber] = useState('');
+  const [useBagJourney, setUseBagJourney] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    const params = new URLSearchParams();
+    
     if (pnr.trim()) {
-      navigate(`/track?pnr=${pnr.trim().toUpperCase()}`);
+      params.append('pnr', pnr.trim().toUpperCase());
     } else if (tagNumber.trim()) {
-      navigate(`/track?tag=${tagNumber.trim().toUpperCase()}`);
+      params.append('tag', tagNumber.trim().toUpperCase());
     }
+    
+    if (useBagJourney) {
+      params.append('source', 'bagjourney');
+    }
+    
+    navigate(`/track?${params.toString()}`);
   };
 
   return (
@@ -102,8 +111,22 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Submit Button */}
-            <div className="flex items-center justify-end">
+            {/* BagJourney Option */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useBagJourney}
+                  onChange={(e) => setUseBagJourney(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-white/20 border-white/30 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4 text-white/70" />
+                  <span className="text-sm text-white/80">Rechercher aussi dans BagJourney (SITA)</span>
+                </div>
+              </label>
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={!pnr.trim() && !tagNumber.trim()}

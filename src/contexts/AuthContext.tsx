@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<UserSession>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, fullName: string, airportCode: string, role: string) => Promise<UserSession>;
+  register: (email: string, password: string, fullName: string, airportCode: string, role: string, airlineCode?: string) => Promise<UserSession>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,13 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await authService.logout();
+    // Mise à jour immédiate de l'UI (écran Login) - pas d'attente réseau
     setUser(null);
     setIsAuthenticated(false);
+    // Nettoyage en arrière-plan (Supabase signOut peut être lent)
+    authService.logout().catch((e) => console.warn('[Auth] Logout cleanup:', e));
   };
 
-  const register = async (email: string, password: string, fullName: string, airportCode: string, role: string) => {
-    const session = await authService.register(email, password, fullName, airportCode, role as any);
+  const register = async (email: string, password: string, fullName: string, airportCode: string, role: string, airlineCode?: string) => {
+    const session = await authService.register(email, password, fullName, airportCode, role as any, airlineCode);
     setUser(session.user);
     setIsAuthenticated(true);
     return session;

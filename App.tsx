@@ -10,7 +10,7 @@ import { FlightProvider } from './src/contexts/FlightContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import RootStack from './src/navigation/RootStack';
 import SplashScreen from './src/screens/SplashScreen';
-import { authServiceInstance, flightService } from './src/services';
+import { authServiceInstance, flightService, syncService } from './src/services';
 import { databaseService } from './src/services/database.service';
 
 function AppContent() {
@@ -45,15 +45,18 @@ function AppContent() {
           const user = await authServiceInstance.getCurrentUser();
           if (user && user.airportCode) {
             console.log('[App] ✅ ÉTAPE 3: Pré-chargement des vols pour', user.airportCode);
-            // Appel asynchrone, ne pas attendre
             flightService.getAvailableFlights(user.airportCode).catch(err => {
               console.warn('[App] ⚠️ Erreur pré-chargement vols:', err);
             });
+            // ✅ Sync immédiate au démarrage (si données en attente)
+            syncService.startAutoSync().catch(err => {
+              console.warn('[App] ⚠️ Erreur démarrage sync:', err);
+            });
           } else {
-            console.log('[App] ℹ️ ÉTAPE 3: Utilisateur non connecté, pré-chargement vols ignoré');
+            console.log('[App] ℹ️ ÉTAPE 3: Utilisateur non connecté');
           }
         } catch (flightError) {
-          console.warn('[App] ⚠️ Erreur lors du pré-chargement des vols:', flightError);
+          console.warn('[App] ⚠️ Erreur lors du pré-chargement:', flightError);
         }
         
         setIsReady(true);

@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from '../components/Button';
 import Input from '../components/Input';
+import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
 import { BorderRadius, Colors, FontSizes, FontWeights, Spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function LoginScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      const session = await authServiceInstance.login(email.trim(), password);
+      const session = await login(email.trim(), password);
       console.log('Login successful:', session.user);
       
       // Enregistrer l'action d'audit
