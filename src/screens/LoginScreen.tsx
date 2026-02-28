@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const isSubmittingRef = useRef(false);
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -37,10 +38,13 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
+    if (isSubmittingRef.current) return;
     if (!validate()) {
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       const session = await login(email.trim(), password);
@@ -63,13 +67,15 @@ export default function LoginScreen({ navigation }: Props) {
       );
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
