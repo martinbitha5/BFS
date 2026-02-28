@@ -13,6 +13,7 @@ import auditRoutes from './routes/audit.routes';
 import authRoutes from './routes/auth.routes';
 import baggageAuthorizationRoutes from './routes/baggage-authorization.routes';
 import baggageRoutes from './routes/baggage.routes';
+import { initializeBagJourneyService } from './services/bagjourney.service';
 import bagJourneyRoutes from './routes/bagjourney.routes';
 import birsHistoryRoutes from './routes/birs-history.routes';
 import birsRoutes from './routes/birs.routes';

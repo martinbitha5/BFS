@@ -1,17 +1,18 @@
 import axios from 'axios';
 
 // Configuration API - Hostinger Cloud Pro (brsats.com)
-// En développement, utiliser localhost. En production, utiliser HTTPS avec api.brsats.com
-const isProduction = false; // Mode développement local - utiliser localhost:3000
-const API_BASE_URL = isProduction
-  ? (import.meta.env.VITE_API_URL || 'https://api.brsats.com')
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
+// En production (vite build): VITE_API_URL depuis .env.production → https://api.brsats.com
+// En développement: VITE_API_URL depuis .env ou localhost:3001
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'production' ? 'https://api.brsats.com' : 'http://localhost:3001'
+);
 
 // Log pour debug (à retirer en production)
 if (import.meta.env.MODE === 'development') {
   console.log('🔧 API Base URL:', API_BASE_URL);
 }
 
+export { API_BASE_URL };
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

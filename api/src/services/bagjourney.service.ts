@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { BagJourneyConfig, BagJourneyFlightBags, BagJourneyFlightRequest, BagJourneyHistory, BagJourneyResponse, BagJourneySyncOptions, BagJourneyTagRequest } from '../types';
+import { BagJourneyConfig, BagJourneyFlightBags, BagJourneyFlightRequest, BagJourneyHistory, BagJourneyResponse, BagJourneySyncOptions, BagJourneyTagRequest, BagJourneyPassengerRequest } from '../types';
 
 class BagJourneyService {
   private config: BagJourneyConfig;
@@ -142,6 +142,34 @@ class BagJourneyService {
    */
   async getBagsForFlight(request: BagJourneyFlightRequest): Promise<BagJourneyResponse<BagJourneyFlightBags>> {
     return this.getFlightBags(request.flightNumber, request.flightDate);
+  }
+
+  /**
+   * Récupère les bagages par nom de passager
+   */
+  async getBagsByPassenger(request: BagJourneyPassengerRequest): Promise<BagJourneyResponse<BagJourneyFlightBags>> {
+    try {
+      // TODO: Implémenter l'appel réel à l'API SITA
+      const mockResponse: BagJourneyFlightBags = {
+        flightNumber: request.flightNumber || 'UNKNOWN',
+        flightDate: request.flightDate || new Date().toISOString().split('T')[0],
+        bags: [],
+        totalBags: 0,
+        delayedBags: 0,
+        rushBags: 0
+      };
+      return {
+        success: true,
+        data: mockResponse,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 
   /**

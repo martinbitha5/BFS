@@ -414,7 +414,7 @@ router.get('/track', async (req: Request, res: Response, next: NextFunction) => 
         const bagJourneyService = getBagJourneyService();
         
         if (bagJourneyService.isConfigured()) {
-          const bagJourneyResponse = await bagJourneyService.getBagHistory(normalizedTag);
+          const bagJourneyResponse = await bagJourneyService.getBagHistory({ tagNumber: normalizedTag });
           
           if (bagJourneyResponse.success && bagJourneyResponse.data) {
             console.log('[TRACK] Bagage trouvé dans BagJourney');

@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle, Package, Plus, Search, Tag, User, X } from 'l
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtime } from '../contexts/RealtimeContext';
 
 interface Passenger {
   id: string;
@@ -27,6 +28,7 @@ interface Baggage {
 
 export default function BaggageManagement() {
   const { user } = useAuth();
+  const { lastUpdate } = useRealtime();
   const [activeTab, setActiveTab] = useState<'add-to-passenger' | 'manual-tag'>('add-to-passenger');
   const [searchTerm, setSearchTerm] = useState('');
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -58,6 +60,13 @@ export default function BaggageManagement() {
   useEffect(() => {
     loadPassengers();
   }, []);
+
+  useEffect(() => {
+    if (lastUpdate > 0) {
+      loadPassengers();
+      if (selectedPassenger) loadPassengerBaggages(selectedPassenger.id);
+    }
+  }, [lastUpdate]);
 
   // Charger les bagages existants quand un passager est sélectionné
   useEffect(() => {

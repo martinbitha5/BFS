@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtime } from '../contexts/RealtimeContext';
 
 interface BIRSReport {
   id: string;
@@ -43,6 +44,7 @@ interface ReportItem {
 
 export default function BRSInternational() {
   const { user } = useAuth();
+  const { lastUpdate } = useRealtime();
   
   const [reports, setReports] = useState<BIRSReport[]>([]);
   const [filteredByAirline, setFilteredByAirline] = useState(false);
@@ -89,6 +91,10 @@ export default function BRSInternational() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (lastUpdate) fetchData();
+  }, [lastUpdate, fetchData]);
 
   const viewReport = async (report: BIRSReport) => {
     setSelectedReport(report);

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
+import { notifyStatsUpdate } from './realtime.routes';
 
 const router = Router();
 
@@ -128,6 +129,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw error;
 
+    // Notifier le dashboard en temps réel (récupérer airport depuis le passager)
+    const { data: p } = await supabase.from('passengers').select('airport_code').eq('id', passenger_id).single();
+    if (p?.airport_code) notifyStatsUpdate(p.airport_code).catch(() => {});
+
     res.status(201).json({
       success: true,
       data
@@ -236,6 +241,8 @@ router.post('/passenger/:passengerId', requireAirportCode, async (req: Request, 
 
     if (error) throw error;
 
+    notifyStatsUpdate(airport).catch(() => {});
+
     res.json({
       success: true,
       data
@@ -280,6 +287,13 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       .select();
 
     if (error) throw error;
+
+    // Notifier le dashboard en temps réel
+    const firstPassengerId = cleanedBoardings[0]?.passenger_id;
+    if (firstPassengerId) {
+      const { data: p } = await supabase.from('passengers').select('airport_code').eq('id', firstPassengerId).single();
+      if (p?.airport_code) notifyStatsUpdate(p.airport_code).catch(() => {});
+    }
 
     res.json({
       success: true,
@@ -412,7 +426,7 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     // Sinon la foreign key constraint échoue
     const { data: passenger, error: passengerError } = await supabase
       .from('passengers')
-      .select('id')
+      .select('id, airport_code')
       .eq('id', passenger_id)
       .single();
 
@@ -456,6 +470,10 @@ router.post('/sync-hash', async (req: Request, res: Response, next: NextFunction
     }
 
     console.log('[Boarding] Success:', boarding);
+
+    // Notifier le dashboard en temps réel
+    const airportCode = req.body.airport_code || passenger?.airport_code;
+    if (airportCode) notifyStatsUpdate(airportCode).catch(() => {});
 
     res.json({
       success: true,

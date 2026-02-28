@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { supabase } from '../config/database';
 import { requireAirportCode } from '../middleware/airport-restriction.middleware';
 import { autoSyncIfNeeded } from '../services/auto-sync.service';
+import { notifyStatsUpdate } from './realtime.routes';
 
 const router = Router();
 
@@ -498,6 +499,12 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
         console.error(`[Passengers/Sync] Erreur inattendue pour ${passenger.pnr}:`, passengerError);
         errors.push({ pnr: passenger.pnr, error: passengerError.message || 'Erreur inconnue', action: 'unknown' });
       }
+    }
+
+    // Notifier le dashboard en temps réel (premier passager = airport_code)
+    const airportCode = results[0]?.airport_code || passengers[0]?.airport_code;
+    if (airportCode && results.length > 0) {
+      notifyStatsUpdate(airportCode).catch((e) => console.warn('[Passengers/Sync] notifyStatsUpdate:', e));
     }
 
     res.json({

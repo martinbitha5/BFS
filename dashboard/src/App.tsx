@@ -2,6 +2,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { RealtimeProvider } from './contexts/RealtimeContext';
 import About from './pages/About';
 import Arrivals from './pages/Arrivals';
 import BaggageManagement from './pages/BaggageManagement';
@@ -54,9 +55,11 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -66,9 +69,11 @@ function App() {
             path="/departures"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Departures />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Departures />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -78,9 +83,11 @@ function App() {
             path="/arrivals"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Arrivals />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Arrivals />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -90,9 +97,11 @@ function App() {
             path="/deliveries"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Deliveries />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Deliveries />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -102,9 +111,11 @@ function App() {
             path="/brs"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <BRSInternational />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <BRSInternational />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -114,9 +125,11 @@ function App() {
             path="/export"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Export />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Export />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -126,9 +139,11 @@ function App() {
             path="/passengers"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Passengers />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <Passengers />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />
@@ -138,9 +153,11 @@ function App() {
             path="/baggage-management"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <BaggageManagement />
-                </Layout>
+                <RealtimeProvider>
+                  <Layout>
+                    <BaggageManagement />
+                  </Layout>
+                </RealtimeProvider>
               </ProtectedRoute>
             }
           />

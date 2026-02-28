@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Pie, PieChar
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtime } from '../contexts/RealtimeContext';
 
 interface Passenger {
   id: string;
@@ -63,6 +64,7 @@ type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { lastUpdate } = useRealtime();
   const [departures, setDepartures] = useState<Passenger[]>([]);
   const [arrivals, setArrivals] = useState<Passenger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +136,10 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (lastUpdate > 0) fetchData();
+  }, [lastUpdate, fetchData]);
 
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
     const now = new Date();

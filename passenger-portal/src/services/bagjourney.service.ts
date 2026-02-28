@@ -82,7 +82,7 @@ class BagJourneyService {
       const params = new URLSearchParams();
       if (flightDate) params.append('flightDate', flightDate);
 
-      const response = await this.api.get(`/status/${tagNumber}?${params.toString()}`);
+      const response = await this.api.get<BagJourneyResponse<BagJourneyHistory>>(`/status/${tagNumber}?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -98,7 +98,7 @@ class BagJourneyService {
    */
   async getFlightBags(flightNumber: string, flightDate: string): Promise<BagJourneyResponse<BagJourneyFlightBags>> {
     try {
-      const response = await this.api.get(`/flight/${flightNumber}/${flightDate}`);
+      const response = await this.api.get<BagJourneyResponse<BagJourneyFlightBags>>(`/flight/${flightNumber}/${flightDate}`);
       return response.data;
     } catch (error: any) {
       return {
@@ -114,7 +114,7 @@ class BagJourneyService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await this.api.get('/health');
+      const response = await this.api.get<{ success?: boolean }>('/health');
       return response.data?.success === true;
     } catch {
       return false;
@@ -125,8 +125,6 @@ class BagJourneyService {
    * Convertit les données BagJourney au format BFS local
    */
   convertToBFSFormat(bagData: BagJourneyHistory): any {
-    const currentEvent = bagData.events[bagData.events.length - 1];
-    
     return {
       bag_id: bagData.tagNumber,
       status: this.mapBagJourneyStatusToBFS(bagData.currentStatus.code),

@@ -128,7 +128,10 @@ export default function ArrivalScreen({ navigation }: Props) {
         
         if (response.data?.success && response.data?.data) {
           const baggageData = response.data.data;
-          const passengerData = baggageData.passengers;
+          // API peut retourner passengers comme objet ou tableau (relation Supabase)
+          const passengerData = Array.isArray(baggageData.passengers)
+            ? baggageData.passengers[0]
+            : baggageData.passengers;
           
           if (!passengerData) {
             await playErrorSound();
@@ -139,20 +142,33 @@ export default function ArrivalScreen({ navigation }: Props) {
             return;
           }
           
-          // FIX CRITICAL: Vérifier l'aéroport TOUJOURS (pas seulement en production)
-          // Le bagage doit arriver à sa destination finale correcte (sinon redirection)
-          if (passengerData.arrival !== user.airportCode) {
+          // FIX: Le bagage doit arriver à la DESTINATION du vol (passenger.arrival)
+          // Ex: FIH→FBM: on scanne à FBM (arrivée) → passenger.arrival=FBM ✓
+          // Si données inversées en BD (arrival=origine, departure=destination), accepter quand on est à departure
+          const destNormale = passengerData.arrival;
+          const origNormale = passengerData.departure;
+          const estADestination = destNormale === user.airportCode;
+          const donneesInversees = origNormale === user.airportCode && origNormale !== destNormale;
+          
+          if (!estADestination && !donneesInversees) {
             await playErrorSound();
+            const destinationAttendue = destNormale || origNormale || '?';
             Alert.alert(
               'MAUVAISE DESTINATION',
-              `Bagage ${baggageData.tag_number} doit arriver a ${passengerData.arrival}, pas a ${user.airportCode}. REDIRIGER LE BAGAGE.`,
+              `Bagage ${baggageData.tag_number} doit arriver à ${destinationAttendue}, pas à ${user.airportCode}. REDIRIGER LE BAGAGE.`,
               [{ text: 'OK', onPress: () => resetScanner() }]
             );
-            console.error(`[ArrivalScreen] Baggage ${baggageData.tag_number} scanned at wrong airport. Expected: ${passengerData.arrival}, Scanned at: ${user.airportCode}`);
+            console.error(`[ArrivalScreen] Baggage ${baggageData.tag_number} wrong airport. Expected destination: ${destinationAttendue}, Scanned at: ${user.airportCode}`);
             return;
           }
 
           // 🔴 FIX: Convertir les données de l'API (snake_case) vers le type Passenger (camelCase)
+          // Si données inversées en BD, corriger pour l'affichage (origine→destination)
+          const dep = passengerData.departure || user.airportCode;
+          const arr = passengerData.arrival || '';
+          const { departure: depAffichage, arrival: arrAffichage } = donneesInversees
+            ? { departure: arr || dep, arrival: dep } // Inverser pour afficher correctement
+            : { departure: dep, arrival: arr };
           const convertedPassenger: Passenger = {
             id: passengerData.id || baggageData.id,
             pnr: passengerData.pnr || '',
@@ -162,9 +178,9 @@ export default function ArrivalScreen({ navigation }: Props) {
             flightNumber: passengerData.flight_number || '',
             airline: passengerData.airline || '',
             airlineCode: passengerData.airline_code || '',
-            departure: passengerData.departure || user.airportCode,
-            arrival: passengerData.arrival || '',
-            route: `${passengerData.departure || user.airportCode}-${passengerData.arrival || ''}`,
+            departure: depAffichage,
+            arrival: arrAffichage,
+            route: `${depAffichage}-${arrAffichage}`,
             baggageCount: passengerData.baggage_count || 1,
             baggageBaseNumber: passengerData.baggage_base_number,
             checkedInAt: passengerData.checked_in_at || new Date().toISOString(),

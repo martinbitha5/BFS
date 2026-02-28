@@ -5,6 +5,7 @@ import { validateBaggageScan } from '../middleware/scan-validation.middleware';
 import { autoSyncIfNeeded } from '../services/auto-sync.service';
 import { getBagJourneyService } from '../services/bagjourney.service';
 import { mapBagJourneyStatusToBFS } from '../utils/bagjourney-status.util';
+import { notifyStatsUpdate } from './realtime.routes';
 
 const router = Router();
 
@@ -14,14 +15,19 @@ router.get('/flights-with-checked', requireAirportCode, async (req: Request & { 
     if (!airport) {
       return res.status(400).json({ success: false, error: 'Code aéroport requis' });
     }
+    const airlineCode = (req.headers['x-airline-code'] as string)?.trim()?.toUpperCase();
     const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase
+    let query = supabase
       .from('baggages')
       .select('flight_number, passengers(departure, arrival)')
       .eq('airport_code', airport)
       .eq('status', 'checked')
       .gte('created_at', `${today}T00:00:00.000Z`)
       .lte('created_at', `${today}T23:59:59.999Z`);
+    if (airlineCode && airlineCode !== 'ALL') {
+      query = query.like('flight_number', `${airlineCode}%`);
+    }
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -101,6 +107,11 @@ router.get('/', requireAirportCode, async (req: Request & { userAirportCode?: st
     // Filtrer par vol si demandé
     if (flight) {
       baggageQuery = baggageQuery.eq('flight_number', flight);
+    }
+    // Filtrer par compagnie (x-airline-code) pour les agents baggage
+    const airlineCode = (req.headers['x-airline-code'] as string)?.trim()?.toUpperCase();
+    if (airlineCode && airlineCode !== 'ALL') {
+      baggageQuery = baggageQuery.like('flight_number', `${airlineCode}%`);
     }
     
     // Filtrer par date de début (created_at >= date_from)
@@ -185,9 +196,19 @@ router.get('/:tagNumber', async (req, res, next) => {
       throw error;
     }
 
+    // Normaliser passengers (Supabase peut retourner objet ou tableau selon la relation)
+    const passenger = Array.isArray(data.passengers) ? data.passengers[0] : data.passengers;
+    const responseData = {
+      ...data,
+      passengers: passenger || null,
+      // Champs explicites pour le flux arrival (éviter confusion departure/arrival)
+      expected_arrival_airport: passenger?.arrival || null,
+      route: passenger ? `${passenger.departure || '?'} → ${passenger.arrival || '?'}` : null,
+    };
+
     res.json({
       success: true,
-      data
+      data: responseData
     });
   } catch (error) {
     next(error);
@@ -486,9 +507,10 @@ router.post('/offload', requireAirportCode, async (req: Request, res: Response, 
       });
     }
 
+    const airlineCode = (req.headers['x-airline-code'] as string)?.trim()?.toUpperCase();
     const { data: baggage, error: fetchError } = await supabase
       .from('baggages')
-      .select('id, tag_number, status, airport_code, notes')
+      .select('id, tag_number, status, airport_code, flight_number, notes')
       .eq('airport_code', airport)
       .eq('tag_number', tagNumber)
       .single();
@@ -497,6 +519,12 @@ router.post('/offload', requireAirportCode, async (req: Request, res: Response, 
       return res.status(404).json({
         success: false,
         error: `Bagage non trouvé: ${tagNumber}`
+      });
+    }
+    if (airlineCode && airlineCode !== 'ALL' && baggage.flight_number && !baggage.flight_number.toUpperCase().startsWith(airlineCode)) {
+      return res.status(403).json({
+        success: false,
+        error: `Ce bagage (vol ${baggage.flight_number}) n'appartient pas à votre compagnie (${airlineCode})`
       });
     }
 
@@ -538,6 +566,13 @@ router.post('/confirm-load', requireAirportCode, async (req: Request, res: Respo
       return res.status(400).json({
         success: false,
         error: 'Code aéroport requis'
+      });
+    }
+    const airlineCode = (req.headers['x-airline-code'] as string)?.trim()?.toUpperCase();
+    if (airlineCode && airlineCode !== 'ALL' && !flightNumber.toUpperCase().startsWith(airlineCode)) {
+      return res.status(403).json({
+        success: false,
+        error: `Le vol ${flightNumber} n'appartient pas à votre compagnie (${airlineCode})`
       });
     }
 
@@ -749,6 +784,12 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
       .select();
 
     if (error) throw error;
+
+    // Notifier le dashboard en temps réel
+    const airportCode = baggagesWithPassenger[0]?.airport_code || baggages[0]?.airport_code;
+    if (airportCode && (data?.length || 0) > 0) {
+      notifyStatsUpdate(airportCode).catch((e) => console.warn('[Baggage/Sync] notifyStatsUpdate:', e));
+    }
 
     res.json({
       success: true,

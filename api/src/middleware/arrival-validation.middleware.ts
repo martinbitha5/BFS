@@ -30,7 +30,9 @@ export const validateArrivalScan = async (
           pnr,
           full_name,
           baggage_count,
-          flight_number
+          flight_number,
+          departure,
+          arrival
         )
       `)
       .eq('tag_number', tag_number)
@@ -43,7 +45,22 @@ export const validateArrivalScan = async (
 
     // 2. Si le bagage existe et est lié à un passager
     if (baggage && baggage.passenger_id) {
-      const passenger = baggage.passengers;
+      const passenger = Array.isArray(baggage.passengers) ? baggage.passengers[0] : baggage.passengers;
+      
+      // Vérifier que le scan est à la bonne destination (passenger.arrival = aéroport d'arrivée)
+      // Si données inversées en BD (departure=destination), accepter quand airport_code = departure
+      const destNormale = passenger?.arrival;
+      const origNormale = passenger?.departure;
+      const estADestination = destNormale === airport_code;
+      const donneesInversees = origNormale === airport_code && origNormale !== destNormale;
+      
+      if (!estADestination && !donneesInversees && (destNormale || origNormale)) {
+        return res.status(403).json({
+          success: false,
+          error: `Ce bagage doit arriver à ${destNormale || origNormale}, pas à ${airport_code}. REDIRIGER LE BAGAGE.`,
+          expected_arrival: destNormale || origNormale,
+        });
+      }
       
       // Vérifier le nombre de bagages déjà arrivés pour ce passager
       const { count: arrivedCount } = await supabase

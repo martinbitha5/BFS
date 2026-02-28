@@ -20,9 +20,6 @@ class RealtimeService {
    * Ajoute un nouveau client SSE
    */
   addClient(id: string, res: Response, airportCode: string): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2e82e369-b2c3-4892-be74-bf76a361a519',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'realtime.service.ts:addClient',message:'Adding SSE client',data:{id,airportCode,totalBefore:this.clients.size},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     this.clients.set(id, {
       id,
       res,

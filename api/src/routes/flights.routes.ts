@@ -35,9 +35,9 @@ function toCamelCase(data: any) {
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { airport, date, status } = req.query;
+    const { airport, date, status, airline_code } = req.query;
     
-    console.log(`[Flights API] GET /flights - airport=${airport}, date=${date}, status=${status}`);
+    console.log(`[Flights API] GET /flights - airport=${airport}, date=${date}, status=${status}, airline_code=${airline_code}`);
     
     let query = supabase
       .from('flight_schedule')
@@ -53,6 +53,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (status) {
       query = query.eq('status', status);
+    }
+    if (airline_code && airline_code !== 'ALL') {
+      query = query.like('flight_number', `${airline_code}%`);
     }
 
     const { data, error } = await query;

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoadingPlane from '../components/LoadingPlane';
 import api from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtime } from '../contexts/RealtimeContext';
 import { exportToExcel } from '../utils/exportExcel';
 
 interface Baggage {
@@ -51,6 +52,7 @@ type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all';
 
 export default function Passengers() {
   const { user } = useAuth();
+  const { lastUpdate } = useRealtime();
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +120,10 @@ export default function Passengers() {
   useEffect(() => {
     fetchPassengers();
   }, [user?.airport_code, user?.airline_code]);
+
+  useEffect(() => {
+    if (lastUpdate) fetchPassengers();
+  }, [lastUpdate, fetchPassengers]);
 
   // Date filtering helper
   const getDateRange = (period: PeriodFilter): { start: Date; end: Date } | null => {
