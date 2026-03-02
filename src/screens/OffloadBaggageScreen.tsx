@@ -6,8 +6,9 @@ import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView
 import { Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
+import { apiService, authServiceInstance } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { invalidateCache } from '../utils/cachedFetch';
 import { playErrorSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OffloadBaggage'>;
@@ -55,6 +56,8 @@ export default function OffloadBaggageScreen({ navigation }: Props) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
+        apiService.invalidateGetCache('/baggage');
+        invalidateCache('/baggage');
         await playSuccessSound();
         setTag('');
         setToastMessage('✅ Bagage débarqué');

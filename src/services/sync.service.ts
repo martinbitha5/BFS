@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, AppStateStatus } from 'react-native';
 import { SyncQueueItem } from '../types/sync.types';
+import { setSyncQueueCallback } from '../utils/sync-trigger';
 import { databaseService } from './database.service';
+import { flightService } from './flight.service';
 
 const STORAGE_KEYS = {
     AUTO_SYNC_ENABLED: '@bfs:auto_sync_enabled',
@@ -9,8 +11,7 @@ const STORAGE_KEYS = {
     API_KEY: '@bfs:api_key',
 };
 
-/** Concurrence : nombre de requêtes envoyées en parallèle */
-const PARALLEL_CONCURRENCY = 8;
+/** Envoi par lots (batch) : une requête API par type de table */
 
 /**
  * Service de synchronisation automatique avec Supabase
@@ -21,9 +22,10 @@ const PARALLEL_CONCURRENCY = 8;
  */
 class SyncService {
     private isSyncing: boolean = false;
+    private syncAgainWhenDone: boolean = false;
     private syncTimeout: ReturnType<typeof setTimeout> | null = null;
     private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
-    private readonly SYNC_INTERVAL_WHEN_PENDING_MS = 2000; // 2 secondes quand il y a des données
+    private readonly SYNC_INTERVAL_WHEN_PENDING_MS = 400; // 400ms quand données en attente → sync très rapide
     private readonly SYNC_INTERVAL_WHEN_EMPTY_MS = 30000; // 30 secondes quand la file est vide
     
     // ✅ CACHE pour éviter les appels répétés à AsyncStorage
@@ -49,6 +51,11 @@ class SyncService {
         if (this.syncTimeout) clearTimeout(this.syncTimeout);
         this.syncTimeout = setTimeout(async () => {
             const result = await this.syncPendingItems();
+            if (this.syncAgainWhenDone) {
+                this.syncAgainWhenDone = false;
+                this.syncTimeout = setTimeout(() => this.triggerSyncNow(), 0);
+                return;
+            }
             const pending = await this.getPendingCount();
             const delay = pending > 0 || result.success > 0
                 ? this.SYNC_INTERVAL_WHEN_PENDING_MS
@@ -73,6 +80,9 @@ class SyncService {
 
         // Première sync immédiate
         await this.syncPendingItems();
+
+        // Sync immédiate quand items ajoutés à la queue (check-in, baggage, etc.)
+        setSyncQueueCallback(() => this.triggerSyncNow());
 
         // Sync au retour de l'app (AppState)
         this.appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
@@ -100,42 +110,181 @@ class SyncService {
             this.appStateSubscription.remove();
             this.appStateSubscription = null;
         }
+        setSyncQueueCallback(null);
         console.log('[Sync] Synchronisation automatique arrêtée');
     }
 
     /**
-     * Traite un lot d'items en parallèle (concurrence limitée)
+     * Déclenche une sync immédiate (appelé quand des items sont ajoutés à la queue)
      */
-    private async processChunk(chunk: SyncQueueItem[]): Promise<{ success: number; failed: number }> {
-        const results = await Promise.allSettled(
-            chunk.map(async (item) => {
-                if (!item.tableName || String(item.tableName) === 'undefined') {
-                    await databaseService.removeSyncQueueItem(item.id);
-                    return { success: true };
-                }
-                try {
-                    await this.syncItem(item);
-                    await databaseService.removeSyncQueueItem(item.id);
-                    return { success: true };
-                } catch (error: any) {
-                    const newRetryCount = item.retryCount + 1;
-                    await databaseService.updateSyncQueueItem(
-                        item.id,
-                        newRetryCount,
-                        `${error.message} (${new Date().toISOString()})`
-                    );
-                    console.error(`[Sync] ❌ ${item.tableName}/${item.recordId}: ${error.message}`);
-                    return { success: false };
-                }
-            })
-        );
-        const success = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
-        const failed = results.length - success;
+    triggerSyncNow(): void {
+        if (this.isSyncing) {
+            this.syncAgainWhenDone = true;
+            return;
+        }
+        if (this.syncTimeout) {
+            clearTimeout(this.syncTimeout);
+            this.syncTimeout = null;
+        }
+        this.syncPendingItems().then((result) => {
+            if (this.syncAgainWhenDone) {
+                this.syncAgainWhenDone = false;
+                setTimeout(() => this.triggerSyncNow(), 0);
+                return;
+            }
+            const delay = result.success > 0 || result.failed > 0
+                ? this.SYNC_INTERVAL_WHEN_PENDING_MS
+                : this.SYNC_INTERVAL_WHEN_EMPTY_MS;
+            this.syncTimeout = setTimeout(() => this.scheduleNextSync(), delay);
+        });
+    }
+
+    /**
+     * Groupe les items par type de table (exclut les items invalides)
+     */
+    private groupByTable(items: SyncQueueItem[]): Map<string, SyncQueueItem[]> {
+        const map = new Map<string, SyncQueueItem[]>();
+        for (const item of items) {
+            if (!item.tableName || String(item.tableName) === 'undefined') continue;
+            const list = map.get(item.tableName) || [];
+            list.push(item);
+            map.set(item.tableName, list);
+        }
+        return map;
+    }
+
+    /**
+     * Synchronise un batch d'items du même type en une seule requête API
+     */
+    private async syncBatch(tableName: string, items: SyncQueueItem[]): Promise<{ success: number; failed: number }> {
+        if (items.length === 0) return { success: 0, failed: 0 };
+
+        await this.loadApiConfig();
+        const apiUrl = this.cachedApiUrl;
+        const apiKey = this.cachedApiKey;
+
+        if (!apiUrl) {
+            throw new Error('Configuration API manquante (API_URL non définie)');
+        }
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (apiKey) headers['x-api-key'] = apiKey;
+
+        let endpoint = '';
+        let body: Record<string, unknown>;
+
+        switch (tableName) {
+            case 'passengers': {
+                const passengers = items.map((item) => {
+                    const data = JSON.parse(item.data);
+                    return {
+                        pnr: data.pnr,
+                        full_name: data.full_name || data.fullName,
+                        flight_number: data.flight_number || data.flightNumber,
+                        seat_number: data.seat_number || data.seatNumber || null,
+                        departure: data.departure,
+                        arrival: data.arrival,
+                        airport_code: data.airport_code || data.airportCode,
+                        baggage_count: data.baggage_count ?? data.baggageCount ?? 0,
+                        baggage_base_number: data.baggage_base_number || data.baggageBaseNumber || null,
+                        checked_in_at: data.checked_in_at || data.checkedInAt || new Date().toISOString(),
+                    };
+                });
+                endpoint = `${apiUrl}/api/v1/passengers/sync`;
+                body = { passengers };
+                break;
+            }
+            case 'baggages': {
+                const baggages = items.map((item) => {
+                    const data = JSON.parse(item.data);
+                    const { id: _, ...rest } = data;
+                    return rest;
+                });
+                endpoint = `${apiUrl}/api/v1/baggage/sync`;
+                body = { baggages };
+                break;
+            }
+            case 'boarding_status': {
+                const boardings = items.map((item) => {
+                    const data = JSON.parse(item.data);
+                    return {
+                        passenger_id: data.passenger_id,
+                        boarded_at: data.boarded_at || new Date().toISOString(),
+                        ...(data.boarded_by && { boarded_by: data.boarded_by }),
+                    };
+                }).filter((b: any) => b.passenger_id);
+                if (boardings.length === 0) return { success: items.length, failed: 0 };
+                endpoint = `${apiUrl}/api/v1/boarding/sync`;
+                body = { boardings };
+                break;
+            }
+            case 'raw_scans':
+                // Pas d'endpoint batch pour raw_scans, on traite un par un
+                return this.syncRawScansIndividually(items);
+            default:
+                throw new Error(`Table non supportée: ${tableName}`);
+        }
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.errors && result.errors.length > 0) {
+                throw new Error(`Erreurs API: ${JSON.stringify(result.errors)}`);
+            }
+
+            await databaseService.removeSyncQueueItems(items.map((i) => i.id));
+            console.log(`[Sync] ✓ Batch ${tableName}: ${items.length} élément(s) synchronisé(s)`);
+            return { success: items.length, failed: 0 };
+        } catch (error: any) {
+            const errMsg = `${error.message} (${new Date().toISOString()})`;
+            for (const item of items) {
+                await databaseService.updateSyncQueueItem(item.id, item.retryCount + 1, errMsg);
+            }
+            console.error(`[Sync] ❌ Batch ${tableName}: ${error.message}`);
+            return { success: 0, failed: items.length };
+        }
+    }
+
+    /**
+     * raw_scans n'a pas d'endpoint batch : envoi un par un
+     */
+    private async syncRawScansIndividually(items: SyncQueueItem[]): Promise<{ success: number; failed: number }> {
+        let success = 0;
+        let failed = 0;
+        for (const item of items) {
+            try {
+                await this.syncItem(item);
+                await databaseService.removeSyncQueueItem(item.id);
+                success++;
+            } catch (error: any) {
+                await databaseService.updateSyncQueueItem(
+                    item.id,
+                    item.retryCount + 1,
+                    `${error.message} (${new Date().toISOString()})`
+                );
+                failed++;
+            }
+        }
         return { success, failed };
     }
 
     /**
-     * Synchronise les éléments en attente (traitement en parallèle)
+     * Synchronise les éléments en attente (batch par type de table)
      */
     async syncPendingItems(): Promise<{ success: number; failed: number }> {
         if (this.isSyncing) {
@@ -153,17 +302,18 @@ class SyncService {
                 return { success: 0, failed: 0 };
             }
 
-            console.log(`[Sync] ${pendingItems.length} élément(s) à synchroniser (parallèle x${PARALLEL_CONCURRENCY})`);
+            const grouped = this.groupByTable(pendingItems);
+            console.log(`[Sync] ${pendingItems.length} élément(s) → ${grouped.size} batch(s)`);
 
-            for (let i = 0; i < pendingItems.length; i += PARALLEL_CONCURRENCY) {
-                const chunk = pendingItems.slice(i, i + PARALLEL_CONCURRENCY);
-                const { success, failed } = await this.processChunk(chunk);
+            for (const [tableName, items] of grouped) {
+                const { success, failed } = await this.syncBatch(tableName, items);
                 totalSuccess += success;
                 totalFailed += failed;
             }
 
             if (totalSuccess > 0 || totalFailed > 0) {
                 console.log(`[Sync] ✓ ${totalSuccess} OK, ✗ ${totalFailed} échoué(s)`);
+                if (totalSuccess > 0) flightService.clearFlightsCache();
             }
         } catch (error) {
             console.error('[Sync] Erreur lors de la synchronisation:', error);

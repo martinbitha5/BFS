@@ -8,7 +8,7 @@ import Card from '../components/Card';
 import StatusIndicator from '../components/StatusIndicator';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, databaseServiceInstance, syncService } from '../services';
+import { authServiceInstance, databaseServiceInstance, flightService, syncService } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { User } from '../types/user.types';
 
@@ -66,6 +66,13 @@ export default function HomeScreen({ navigation }: Props) {
     const currentUser = await authServiceInstance.getCurrentUser();
     setUser(currentUser);
     setIsRushAgent(currentUser?.role === 'rush');
+    if (currentUser?.airportCode) {
+      flightService.getAvailableFlights(
+        currentUser.airportCode,
+        undefined,
+        currentUser.role === 'baggage' ? currentUser.airlineCode : undefined
+      ).catch(() => {});
+    }
   };
 
   const loadSyncStatus = async () => {

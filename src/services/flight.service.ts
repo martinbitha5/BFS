@@ -6,6 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FREQUENT_FLIGHTS, FrequentFlight } from '../constants/flight-schedule';
+import { cachedFetch } from '../utils/cachedFetch';
 import { AvailableFlight } from '../types/flight.types';
 import { databaseService } from './database.service';
 
@@ -14,7 +15,15 @@ const STORAGE_KEYS = {
   API_KEY: '@bfs:api_key',
 };
 
+const FLIGHTS_CACHE_TTL_MS = 15000; // 15 secondes - consultation très rapide
+
 class FlightService {
+  private flightsCache: {
+    key: string;
+    data: import('../types/flight.types').AvailableFlight[];
+    timestamp: number;
+  } | null = null;
+
   /**
    * Normalise un numéro de vol en supprimant les zéros non significatifs
    * ET0064 -> ET64, 9U0404 -> 9U404
@@ -38,9 +47,16 @@ class FlightService {
   /**
    * Récupère tous les vols disponibles pour un aéroport
    * Source : 1) Vols programmés (dashboard), 2) Passagers enregistrés
+   * Cache 15s pour consultation très rapide
    */
   async getAvailableFlights(airportCode: string, date?: string, airlineCode?: string): Promise<AvailableFlight[]> {
     const today = date || new Date().toISOString().split('T')[0];
+    const cacheKey = `${airportCode}|${today}|${airlineCode || ''}`;
+
+    if (this.flightsCache?.key === cacheKey && Date.now() - this.flightsCache.timestamp < FLIGHTS_CACHE_TTL_MS) {
+      return this.flightsCache.data;
+    }
+
     const flights = new Map<string, AvailableFlight>();
 
     const [scheduledFlights, passengersFlights] = await Promise.all([
@@ -64,9 +80,16 @@ class FlightService {
       }
     }
 
-    return Array.from(flights.values()).sort((a, b) =>
+    const result = Array.from(flights.values()).sort((a, b) =>
       a.flightNumber.localeCompare(b.flightNumber)
     );
+    this.flightsCache = { key: cacheKey, data: result, timestamp: Date.now() };
+    return result;
+  }
+
+  /** Invalide le cache des vols (après sync par ex.) pour avoir des données fraîches */
+  clearFlightsCache(): void {
+    this.flightsCache = null;
   }
 
   /**
@@ -100,7 +123,7 @@ class FlightService {
         'Content-Type': 'application/json',
       };
       if (airlineCode) headers['x-airline-code'] = airlineCode;
-      const response = await fetch(url, { headers });
+      const response = await cachedFetch(url, { headers });
 
       console.log('[FlightService] 📥 Réponse API:', response.status, response.statusText);
 
@@ -162,7 +185,7 @@ class FlightService {
           'Content-Type': 'application/json',
         };
         if (airlineCode) headers['x-airline-code'] = airlineCode;
-        const response = await fetch(url, { headers });
+        const response = await cachedFetch(url, { headers });
 
         if (response.ok) {
           const result = await response.json();

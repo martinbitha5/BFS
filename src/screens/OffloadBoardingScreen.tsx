@@ -6,8 +6,9 @@ import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView
 import { Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance } from '../services';
+import { apiService, authServiceInstance } from '../services';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
+import { invalidateCache } from '../utils/cachedFetch';
 import { playErrorSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OffloadBoarding'>;
@@ -53,6 +54,10 @@ export default function OffloadBoardingScreen({ navigation }: Props) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
+        apiService.invalidateGetCache('/boarding');
+        apiService.invalidateGetCache('/passengers');
+        invalidateCache('/passengers');
+        invalidateCache('/boarding');
         await playSuccessSound();
         setPnr('');
         setToastMessage('✅ Passager débarqué avec succès');

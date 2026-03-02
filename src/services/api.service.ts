@@ -6,6 +6,10 @@ const STORAGE_KEYS = {
   API_KEY: '@bfs:api_key',
 };
 
+/** Cache 12 s pour api.get() - réponses très rapides sur tous les écrans */
+const GET_CACHE_TTL_MS = 12000;
+const getCache = new Map<string, { data: any; timestamp: number }>();
+
 class ApiService {
   private api: AxiosInstance;
   private cachedApiUrl: string | null = null;
@@ -47,7 +51,14 @@ class ApiService {
   }
 
   async get(url: string, params?: any) {
-    return this.api.get(url, { params });
+    const cacheKey = url + (params ? JSON.stringify(params) : '');
+    const cached = getCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < GET_CACHE_TTL_MS) {
+      return { data: cached.data, status: 200, statusText: 'OK', headers: {}, config: {} as any };
+    }
+    const res = await this.api.get(url, { params });
+    getCache.set(cacheKey, { data: res.data, timestamp: Date.now() });
+    return res;
   }
 
   async post(url: string, data?: any) {
@@ -60,6 +71,17 @@ class ApiService {
 
   async delete(url: string) {
     return this.api.delete(url);
+  }
+
+  /** Invalide le cache GET (appeler après offload, confirm-load, etc.) */
+  invalidateGetCache(pattern?: string): void {
+    if (!pattern) {
+      getCache.clear();
+      return;
+    }
+    for (const key of getCache.keys()) {
+      if (key.includes(pattern)) getCache.delete(key);
+    }
   }
 }
 

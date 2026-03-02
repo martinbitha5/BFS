@@ -11,6 +11,7 @@ import { birsDatabaseService } from '../services/birs-database.service';
 import { parserService } from '../services/parser.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Passenger } from '../types/passenger.types';
+import { cachedFetch } from '../utils/cachedFetch';
 import { logAudit } from '../utils/audit.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
@@ -80,11 +81,11 @@ export default function ManualBaggageScreen({ navigation }: Props) {
         const apiKey = await AsyncStorage.getItem('@bfs:api_key');
         if (apiUrl && apiKey) {
           const tagBase = tagNumber.replace(/\D/g, '').substring(0, 10);
-          let response = await fetch(`${apiUrl}/api/v1/passengers/by-baggage-tag?tag=${tagBase}&airport=${user.airportCode}`, {
+          let response = await cachedFetch(`${apiUrl}/api/v1/passengers/by-baggage-tag?tag=${tagBase}&airport=${user.airportCode}`, {
             headers: { 'x-api-key': apiKey || '', 'x-airport-code': user.airportCode || '', ...(user.airlineCode && { 'x-airline-code': user.airlineCode }), 'Content-Type': 'application/json' },
           });
           if (!response.ok && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
-            response = await fetch(`${apiUrl}/api/v1/passengers/pnr/${baggageTagData.pnr}`, {
+            response = await cachedFetch(`${apiUrl}/api/v1/passengers/pnr/${baggageTagData.pnr}`, {
               headers: { 'x-api-key': apiKey || '', 'x-airport-code': user.airportCode || '', ...(user.airlineCode && { 'x-airline-code': user.airlineCode }), 'Content-Type': 'application/json' },
             });
           }

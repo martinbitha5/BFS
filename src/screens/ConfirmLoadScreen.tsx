@@ -13,7 +13,8 @@ import {
 import { Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
-import { authServiceInstance, flightService } from '../services';
+import { apiService, authServiceInstance, flightService } from '../services';
+import { cachedFetch, invalidateCache } from '../utils/cachedFetch';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { AvailableFlight } from '../types/flight.types';
 import { playErrorSound, playSuccessSound } from '../utils/sound.util';
@@ -35,23 +36,28 @@ export default function ConfirmLoadScreen({ navigation }: Props) {
   }, []);
 
   const loadFlights = async () => {
-    setLoadingFlights(true);
     try {
       const user = await authServiceInstance.getCurrentUser();
       if (!user) return;
+
       const apiUrl = await AsyncStorage.getItem('@bfs:api_url');
       const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+      const headers: Record<string, string> = {
+        'x-api-key': apiKey || '',
+        'x-airport-code': user.airportCode || '',
+      };
+      if (user.airlineCode) headers['x-airline-code'] = user.airlineCode;
+
+      setLoadingFlights(true);
+
       if (apiUrl && apiKey) {
-        const headers: Record<string, string> = {
-          'x-api-key': apiKey || '',
-          'x-airport-code': user.airportCode || '',
-        };
-        if (user.airlineCode) headers['x-airline-code'] = user.airlineCode;
-        const res = await fetch(`${apiUrl}/api/v1/baggage/flights-with-checked`, { headers });
+        const url = `${apiUrl}/api/v1/baggage/flights-with-checked`;
+        const res = await cachedFetch(url, { headers });
         if (res.ok) {
           const json = await res.json();
           if (json.data?.length > 0) {
             setFlights(json.data);
+            setLoadingFlights(false);
             return;
           }
         }
@@ -102,6 +108,9 @@ export default function ConfirmLoadScreen({ navigation }: Props) {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        apiService.invalidateGetCache();
+        invalidateCache();
+        flightService.clearFlightsCache();
         await playSuccessSound();
         setToastMessage(
           data.loaded_count > 0

@@ -3,6 +3,7 @@ import { Baggage } from '../types/baggage.types';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger } from '../types/passenger.types';
 import { SyncQueueItem } from '../types/sync.types';
+import { notifySyncQueueUpdated } from '../utils/sync-trigger';
 import { auditService } from './audit.service';
 
 class DatabaseService {
@@ -1022,6 +1023,7 @@ class DatabaseService {
       ]
     );
 
+    notifySyncQueueUpdated();
     return id;
   }
 
@@ -1085,6 +1087,13 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     await this.db.runAsync('DELETE FROM sync_queue WHERE id = ?', [id]);
+  }
+
+  async removeSyncQueueItems(ids: string[]): Promise<void> {
+    if (!this.db || ids.length === 0) return;
+
+    const placeholders = ids.map(() => '?').join(',');
+    await this.db.runAsync(`DELETE FROM sync_queue WHERE id IN (${placeholders})`, ids);
   }
 
   async updateSyncQueueItem(id: string, retryCount: number, lastError?: string): Promise<void> {

@@ -12,6 +12,7 @@ import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { BoardingConfirmation } from '../types/boarding-new.types';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger, PassengerData } from '../types/passenger.types';
+import { cachedFetch } from '../utils/cachedFetch';
 import { logAudit } from '../utils/audit.util';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
@@ -322,7 +323,7 @@ export default function BoardingScreen({ navigation }: Props) {
         
         console.log('[BoardingScreen] 📡 Appel API - PNR:', pnr, 'URL:', apiUrl);
         
-        const searchResponse = await fetch(
+        const searchResponse = await cachedFetch(
           `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(pnr)}&airport=${encodeURIComponent(user.airportCode)}`,
           {
             method: 'GET',
@@ -645,26 +646,16 @@ export default function BoardingScreen({ navigation }: Props) {
 
           console.log('[Boarding] 1️⃣  Looking for passenger by PNR:', passengerData.pnr);
 
-          const checkResponse = await fetch(
-
+          const checkResponse = await cachedFetch(
             `${apiUrl}/api/v1/passengers?pnr=${encodeURIComponent(passengerData.pnr)}&airport=${encodeURIComponent(user.airportCode)}`,
-
             {
-
               method: 'GET',
-
               headers: {
-
                 'x-api-key': apiKey || '',
-
                 'x-airport-code': user.airportCode || '',
-
               },
-
               signal: controller1.signal,
-
             }
-
           );
 
           clearTimeout(timeout1);

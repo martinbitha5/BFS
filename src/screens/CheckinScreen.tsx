@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -296,7 +295,7 @@ export default function CheckinScreen({ navigation }: Props) {
         
         if (!existingPassenger) {
           // Créer le passager avec les données du boarding pass
-          const passengerId = await databaseServiceInstance.createPassenger({
+          await databaseServiceInstance.createPassenger({
             pnr: parsedData.pnr,
             fullName: parsedData.fullName,
             firstName: parsedData.firstName,
@@ -311,7 +310,6 @@ export default function CheckinScreen({ navigation }: Props) {
             companyCode: parsedData.companyCode,
             ticketNumber: parsedData.ticketNumber,
             seatNumber: parsedData.seatNumber,
-            // ✅ FIX: Ne mettre baggage_count > 0 que si baggageInfo existe vraiment
             baggageCount: parsedData.baggageInfo?.count ?? 0,
             baggageBaseNumber: parsedData.baggageInfo?.baseNumber || undefined,
             rawData: data,
@@ -321,58 +319,7 @@ export default function CheckinScreen({ navigation }: Props) {
             airportCode: user.airportCode,
             synced: false,
           });
-          
-          // 🚀 AUSSI créer le passager au serveur via SYNC (pour que le boarding puisse le chercher)
-          // ✅ OPTIMISATION: Import statique pour AsyncStorage
-          try {
-            const apiKey = await AsyncStorage.getItem('@bfs:api_key');
-            const apiUrl = await AsyncStorage.getItem('@bfs:api_url') || 'https://api.brsats.com';
-            
-            // Timeout 10s pour éviter les blocages en production
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const syncResponse = await fetch(`${apiUrl}/api/v1/passengers/sync`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey || '',
-                'x-airport-code': user.airportCode || '',
-              },
-              body: JSON.stringify({
-                passengers: [{
-                  pnr: parsedData.pnr,
-                  full_name: parsedData.fullName,
-                  flight_number: parsedData.flightNumber,
-                  seat_number: parsedData.seatNumber || null,
-                  departure: parsedData.departure,
-                  arrival: parsedData.arrival,
-                  airport_code: user.airportCode,
-                  baggage_count: parsedData.baggageInfo?.count ?? 0,
-                  baggage_base_number: parsedData.baggageInfo?.baseNumber || null,
-                  checked_in_at: new Date().toISOString(),
-                }]
-              }),
-              signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            
-            if (syncResponse.ok) {
-              const syncResult = await syncResponse.json();
-              if (syncResult.count > 0) {
-                console.log('[CHECKIN] ✅ Passager synchronisé au serveur:', parsedData.pnr);
-              } else {
-                console.warn('[CHECKIN] ⚠️ Passager non inséré:', syncResult.errors || 'Raison inconnue');
-              }
-            } else {
-              const errorText = await syncResponse.text();
-              console.warn('[CHECKIN] ⚠️ Erreur sync passager serveur:', syncResponse.status, errorText);
-            }
-          } catch (serverError) {
-            console.warn('[CHECKIN] ⚠️ Erreur sync passager serveur:', serverError);
-            // On continue quand même, au moins c'est en cache local
-          }
-          
+          // Sync en arrière-plan via sync_queue (batch ~2s) - pas d'attente
         } else {
           // Mettre à jour le passager existant avec les données du boarding pass
         }

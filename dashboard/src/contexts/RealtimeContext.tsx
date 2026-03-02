@@ -2,6 +2,8 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, u
 import { API_BASE_URL } from '../config/api';
 import { useAuth } from './AuthContext';
 
+const POLLING_INTERVAL_MS = 5000; // 5 secondes quand SSE est déconnecté
+
 interface RealtimeContextType {
   /** Timestamp du dernier update reçu - déclencher refetch quand il change */
   lastUpdate: number;
@@ -16,6 +18,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const [lastUpdate, setLastUpdate] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const connect = useCallback(() => {
     if (!user?.airport_code) return;
@@ -36,10 +39,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       setIsConnected(true);
     });
 
-    es.addEventListener('stats_update', (e: MessageEvent) => {
-      setLastUpdate(Date.now());
-    });
-
+    es.addEventListener('stats_update', () => setLastUpdate(Date.now()));
     es.addEventListener('new_passenger', () => setLastUpdate(Date.now()));
     es.addEventListener('new_baggage', () => setLastUpdate(Date.now()));
     es.addEventListener('boarding_update', () => setLastUpdate(Date.now()));
@@ -49,7 +49,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       setIsConnected(false);
       es.close();
       eventSourceRef.current = null;
-      // Reconnect après 5s
       setTimeout(connect, 5000);
     };
   }, [user?.airport_code]);
@@ -63,9 +62,32 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
       setIsConnected(false);
     };
   }, [user?.airport_code, connect]);
+
+  /** Fallback: polling toutes les 5s quand SSE est déconnecté */
+  useEffect(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    if (!user?.airport_code) return;
+
+    if (!isConnected) {
+      pollingRef.current = setInterval(() => setLastUpdate(Date.now()), POLLING_INTERVAL_MS);
+    }
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [isConnected, user?.airport_code]);
 
   return (
     <RealtimeContext.Provider value={{ lastUpdate, isConnected }}>
