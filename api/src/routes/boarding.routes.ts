@@ -377,6 +377,7 @@ router.post('/offload', requireAirportCode, async (req: Request, res: Response, 
         boarded: false,
         boarded_at: null,
         boarded_by: null,
+        offloaded_at: new Date().toISOString(), // Marquer comme débarqué
       }, { onConflict: 'passenger_id' })
       .select()
       .single();

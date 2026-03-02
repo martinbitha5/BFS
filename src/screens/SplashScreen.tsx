@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -5,266 +7,232 @@ interface SplashScreenProps {
   onFinish: () => void;
 }
 
+const DEEP_NAVY = '#0a1628';
+const ACCENT = '#00b4d8';
+const WHITE = '#ffffff';
+const MUTED = 'rgba(255,255,255,0.78)';
+
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoRotation = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const ringScale1 = useRef(new Animated.Value(0)).current;
-  const ringOpacity1 = useRef(new Animated.Value(1)).current;
-  const ringScale2 = useRef(new Animated.Value(0)).current;
-  const ringOpacity2 = useRef(new Animated.Value(1)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const planeX = useRef(new Animated.Value(-120)).current;
+  const planeOpacity = useRef(new Animated.Value(0)).current;
+  const planeRotate = useRef(new Animated.Value(0)).current;
+  const bagX = useRef(new Animated.Value(120)).current;
+  const bagOpacity = useRef(new Animated.Value(0)).current;
+  const centerScale = useRef(new Animated.Value(0.3)).current;
+  const centerOpacity = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(0)).current;
+  const ringOpacity = useRef(new Animated.Value(0.7)).current;
+  const ring2Scale = useRef(new Animated.Value(0)).current;
+  const ring2Opacity = useRef(new Animated.Value(0.4)).current;
+  const pulseScale = useRef(new Animated.Value(1)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(30)).current;
+  const titleY = useRef(new Animated.Value(28)).current;
+  const titleScale = useRef(new Animated.Value(0.92)).current;
+  const lineWidth = useRef(new Animated.Value(0)).current;
+  const lineGlow = useRef(new Animated.Value(0)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.85)).current;
   const particles = useRef(
     Array.from({ length: 6 }, () => ({
-      translateX: new Animated.Value(0),
-      translateY: new Animated.Value(0),
-      opacity: new Animated.Value(0),
       scale: new Animated.Value(0),
+      opacity: new Animated.Value(0),
     }))
   ).current;
 
   useEffect(() => {
-    // Animation des particules (étoiles/bagages)
-    const particleAnimations = particles.map((particle, index) => {
-      const angle = (index * 60 * Math.PI) / 180;
-      const distance = 80;
-      return Animated.parallel([
-        Animated.timing(particle.translateX, {
-          toValue: Math.cos(angle) * distance,
-          duration: 1200,
-          delay: 400 + index * 100,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(particle.translateY, {
-          toValue: Math.sin(angle) * distance,
-          duration: 1200,
-          delay: 400 + index * 100,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(particle.opacity, {
-            toValue: 1,
-            duration: 300,
-            delay: 400 + index * 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle.opacity, {
-            toValue: 0.3,
-            duration: 900,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.timing(particle.scale, {
-          toValue: 1,
-          duration: 400,
-          delay: 400 + index * 100,
-          easing: Easing.out(Easing.back(1.5)),
-          useNativeDriver: true,
-        }),
-      ]);
-    });
-
-    // Animation principale
     Animated.sequence([
-      // Fade in du fond
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      // Premier anneau qui s'étend
+      Animated.timing(fadeIn, { toValue: 1, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      // Avion + bagage convergent
       Animated.parallel([
-        Animated.timing(ringScale1, {
-          toValue: 1.5,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(ringOpacity1, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
+        Animated.timing(planeX, { toValue: -42, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(planeOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(planeRotate, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(bagX, { toValue: 42, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(bagOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]),
-      // Logo qui apparaît avec rotation et scale
+      // Cercles + anneaux + particules
       Animated.parallel([
-        Animated.spring(logoScale, {
-          toValue: 1,
-          tension: 30,
-          friction: 6,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotation, {
-          toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.back(1.2)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
+        Animated.spring(centerScale, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }),
+        Animated.timing(centerOpacity, { toValue: 1, duration: 450, useNativeDriver: true }),
+        Animated.timing(ringScale, { toValue: 2.2, duration: 1100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(ringOpacity, { toValue: 0, duration: 1100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(120),
+          Animated.parallel([
+            Animated.timing(ring2Scale, { toValue: 2.4, duration: 1000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+            Animated.timing(ring2Opacity, { toValue: 0, duration: 1000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          ]),
+        ]),
+        ...particles.map((p, i) =>
+          Animated.sequence([
+            Animated.delay(350 + i * 90),
+            Animated.parallel([
+              Animated.spring(p.scale, { toValue: 1, tension: 100, friction: 6, useNativeDriver: true }),
+              Animated.timing(p.opacity, { toValue: 0.6, duration: 350, useNativeDriver: true }),
+            ]),
+          ])
+        ),
       ]),
-      // Deuxième anneau
+      // Double pulse sur les cercles
+      Animated.sequence([
+        Animated.timing(pulseScale, { toValue: 1.06, duration: 350, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseScale, { toValue: 1, duration: 350, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.delay(120),
+        Animated.timing(pulseScale, { toValue: 1.04, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseScale, { toValue: 1, duration: 300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+      // Texte + ligne runway
       Animated.parallel([
-        Animated.timing(ringScale2, {
-          toValue: 1.8,
-          duration: 1000,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(ringOpacity2, {
-          toValue: 0,
-          duration: 1000,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
+        Animated.timing(titleOpacity, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(titleY, { toValue: 0, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 650, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(200),
+          Animated.parallel([
+            Animated.timing(lineWidth, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.sequence([
+              Animated.delay(400),
+              Animated.timing(lineGlow, { toValue: 1, duration: 500, useNativeDriver: true }),
+            ]),
+          ]),
+        ]),
       ]),
-      // Démarrage des particules
-      Animated.parallel(particleAnimations),
-      // Titre qui apparaît
+      Animated.timing(subtitleOpacity, { toValue: 1, duration: 500, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
       Animated.parallel([
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(titleTranslateY, {
-          toValue: 0,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(logoScale, { toValue: 1, duration: 600, easing: Easing.out(Easing.back(1.1)), useNativeDriver: true }),
       ]),
-      // Sous-titre
-      Animated.timing(subtitleOpacity, {
-        toValue: 1,
-        duration: 500,
-        delay: 200,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      // Pause
-      Animated.delay(1200),
+      Animated.delay(1500),
     ]).start(() => {
-      // Fade out élégant
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(titleOpacity, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(subtitleOpacity, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        onFinish();
-      });
+        Animated.timing(fadeIn, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(centerOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(planeOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(bagOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(titleOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(subtitleOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(lineWidth, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(lineGlow, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start(() => onFinish());
     });
   }, []);
 
-  const logoRotationInterpolate = logoRotation.interpolate({
+  const planeRotateInterpolate = planeRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ['-20deg', '0deg'],
   });
 
+  const lineScaleX = lineWidth;
+
+  const lineGlowInterpolate = lineGlow.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.7, 1],
+  });
+
+  const particlePositions = [
+    { top: -25, left: -20 },
+    { top: -15, right: -35 },
+    { top: 10, right: -40 },
+    { bottom: -5, right: -25 },
+    { bottom: -20, left: -15 },
+    { top: 5, left: -40 },
+  ];
+
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Anneaux concentriques animés */}
+    <Animated.View style={[styles.container, { opacity: fadeIn }]}>
+      {/* Anneaux en cascade */}
       <Animated.View
         style={[
           styles.ring,
           {
-            transform: [{ scale: ringScale1 }],
-            opacity: ringOpacity1,
+            transform: [{ scale: ringScale }],
+            opacity: ringOpacity,
           },
         ]}
       />
       <Animated.View
         style={[
           styles.ring,
+          styles.ring2,
           {
-            transform: [{ scale: ringScale2 }],
-            opacity: ringOpacity2,
+            transform: [{ scale: ring2Scale }],
+            opacity: ring2Opacity,
           },
         ]}
       />
 
-      {/* Particules autour du logo */}
-      {particles.map((particle, index) => (
+      {/* Zone centrale */}
+      <View style={styles.centerZone}>
+        {/* Particules autour */}
+        {particles.map((p, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.particle,
+              particlePositions[i],
+              {
+                transform: [
+                  { scale: Animated.multiply(p.scale, pulseScale) },
+                ],
+                opacity: p.opacity,
+              },
+            ]}
+          />
+        ))}
         <Animated.View
-          key={index}
           style={[
-            styles.particle,
+            styles.iconCircle,
             {
               transform: [
-                { translateX: particle.translateX },
-                { translateY: particle.translateY },
-                { scale: particle.scale },
+                { scale: Animated.multiply(centerScale, pulseScale) },
+                { translateX: planeX },
+                { rotate: planeRotateInterpolate },
               ],
-              opacity: particle.opacity,
+              opacity: Animated.multiply(planeOpacity, centerOpacity),
             },
           ]}>
-          <View style={styles.particleDot} />
+          <Ionicons name="airplane" size={36} color={WHITE} />
         </Animated.View>
-      ))}
+        <Animated.View
+          style={[
+            styles.iconCircle,
+            {
+              transform: [
+                { scale: Animated.multiply(centerScale, pulseScale) },
+                { translateX: bagX },
+              ],
+              opacity: Animated.multiply(bagOpacity, centerOpacity),
+            },
+          ]}>
+          <Ionicons name="briefcase" size={36} color={WHITE} />
+        </Animated.View>
+      </View>
 
-      {/* Logo BFS avec rotation */}
+      {/* Texte */}
       <Animated.View
         style={[
-          styles.logoContainer,
-          {
-            transform: [
-              { scale: logoScale },
-              { rotate: logoRotationInterpolate },
-            ],
-            opacity: logoOpacity,
-          },
-        ]}>
-        <View style={styles.logoCircle}>
-          <View style={styles.logoInnerGlow} />
-          <Text style={styles.logoText}>PB</Text>
-        </View>
-      </Animated.View>
-
-      {/* Titre avec animation */}
-      <Animated.View
-        style={[
-          styles.titleContainer,
+          styles.textBlock,
           {
             opacity: titleOpacity,
-            transform: [{ translateY: titleTranslateY }],
+            transform: [{ translateY: titleY }, { scale: titleScale }],
           },
         ]}>
         <Text style={styles.title}>Police Bagages</Text>
-        <Animated.View style={{ opacity: subtitleOpacity }}>
-          <Text style={styles.subtitle}>Gestion intelligente des bagages aéroportuaires</Text>
+        <Animated.View style={[styles.runwayLine, { transform: [{ scaleX: lineScaleX }], opacity: lineGlowInterpolate }]} />
+        <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
+          Gestion intelligente des bagages aéroportuaires
+        </Animated.Text>
+        <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+          <View style={styles.logoClip} collapsable={false}>
+            <Image
+              source={require('../../assets/images/csi-logo.png')}
+              style={styles.csiLogo}
+              contentFit="cover"
+            />
+          </View>
         </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -274,86 +242,95 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: DEEP_NAVY,
     justifyContent: 'center',
     alignItems: 'center',
   },
   ring: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    top: '50%',
+    left: '50%',
+    width: 140,
+    height: 140,
+    marginLeft: -70,
+    marginTop: -80,
+    borderRadius: 70,
     borderWidth: 2,
-    borderColor: '#ffffff',
-    opacity: 0.3,
+    borderColor: ACCENT,
+  },
+  ring2: {
+    borderColor: 'rgba(0,180,216,0.5)',
+  },
+  centerZone: {
+    position: 'absolute',
+    width: 220,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 55,
   },
   particle: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: ACCENT,
   },
-  particleDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-    opacity: 0.8,
-  },
-  logoContainer: {
-    marginBottom: 50,
-  },
-  logoCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 16,
-    overflow: 'hidden',
-  },
-  logoInnerGlow: {
+  iconCircle: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#0a7ea4',
-    opacity: 0.1,
-  },
-  logoText: {
-    fontSize: 52,
-    fontWeight: '800',
-    color: '#0a7ea4',
-    letterSpacing: 8,
-    zIndex: 1,
-  },
-  titleContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: ACCENT,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    shadowColor: ACCENT,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 14,
+  },
+  textBlock: {
+    position: 'absolute',
+    bottom: '18%',
+    alignItems: 'center',
+    paddingHorizontal: 48,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontSize: 25,
+    fontWeight: '800',
+    color: WHITE,
     textAlign: 'center',
-    letterSpacing: 2,
+    letterSpacing: 3,
     marginBottom: 12,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+  },
+  runwayLine: {
+    width: 180,
+    height: 2,
+    backgroundColor: ACCENT,
+    borderRadius: 1,
+    marginBottom: 14,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#ffffff',
-    opacity: 0.9,
+    fontSize: 13,
+    color: MUTED,
     textAlign: 'center',
-    fontWeight: '400',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    lineHeight: 20,
+  },
+  logoContainer: {
+    marginTop: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoClip: {
+    width: 170,
+    height: 68,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  csiLogo: {
+    width: 170,
+    height: 68,
   },
 });

@@ -49,6 +49,7 @@ export interface ThemeColors {
   text: {
     primary: string;
     secondary: string;
+    tertiary: string;  // Placeholder, labels secondaires
     disabled: string;
     hint: string;
   };
@@ -104,6 +105,7 @@ export const lightTheme: ThemeColors = {
   text: {
     primary: '#212529',
     secondary: '#6c757d',
+    tertiary: '#868e96',
     disabled: '#adb5bd',
     hint: '#868e96',
   },
@@ -153,17 +155,18 @@ export const darkTheme: ThemeColors = {
   },
   background: {
     default: '#121212',
-    paper: '#1e1e1e',
+    paper: '#2a2a2a',   // Contraste amélioré pour les inputs (avant #1e1e1e)
     dark: '#0a0a0a',
   },
   text: {
     primary: '#ffffff',
     secondary: '#b0b0b0',
+    tertiary: '#a0a0a0',  // Placeholder visible sur fond sombre
     disabled: '#707070',
     hint: '#909090',
   },
   border: {
-    light: '#333333',
+    light: '#444444',  // Plus visible sur fond #1e1e1e
     main: '#404040',
     dark: '#555555',
   },

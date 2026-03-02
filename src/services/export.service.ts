@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { Baggage } from '../types/baggage.types';
 import { BoardingStatus } from '../types/boarding.types';
 import { Passenger } from '../types/passenger.types';
-import { databaseServiceInstance } from './database.service';
+import { databaseService } from './database.service';
 
 interface ExportOptions {
   dateFrom?: string;
@@ -78,7 +78,7 @@ class ExportService {
       csvContent += baggageHeaders.join(',') + '\n';
 
       for (const passenger of passengers) {
-        const baggages = await databaseServiceInstance.getBaggagesByPassengerId(passenger.id);
+        const baggages = await databaseService.getBaggagesByPassengerId(passenger.id);
         for (const baggage of baggages) {
           const checkedDate = baggage.checkedAt ? new Date(baggage.checkedAt) : null;
           const arrivedDate = baggage.arrivedAt ? new Date(baggage.arrivedAt) : null;
@@ -292,8 +292,8 @@ class ExportService {
     route?: string
   ): Promise<string> {
     // Récupérer tous les bagages et passagers de l'aéroport
-    const allBaggages = await databaseServiceInstance.getBaggagesByAirport(airportCode);
-    const allPassengers = await databaseServiceInstance.getPassengersByAirport(airportCode);
+    const allBaggages = await databaseService.getBaggagesByAirport(airportCode);
+    const allPassengers = await databaseService.getPassengersByAirport(airportCode);
     const passengersMap = new Map(allPassengers.map(p => [p.id, p]));
 
     // Filtrer par route si spécifiée

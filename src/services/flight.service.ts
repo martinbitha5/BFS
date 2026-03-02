@@ -7,7 +7,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FREQUENT_FLIGHTS, FrequentFlight } from '../constants/flight-schedule';
 import { AvailableFlight } from '../types/flight.types';
-import { databaseServiceInstance } from './';
+import { databaseService } from './database.service';
 
 const STORAGE_KEYS = {
   API_URL: '@bfs:api_url',
@@ -208,7 +208,7 @@ class FlightService {
     }
 
     // ✅ ÉTAPE 2: Fallback sur SQLite local (si API unavailable ou offline)
-    const db = databaseServiceInstance.getDatabase();
+    const db = databaseService.getDatabase();
     if (!db) {
       console.warn('[FlightService] ⚠️ SQLite non disponible - aucun passager à charger');
       return [];
@@ -287,7 +287,7 @@ class FlightService {
     }
 
     // 2. Chercher dans les passagers du jour
-    const db = databaseServiceInstance.getDatabase();
+    const db = databaseService.getDatabase();
     if (!db) {
       return null;
     }

@@ -72,10 +72,12 @@ export const exportToExcel = async (
     totalPassengers: filteredPassengers.length,
     totalBaggages: filteredBaggages.length,
     boardedPassengers: filteredPassengers.filter((p: any) => p.boarding_status?.[0]?.boarded).length,
-    notBoardedPassengers: filteredPassengers.filter((p: any) => !p.boarding_status?.[0]?.boarded).length,
+    offloadedPassengers: filteredPassengers.filter((p: any) => !p.boarding_status?.[0]?.boarded && !!p.boarding_status?.[0]?.offloaded_at).length,
+    notBoardedPassengers: filteredPassengers.filter((p: any) => !p.boarding_status?.[0]?.boarded && !p.boarding_status?.[0]?.offloaded_at).length,
     arrivedBaggages: filteredBaggages.filter((b: any) => 
       b.status === 'arrived' || b.arrived_at || b.status === 'rush'
     ).length,
+    offloadedBaggages: filteredBaggages.filter((b: any) => (b.notes || '').toLowerCase().includes('offload')).length,
     inTransitBaggages: filteredBaggages.filter((b: any) => 
       b.status === 'checked' || (b.status === 'loaded' && !b.arrived_at)
     ).length,
@@ -151,11 +153,13 @@ export const exportToExcel = async (
   const statsData = [
     ['Total Passagers', stats.totalPassengers],
     ['Passagers Embarqués', stats.boardedPassengers],
+    ['Passagers Débarqués', stats.offloadedPassengers],
     ['Passagers Non Embarqués', stats.notBoardedPassengers],
     ['Taux d\'Embarquement', `${boardingRate}%`],
     ['', ''], // Ligne vide
     ['Total Bagages', stats.totalBaggages],
     ['Bagages Arrivés', stats.arrivedBaggages],
+    ['Bagages Débarqués (Offload)', stats.offloadedBaggages],
     ['Bagages En Transit', stats.inTransitBaggages],
     ['Taux d\'Arrivée des Bagages', `${arrivalRate}%`],
     ['', ''], // Ligne vide
@@ -205,7 +209,10 @@ export const exportToExcel = async (
     passHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
     filteredPassengers.forEach((p: any) => {
-      const boarded = p.boarding_status?.[0]?.boarded || false;
+      const bs = p.boarding_status?.[0];
+      const boarded = bs?.boarded || false;
+      const offloaded = !!bs?.offloaded_at;
+      const statusLabel = boarded ? 'Embarqué' : offloaded ? 'Débarqué' : 'Non embarqué';
       passSheet.addRow([
         p.pnr,
         p.full_name,
@@ -213,7 +220,7 @@ export const exportToExcel = async (
         p.departure,
         p.arrival,
         p.seat_number || '-',
-        boarded ? 'Embarqué' : 'Non embarqué',
+        statusLabel,
         p.baggage_count || 0
       ]);
     });
@@ -276,9 +283,10 @@ export const exportToExcel = async (
   if (filteredBaggages.length > 0) {
     filteredBaggages.forEach((b: any) => {
       // Déterminer le statut avec tous les cas possibles
+      const isOffloaded = (b.notes || '').toLowerCase().includes('offload');
       const statusLabel = 
         b.status === 'arrived' ? 'Arrivé'
-        : b.status === 'rush' ? 'RUSH'
+        : b.status === 'rush' ? (isOffloaded ? 'Débarqué' : 'RUSH')
         : b.status === 'loaded' ? 'Loaded'
         : b.status === 'checked' ? 'Checked'
         : b.status === 'in_transit' ? 'En Transit'
