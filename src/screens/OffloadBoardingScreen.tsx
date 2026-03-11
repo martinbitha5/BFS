@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -58,6 +58,10 @@ export default function OffloadBoardingScreen({ navigation }: Props) {
         apiService.invalidateGetCache('/passengers');
         invalidateCache('/passengers');
         invalidateCache('/boarding');
+        const offloadedAt = data.offloaded_at || new Date().toISOString();
+        const existing = JSON.parse(await AsyncStorage.getItem('@bfs:offloaded_boardings') || '{}');
+        existing[pnrClean] = offloadedAt;
+        await AsyncStorage.setItem('@bfs:offloaded_boardings', JSON.stringify(existing));
         await playSuccessSound();
         setPnr('');
         setToastMessage('✅ Passager débarqué avec succès');

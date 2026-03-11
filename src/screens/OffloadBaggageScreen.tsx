@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -58,6 +58,10 @@ export default function OffloadBaggageScreen({ navigation }: Props) {
       if (response.ok && data.success) {
         apiService.invalidateGetCache('/baggage');
         invalidateCache('/baggage');
+        const offloadedAt = data.offloaded_at || new Date().toISOString();
+        const existingOffloads = JSON.parse(await AsyncStorage.getItem('@bfs:offloaded_baggages') || '{}');
+        existingOffloads[tagClean] = offloadedAt;
+        await AsyncStorage.setItem('@bfs:offloaded_baggages', JSON.stringify(existingOffloads));
         await playSuccessSound();
         setTag('');
         setToastMessage('✅ Bagage débarqué');

@@ -9,7 +9,7 @@ export type BaggageStatus =
 
 export interface Baggage {
   id: string;
-  passengerId: string;
+  passengerId?: string | null;
   tagNumber: string;
   expectedTag?: string;
   status: BaggageStatus;

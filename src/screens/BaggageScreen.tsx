@@ -14,12 +14,100 @@ import { birsDatabaseService } from '../services/birs-database.service';
 import { parserService } from '../services/parser.service';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { Passenger } from '../types/passenger.types';
-import { cachedFetch } from '../utils/cachedFetch';
 import { logAudit } from '../utils/audit.util';
+import { cachedFetch } from '../utils/cachedFetch';
 import { getScanErrorMessage } from '../utils/scanMessages.util';
 import { playErrorSound, playScanSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Baggage'>;
+
+/**
+ * Tente de reconnaître un tag non reconnu en arrière-plan.
+ * Appelle l'API pour trouver le passager correspondant et lie automatiquement
+ * le bagage si une correspondance est trouvée.
+ */
+const recognizeTagInBackground = async (
+  baggageId: string,
+  tagNumber: string,
+  airportCode: string,
+  airlineCode: string | undefined,
+  userId: string
+): Promise<void> => {
+  try {
+    const apiUrl = await AsyncStorage.getItem('@bfs:api_url');
+    const apiKey = await AsyncStorage.getItem('@bfs:api_key');
+    if (!apiUrl || !apiKey) return;
+
+    const tagBase = tagNumber.replace(/\D/g, '').substring(0, 10);
+    if (!tagBase || tagBase.length < 4) return;
+
+    const response = await fetch(
+      `${apiUrl}/api/v1/passengers/by-baggage-tag?tag=${tagBase}&airport=${airportCode}`,
+      {
+        headers: {
+          'x-api-key': apiKey,
+          'x-airport-code': airportCode,
+          ...(airlineCode && { 'x-airline-code': airlineCode }),
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.log(`[BAGGAGE BG] Tag ${tagNumber} toujours non reconnu (status: ${response.status})`);
+      return;
+    }
+
+    const result = await response.json();
+    const passengerData = result.data;
+    if (!passengerData?.full_name?.trim()) return;
+
+    const fullName = passengerData.full_name.trim();
+    const nameParts = fullName.split(/\s+/);
+    const departure = passengerData.departure || airportCode;
+    const arrival = passengerData.arrival || '';
+
+    // Trouver ou créer le passager localement
+    let passengerId: string;
+    const existingPassenger = await databaseServiceInstance.getPassengerByPnr(passengerData.pnr);
+    if (existingPassenger) {
+      passengerId = existingPassenger.id;
+    } else {
+      const newPassengerPayload: any = {
+        pnr: passengerData.pnr,
+        fullName,
+        firstName: passengerData.first_name?.trim() || nameParts[0] || '',
+        lastName: passengerData.last_name?.trim() || nameParts.slice(1).join(' ') || '',
+        flightNumber: passengerData.flight_number,
+        airline: passengerData.airline || '',
+        airlineCode: passengerData.airline_code || '',
+        departure,
+        arrival,
+        route: passengerData.route || `${departure}-${arrival}`,
+        baggageCount: passengerData.baggage_count || 1,
+        baggageBaseNumber: passengerData.baggage_base_number,
+        airportCode,
+        checkedInAt: passengerData.checked_in_at || new Date().toISOString(),
+        checkedInBy: passengerData.checked_in_by || userId,
+        synced: true,
+      };
+      passengerId = await databaseServiceInstance.createPassenger(newPassengerPayload);
+    }
+
+    // Lier le bagage au passager trouvé
+    await databaseServiceInstance.linkBaggageToPassenger(
+      baggageId,
+      passengerId,
+      passengerData.pnr,
+      passengerData.flight_number,
+      userId
+    );
+
+    console.log(`[BAGGAGE BG] ✅ Tag ${tagNumber} lié à ${fullName} (PNR: ${passengerData.pnr})`);
+  } catch (err) {
+    console.warn(`[BAGGAGE BG] Reconnaissance échouée pour ${tagNumber}:`, err);
+  }
+};
 
 export default function BaggageScreen({ navigation }: Props) {
   const { colors } = useTheme();
@@ -398,6 +486,31 @@ export default function BaggageScreen({ navigation }: Props) {
       // ❌ REFUSER LE SCAN SI LE PASSAGER N'EST PAS TROUVÉ
       if (!passenger) {
         await playErrorSound();
+
+        // 🗄️ Sauvegarder le tag non reconnu en BD (apparaît dans export "Bagages Non Reconnus")
+        try {
+          const savedBaggageId = await databaseServiceInstance.createBaggage({
+            tagNumber,
+            status: 'checked',
+            airportCode: user.airportCode,
+            checkedAt: new Date().toISOString(),
+            checkedBy: user.id,
+            synced: false,
+          });
+          console.log(`[BAGGAGE] 🗄️ Tag non reconnu ${tagNumber} sauvegardé en BD`);
+
+          // 🔄 BACKGROUND: Tenter de reconnaître le tag via API et lier au passager
+          recognizeTagInBackground(
+            savedBaggageId,
+            tagNumber,
+            user.airportCode,
+            user.airlineCode || undefined,
+            user.id
+          ).catch(err => console.warn('[BAGGAGE BG] Erreur reconnaissance:', err));
+        } catch (saveErr) {
+          console.warn('[BAGGAGE] Erreur sauvegarde tag non reconnu:', saveErr);
+        }
+
         setProcessing(false);
         
         // 🔍 DÉTECTION SIMPLIFIÉE: Tag non reconnu = potentiellement suspect

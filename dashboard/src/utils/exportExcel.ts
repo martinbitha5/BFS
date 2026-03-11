@@ -77,7 +77,8 @@ export const exportToExcel = async (
     arrivedBaggages: filteredBaggages.filter((b: any) => 
       b.status === 'arrived' || b.arrived_at || b.status === 'rush'
     ).length,
-    offloadedBaggages: filteredBaggages.filter((b: any) => (b.notes || '').toLowerCase().includes('offload')).length,
+    offloadedBaggages: filteredBaggages.filter((b: any) => !!b.offloaded_at).length,
+    unrecognizedBaggages: filteredBaggages.filter((b: any) => !b.passenger_id && !b.passengers?.full_name).length,
     inTransitBaggages: filteredBaggages.filter((b: any) => 
       b.status === 'checked' || (b.status === 'loaded' && !b.arrived_at)
     ).length,
@@ -151,13 +152,14 @@ export const exportToExcel = async (
   infoSheet.getCell('A15').font = { bold: true, size: 12, color: { argb: 'FF2563EB' } };
 
   const statsData = [
-    ['Total Passagers', stats.totalPassengers],
+    ['Total Passagers Enregistrés', stats.totalPassengers],
     ['Passagers Embarqués', stats.boardedPassengers],
     ['Passagers Débarqués', stats.offloadedPassengers],
     ['Passagers Non Embarqués', stats.notBoardedPassengers],
     ['Taux d\'Embarquement', `${boardingRate}%`],
     ['', ''], // Ligne vide
-    ['Total Bagages', stats.totalBaggages],
+    ['Total Bagages Enregistrés', stats.totalBaggages],
+    ['Total Bagages Non Reconnus', stats.unrecognizedBaggages],
     ['Bagages Arrivés', stats.arrivedBaggages],
     ['Bagages Débarqués (Offload)', stats.offloadedBaggages],
     ['Bagages En Transit', stats.inTransitBaggages],
@@ -295,7 +297,7 @@ export const exportToExcel = async (
   if (filteredBaggages.length > 0) {
     filteredBaggages.forEach((b: any) => {
       // Déterminer le statut avec tous les cas possibles
-      const isOffloaded = (b.notes || '').toLowerCase().includes('offload');
+      const isOffloaded = !!b.offloaded_at;
       const statusLabel = 
         b.status === 'arrived' ? 'Arrivé'
         : b.status === 'rush' ? (isOffloaded ? 'Débarqué' : 'RUSH')
@@ -383,7 +385,68 @@ export const exportToExcel = async (
     }
   });
 
-  // ===== FEUILLE 4: BRS INTERNATIONAL =====
+  // ===== FEUILLE 4: BAGAGES NON RECONNUS (conditionnelle) =====
+  const unrecognizedList = filteredBaggages.filter((b: any) => !b.passenger_id && !b.passengers?.full_name);
+  if (unrecognizedList.length > 0) {
+    const unrecSheet = workbook.addWorksheet('Bagages Non Reconnus', {
+      properties: { tabColor: { argb: 'FFEF4444' } }
+    });
+
+    unrecSheet.addRow(['Tag RFID', 'Date Scan', 'Aéroport', 'Motif', 'Statut']);
+
+    const unrecHeaderRow = unrecSheet.getRow(1);
+    unrecHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+    unrecHeaderRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFEF4444' }
+    };
+    unrecHeaderRow.height = 25;
+    unrecHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    unrecognizedList.forEach((b: any) => {
+      const dateScan = b.created_at || b.checked_at || b.scanned_at;
+      const motif = b.notes || 'Passager non identifié';
+      const statut = b.status === 'arrived' ? 'Arrivé'
+        : b.status === 'rush' ? 'RUSH'
+        : b.status === 'loaded' ? 'Loaded'
+        : b.status === 'checked' ? 'Enregistré'
+        : b.status === 'in_transit' ? 'En Transit'
+        : 'Non reconnu';
+
+      unrecSheet.addRow([
+        b.tag_number || '-',
+        dateScan ? new Date(dateScan).toLocaleString('fr-FR') : '-',
+        airportCode,
+        motif,
+        statut
+      ]);
+    });
+
+    unrecSheet.getColumn(1).width = 18;
+    unrecSheet.getColumn(2).width = 20;
+    unrecSheet.getColumn(3).width = 12;
+    unrecSheet.getColumn(4).width = 30;
+    unrecSheet.getColumn(5).width = 15;
+
+    unrecSheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+      }
+    });
+
+    console.log(`[EXPORT] Feuille Bagages Non Reconnus: ${unrecognizedList.length} tags orphelins`);
+  }
+
+  // ===== FEUILLE 5: BRS INTERNATIONAL =====
   // Cette section est gérée plus bas dans le code
 
   // =============================================

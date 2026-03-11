@@ -160,26 +160,47 @@ export default function RushScreen() {
     try {
       setDeclaring(true);
       const user = await authServiceInstance.getCurrentUser();
-      
-      await apiService.post('/api/v1/rush/declare', {
-        tagNumber,
-        reason,
-        nextFlightNumber: nextFlight || undefined,
-        userId: user?.id,
-        airportCode: user?.airportCode,
-      });
 
+      // ✅ OFFLINE-FIRST: Sauvegarder localement d'abord
+      const existing = await databaseServiceInstance.getBaggageByTagNumber(tagNumber);
+
+      if (existing) {
+        // Bagage déjà en BD → mettre à jour le statut en RUSH
+        await databaseServiceInstance.updateBaggageStatus(existing.id, 'rush', user?.id || 'system');
+      } else {
+        // Bagage inconnu → créer en RUSH sans passager lié
+        await databaseServiceInstance.createBaggage({
+          tagNumber,
+          status: 'rush',
+          airportCode: user?.airportCode,
+          checkedAt: new Date().toISOString(),
+          checkedBy: user?.id,
+          synced: false,
+        });
+      }
+
+      // ✅ Succès immédiat (offline-first)
       await playSuccessSound();
       Alert.alert(
         'Succès',
         `Bagage ${tagNumber} déclaré en RUSH avec succès`,
         [{ text: 'OK', onPress: handleScanAgain }]
       );
+
+      // 🔄 BACKGROUND: Synchronisation vers l'API (fire-and-forget)
+      apiService.post('/api/v1/rush/declare', {
+        tagNumber,
+        reason,
+        nextFlightNumber: nextFlight || undefined,
+        userId: user?.id,
+        airportCode: user?.airportCode,
+      }).catch(err => console.warn('[RUSH] Sync API background échouée:', err));
+
     } catch (error: any) {
       await playErrorSound();
       Alert.alert(
         'Erreur',
-        error.response?.data?.error || 'Erreur lors de la déclaration RUSH'
+        error.message || 'Erreur lors de la déclaration RUSH'
       );
     } finally {
       setDeclaring(false);

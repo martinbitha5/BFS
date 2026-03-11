@@ -627,7 +627,7 @@ class DatabaseService {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        baggage.passengerId,
+        baggage.passengerId ?? null,
         baggage.tagNumber,
         baggage.expectedTag || null,
         baggage.status,
@@ -998,31 +998,6 @@ class DatabaseService {
       ]
     );
 
-    return id;
-  }
-
-  // Sync Queue
-  async addToSyncQueue(item: Omit<SyncQueueItem, 'id' | 'createdAt'>): Promise<string> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date().toISOString();
-
-    await this.db.runAsync(
-      `INSERT INTO sync_queue (id, table_name, record_id, operation, data, retry_count, user_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        item.tableName,
-        item.recordId,
-        item.operation,
-        item.data,
-        item.retryCount,
-        item.userId,
-        now,
-      ]
-    );
-
     notifySyncQueueUpdated();
     return id;
   }
@@ -1103,6 +1078,41 @@ class DatabaseService {
       'UPDATE sync_queue SET retry_count = ?, last_error = ? WHERE id = ?',
       [retryCount, lastError || null, id]
     );
+  }
+
+  async linkBaggageToPassenger(
+    baggageId: string,
+    passengerId: string,
+    passengerPnr: string,
+    flightNumber?: string,
+    userId?: string
+  ): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const now = new Date().toISOString();
+
+    await this.db.runAsync(
+      `UPDATE baggages SET
+        passenger_id = ?,
+        flight_number = COALESCE(flight_number, ?),
+        synced = 0,
+        updated_at = ?
+      WHERE id = ?`,
+      [passengerId, flightNumber || null, now, baggageId]
+    );
+
+    await this.addToSyncQueue({
+      tableName: 'baggages',
+      recordId: baggageId,
+      operation: 'UPDATE',
+      data: JSON.stringify({
+        passenger_id: passengerId,
+        passenger_pnr: passengerPnr,
+        flight_number: flightNumber || null,
+        updated_at: now,
+      }),
+      retryCount: 0,
+      userId: userId || 'system',
+    });
   }
 }
 
