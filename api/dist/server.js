@@ -18,6 +18,8 @@ const audit_routes_1 = __importDefault(require("./routes/audit.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const baggage_authorization_routes_1 = __importDefault(require("./routes/baggage-authorization.routes"));
 const baggage_routes_1 = __importDefault(require("./routes/baggage.routes"));
+const bagjourney_service_1 = require("./services/bagjourney.service");
+const bagjourney_routes_1 = __importDefault(require("./routes/bagjourney.routes"));
 const birs_history_routes_1 = __importDefault(require("./routes/birs-history.routes"));
 const birs_routes_1 = __importDefault(require("./routes/birs.routes"));
 const boarding_routes_1 = __importDefault(require("./routes/boarding.routes"));
@@ -36,6 +38,20 @@ const sync_raw_scans_routes_1 = __importDefault(require("./routes/sync-raw-scans
 const user_approval_routes_1 = __importDefault(require("./routes/user-approval.routes"));
 const users_routes_1 = __importDefault(require("./routes/users.routes"));
 dotenv_1.default.config();
+// Initialiser le service BagJourney si configuré
+if (process.env.BAGJOURNEY_API_KEY && process.env.BAGJOURNEY_BASE_URL) {
+    try {
+        (0, bagjourney_service_1.initializeBagJourneyService)({
+            apiKey: process.env.BAGJOURNEY_API_KEY,
+            baseUrl: process.env.BAGJOURNEY_BASE_URL,
+            timeout: Number(process.env.BAGJOURNEY_TIMEOUT) || 30000,
+        });
+        console.log('✅ BagJourney service initialized');
+    }
+    catch (error) {
+        console.warn('⚠️  Failed to initialize BagJourney service:', error);
+    }
+}
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT) || 3000;
 // Middleware
@@ -107,6 +123,7 @@ app.use('/api/v1/audit', auth_middleware_1.apiKeyAuth, audit_routes_1.default); 
 app.use('/api/v1/support', auth_middleware_1.apiKeyAuth, support_routes_1.default); // ✅ NEW: Routes support (bagages, utilisateurs, stats)
 app.use('/api/v1/airports', airports_routes_1.default); // Endpoint public
 app.use('/api/v1/realtime', realtime_routes_1.default); // ✅ NEW: SSE temps réel (auth via query params pour EventSource)
+app.use('/api/v1/bagjourney', auth_middleware_1.apiKeyAuth, bagjourney_routes_1.default); // ✅ NEW: Intégration BagJourney SITA
 // 404 handler (must come before error handler)
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });

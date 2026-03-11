@@ -119,13 +119,25 @@ export default function ManualBaggageScreen({ navigation }: Props) {
       } catch (e) {
         console.error('[ManualBaggage] API error:', e);
       }
+      // RÈGLE LIAISON: Uniquement tag (plage attendue) ou PNR. JAMAIS le nom seul (non unique).
       if (!passenger) {
         passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
         if (!passenger && baggageTagData.pnr !== 'UNKNOWN') {
-          passenger = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
-        }
-        if (!passenger && baggageTagData.passengerName !== 'UNKNOWN') {
-          passenger = await databaseServiceInstance.getPassengerByName(baggageTagData.passengerName);
+          const passengerByPnr = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
+          if (passengerByPnr?.baggageCount === 0) {
+            await playErrorSound();
+            setToastMessage('🚨 FRAUDE: Passager sans bagage - son PNR a été utilisé pour imprimer ces étiquettes à quelqu\'un d\'autre.');
+            setToastType('error');
+            setShowToast(true);
+            setProcessing(false);
+            return;
+          }
+          if (passengerByPnr?.baggageBaseNumber) {
+            const foundByTag = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
+            if (foundByTag?.id === passengerByPnr.id) passenger = passengerByPnr;
+          } else {
+            passenger = passengerByPnr;
+          }
         }
       }
       if (!passenger || !passenger.id) {

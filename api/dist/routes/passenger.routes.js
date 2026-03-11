@@ -37,6 +37,7 @@ const express_1 = require("express");
 const database_1 = require("../config/database");
 const airport_restriction_middleware_1 = require("../middleware/airport-restriction.middleware");
 const auto_sync_service_1 = require("../services/auto-sync.service");
+const realtime_routes_1 = require("./realtime.routes");
 const router = (0, express_1.Router)();
 /**
  * GET /api/v1/passengers
@@ -486,6 +487,11 @@ router.post('/sync', async (req, res, next) => {
                 console.error(`[Passengers/Sync] Erreur inattendue pour ${passenger.pnr}:`, passengerError);
                 errors.push({ pnr: passenger.pnr, error: passengerError.message || 'Erreur inconnue', action: 'unknown' });
             }
+        }
+        // Notifier le dashboard en temps réel (premier passager = airport_code)
+        const airportCode = results[0]?.airport_code || passengers[0]?.airport_code;
+        if (airportCode && results.length > 0) {
+            (0, realtime_routes_1.notifyStatsUpdate)(airportCode).catch((e) => console.warn('[Passengers/Sync] notifyStatsUpdate:', e));
         }
         res.json({
             success: results.length > 0 || errors.length === 0,

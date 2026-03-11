@@ -213,6 +213,7 @@ export const exportToExcel = async (
       const boarded = bs?.boarded || false;
       const offloaded = !!bs?.offloaded_at;
       const statusLabel = boarded ? 'Embarqué' : offloaded ? 'Débarqué' : 'Non embarqué';
+      const rowIndex = passSheet.rowCount + 1;
       passSheet.addRow([
         p.pnr,
         p.full_name,
@@ -223,6 +224,17 @@ export const exportToExcel = async (
         statusLabel,
         p.baggage_count || 0
       ]);
+      
+      // Apply red formatting for 0 baggage but PNR scanned (checked_in)
+      if (p.checked_at && (p.baggage_count || 0) === 0) {
+        const baggageCell = passSheet.getCell(`H${rowIndex}`);
+        baggageCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFCCCC' } // Light red background
+        };
+        baggageCell.font = { color: { argb: 'FFCC0000' } }; // Dark red text
+      }
     });
 
     // Largeurs de colonnes

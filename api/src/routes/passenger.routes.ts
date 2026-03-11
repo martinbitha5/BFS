@@ -218,13 +218,13 @@ router.get('/by-baggage-tag', requireAirportCode, async (req: Request & { userAi
     
     console.log(`[PASSENGER API] Passager trouve: ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr})`);
     
-    // 🚨 Vérification spéciale: Si le passager a baggage_count = 0, c'est une fraude
+    // 🚨 FRAUDE: Passager sans bagage (base à 0) → son PNR a été utilisé pour imprimer des étiquettes à quelqu'un d'autre
     if (foundPassenger.baggage_count === 0) {
-      console.log(`[PASSENGER API] 🚨 FRAUDE DÉTECTÉE: Passager ${foundPassenger.full_name} a baggage_count = 0!`);
+      console.log(`[PASSENGER API] 🚨 FRAUDE: Passager ${foundPassenger.full_name} sans bagage - tag imprimé avec son PNR pour une autre personne`);
       return res.status(403).json({
         success: false,
         error: 'FRAUDE_DETECTEE',
-        message: `Le passager ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr}) n'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.`,
+        message: `Le passager ${foundPassenger.full_name} (PNR: ${foundPassenger.pnr}) s'est présenté SANS bagage. Son PNR a été utilisé pour imprimer ces étiquettes et les donner à quelqu'un d'autre.`,
         data: foundPassenger
       });
     }

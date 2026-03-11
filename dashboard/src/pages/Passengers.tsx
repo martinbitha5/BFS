@@ -726,7 +726,9 @@ export default function Passengers() {
                             ? 'bg-green-500/20 text-green-300' 
                             : (pax.baggageCount || 0) > 0 
                               ? 'bg-orange-500/20 text-orange-300'
-                              : 'bg-gray-500/20 text-gray-300'
+                              : pax.checkedInAt && (pax.baggageCount || 0) === 0 && (!pax.baggages || pax.baggages.length === 0)
+                                ? 'bg-red-500/20 text-red-300'
+                                : 'bg-gray-500/20 text-gray-300'
                         }`}>
                           {(Array.isArray(pax.baggages) ? pax.baggages.length : 0)}/{pax.baggageCount || 0}
                         </span>

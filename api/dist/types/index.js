@@ -16,6 +16,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./auth.types"), exports);
 __exportStar(require("./baggage.types"), exports);
+__exportStar(require("./bagjourney.types"), exports);
 __exportStar(require("./boarding.types"), exports);
 __exportStar(require("./passenger.types"), exports);
 __exportStar(require("./sync.types"), exports);

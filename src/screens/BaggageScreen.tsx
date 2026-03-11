@@ -247,15 +247,15 @@ export default function BaggageScreen({ navigation }: Props) {
             if (result.data) {
               console.log('[BAGGAGE] Passager trouve via API:', result.data.full_name);
               
-              // � DÉTECTION DE FRAUDE: Vérifier si le passager a baggage_count = 0
+              // 🚨 FRAUDE: Passager sans bagage (base à 0) → agents ont utilisé son PNR pour imprimer des étiquettes à quelqu'un d'autre
               if (result.data.baggage_count === 0) {
-                console.log('[BAGGAGE] 🚨 FRAUDE DÉTECTÉE: Passager avec baggage_count = 0 trouvé via tag!');
+                console.log('[BAGGAGE] 🚨 FRAUDE: Passager sans bagage - tag imprimé avec son PNR pour une autre personne');
                 await playErrorSound();
                 setProcessing(false);
                 
                 Alert.alert(
                   '🚨 FRAUDE DÉTECTÉE',
-                  `Le passager ${result.data.full_name} (PNR: ${result.data.pnr}) n'a AUCUN bagage autorisé (${result.data.baggage_count} bagages attendus).\n\nCe bagage a été imprimé frauduleusement après le check-in.\n\nAction requise: Déclasser ce bagage et contacter la sécurité.`,
+                  `Le passager ${result.data.full_name} (PNR: ${result.data.pnr}) s'est présenté SANS bagage.\n\nSon PNR a été utilisé pour imprimer ces étiquettes et les donner à quelqu'un d'autre.\n\nAction: Déclasser ce bagage et contacter la sécurité.`,
                   [
                     {
                       text: 'Compris (Déclasser)',
@@ -331,29 +331,6 @@ export default function BaggageScreen({ navigation }: Props) {
               { cancelable: false }
             );
             return; // 🛑 Arrêter le traitement
-          } else if (response.status === 403) {
-            // 🚨 Erreur spéciale: Fraude détectée (baggage_count = 0)
-            const errorResult = await response.json();
-            console.log('[BAGGAGE] 🚨 FRAUDE DÉTECTÉE par le serveur:', errorResult.message);
-            await playErrorSound();
-            setProcessing(false);
-            
-            Alert.alert(
-              '🚨 FRAUDE DÉTECTÉE',
-              errorResult.message || 'Ce passager n\'a AUCUN bagage autorisé. Ce bagage a été imprimé frauduleusement.',
-              [
-                {
-                  text: 'Compris (Déclasser)',
-                  onPress: () => {
-                    isProcessingRef.current = false;
-                    setScanned(false);
-                    setShowScanner(true);
-                  },
-                },
-              ],
-              { cancelable: false }
-            );
-            return; // 🛑 Arrêter le traitement
           } else if (response.status === 409) {
             // ⚠️ Erreur: Tag appartient à un passager mais pas dans sa plage
             const errorResult = await response.json();
@@ -386,16 +363,35 @@ export default function BaggageScreen({ navigation }: Props) {
       }
       
       // 2. Fallback: chercher localement si API echoue
+      // RÈGLE LIAISON: Uniquement tag (plage attendue) ou PNR. JAMAIS le nom seul (non unique, risque d'erreur).
       if (!passenger) {
         console.log('[BAGGAGE] Fallback: recherche locale...');
         passenger = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
         
         if (!passenger && baggageTagData.pnr && baggageTagData.pnr !== 'UNKNOWN') {
-          passenger = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
-        }
-        
-        if (!passenger && baggageTagData.passengerName && baggageTagData.passengerName !== 'UNKNOWN') {
-          passenger = await databaseServiceInstance.getPassengerByName(baggageTagData.passengerName);
+          const passengerByPnr = await databaseServiceInstance.getPassengerByPnr(baggageTagData.pnr);
+          // 🚨 FRAUDE: Passager sans bagage (base à 0) → tout tag portant son PNR est frauduleux
+          // (agent a utilisé son PNR pour imprimer des étiquettes à quelqu'un d'autre)
+          if (passengerByPnr?.baggageCount === 0) {
+            console.log('[BAGGAGE] 🚨 FRAUDE: Tag avec PNR d\'un passager sans bagage');
+            await playErrorSound();
+            setProcessing(false);
+            Alert.alert(
+              '🚨 FRAUDE DÉTECTÉE',
+              `Le passager ${passengerByPnr.fullName} (PNR: ${passengerByPnr.pnr}) n'a AUCUN bagage autorisé.\n\nCe tag a été imprimé en utilisant son PNR pour une autre personne.\n\nAction: Déclasser ce bagage et contacter la sécurité.`,
+              [{ text: 'Compris (Déclasser)', onPress: () => { isProcessingRef.current = false; setScanned(false); setShowScanner(true); } }],
+              { cancelable: false }
+            );
+            return;
+          }
+          // Validation: si le passager a baggage_base_number, vérifier que le tag est dans sa plage
+          if (passengerByPnr?.baggageBaseNumber) {
+            const foundByTag = await databaseServiceInstance.getPassengerByExpectedTag(tagNumber);
+            if (foundByTag?.id === passengerByPnr.id) passenger = passengerByPnr;
+            else console.log('[BAGGAGE] Tag hors plage du passager PNR - liaison refusée');
+          } else {
+            passenger = passengerByPnr;
+          }
         }
       }
 
@@ -467,18 +463,14 @@ export default function BaggageScreen({ navigation }: Props) {
       
       console.log(`[BAGGAGE] 🔍 Vérification quota: passager ${passenger.fullName} (${passenger.pnr}) - baggageCount attendu: ${expectedBaggageCount}, déjà enregistrés: ${baggageCount}`);
       
-      // 🚨 DÉTECTION FRAUDE: Passager avec baggage_count = 0 qui essaie d'enregistrer un bagage
+      // 🚨 FRAUDE: Passager sans bagage (base à 0) → son PNR a été utilisé pour imprimer des étiquettes à quelqu'un d'autre
       if (expectedBaggageCount === 0) {
         await playErrorSound();
         setProcessing(false);
         
         Alert.alert(
           '🚨 FRAUDE DÉTECTÉE',
-          `Le passager ${passenger.fullName} (PNR: ${passenger.pnr}) n'a AUCUN bagage autorisé (${expectedBaggageCount} bagages attendus).
-
-Ce bagage a été imprimé frauduleusement après le check-in.
-
-Action requise: Déclasser ce bagage et contacter la sécurité.`,
+          `Le passager ${passenger.fullName} (PNR: ${passenger.pnr}) s'est présenté SANS bagage.\n\nSon PNR a été utilisé pour imprimer ces étiquettes et les donner à quelqu'un d'autre.\n\nAction: Déclasser ce bagage et contacter la sécurité.`,
           [
             {
               text: 'Compris (Déclasser)',

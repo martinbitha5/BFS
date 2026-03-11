@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -32,8 +31,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const lineWidth = useRef(new Animated.Value(0)).current;
   const lineGlow = useRef(new Animated.Value(0)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.85)).current;
   const particles = useRef(
     Array.from({ length: 6 }, () => ({
       scale: new Animated.Value(0),
@@ -100,10 +97,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         ]),
       ]),
       Animated.timing(subtitleOpacity, { toValue: 1, duration: 500, delay: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-      Animated.parallel([
-        Animated.timing(logoOpacity, { toValue: 1, duration: 600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(logoScale, { toValue: 1, duration: 600, easing: Easing.out(Easing.back(1.1)), useNativeDriver: true }),
-      ]),
       Animated.delay(1500),
     ]).start(() => {
       Animated.parallel([
@@ -113,7 +106,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         Animated.timing(bagOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
         Animated.timing(titleOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
         Animated.timing(subtitleOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 0, duration: 550, useNativeDriver: true }),
         Animated.timing(lineWidth, { toValue: 0, duration: 400, useNativeDriver: true }),
         Animated.timing(lineGlow, { toValue: 0, duration: 300, useNativeDriver: true }),
       ]).start(() => onFinish());
@@ -225,15 +217,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
           Gestion intelligente des bagages aéroportuaires
         </Animated.Text>
-        <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-          <View style={styles.logoClip} collapsable={false}>
-            <Image
-              source={require('../../assets/images/csi-logo.png')}
-              style={styles.csiLogo}
-              contentFit="cover"
-            />
-          </View>
-        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
@@ -317,20 +300,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1,
     lineHeight: 20,
-  },
-  logoContainer: {
-    marginTop: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoClip: {
-    width: 170,
-    height: 68,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  csiLogo: {
-    width: 170,
-    height: 68,
   },
 });

@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const database_1 = require("../config/database");
 const airport_restriction_middleware_1 = require("../middleware/airport-restriction.middleware");
+const realtime_routes_1 = require("./realtime.routes");
 const router = (0, express_1.Router)();
 /**
  * GET /api/v1/boarding
@@ -142,6 +143,10 @@ router.post('/', async (req, res, next) => {
             .single();
         if (error)
             throw error;
+        // Notifier le dashboard en temps réel (récupérer airport depuis le passager)
+        const { data: p } = await database_1.supabase.from('passengers').select('airport_code').eq('id', passenger_id).single();
+        if (p?.airport_code)
+            (0, realtime_routes_1.notifyStatsUpdate)(p.airport_code).catch(() => { });
         res.status(201).json({
             success: true,
             data
@@ -238,6 +243,7 @@ router.post('/passenger/:passengerId', airport_restriction_middleware_1.requireA
             .single();
         if (error)
             throw error;
+        (0, realtime_routes_1.notifyStatsUpdate)(airport).catch(() => { });
         res.json({
             success: true,
             data
@@ -278,11 +284,95 @@ router.post('/sync', async (req, res, next) => {
             .select();
         if (error)
             throw error;
+        // Notifier le dashboard en temps réel
+        const firstPassengerId = cleanedBoardings[0]?.passenger_id;
+        if (firstPassengerId) {
+            const { data: p } = await database_1.supabase.from('passengers').select('airport_code').eq('id', firstPassengerId).single();
+            if (p?.airport_code)
+                (0, realtime_routes_1.notifyStatsUpdate)(p.airport_code).catch(() => { });
+        }
         res.json({
             success: true,
             count: data?.length || 0,
             data
         });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+router.post('/offload', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { passenger_id, pnr } = req.body;
+        const airport = req.query.airport || req.headers['x-airport-code'];
+        if (!airport) {
+            return res.status(400).json({
+                success: false,
+                error: 'Code aéroport requis (header x-airport-code ou query airport)'
+            });
+        }
+        let passengerId = null;
+        if (passenger_id) {
+            passengerId = passenger_id;
+        }
+        else if (pnr) {
+            const pnrClean = String(pnr).trim().toUpperCase();
+            const { data: passenger, error: passengerError } = await database_1.supabase
+                .from('passengers')
+                .select('id, airport_code')
+                .eq('pnr', pnrClean)
+                .eq('airport_code', airport)
+                .single();
+            if (passengerError || !passenger) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Passager non trouvé avec PNR: ${pnrClean}`
+                });
+            }
+            passengerId = passenger.id;
+        }
+        else {
+            return res.status(400).json({
+                success: false,
+                error: 'passenger_id ou pnr requis'
+            });
+        }
+        const { data: passenger, error: passengerError } = await database_1.supabase
+            .from('passengers')
+            .select('id, airport_code')
+            .eq('id', passengerId)
+            .single();
+        if (passengerError || !passenger) {
+            return res.status(404).json({
+                success: false,
+                error: 'Passager non trouvé'
+            });
+        }
+        if (passenger.airport_code !== airport) {
+            return res.status(403).json({
+                success: false,
+                error: 'Ce passager n\'appartient pas à votre aéroport'
+            });
+        }
+        const updateData = {
+            boarded: false,
+            boarded_at: null,
+            boarded_by: null,
+        };
+        const { data, error } = await database_1.supabase
+            .from('boarding_status')
+            .upsert({
+            passenger_id: passengerId,
+            boarded: false,
+            boarded_at: null,
+            boarded_by: null,
+            offloaded_at: new Date().toISOString(), // Marquer comme débarqué
+        }, { onConflict: 'passenger_id' })
+            .select()
+            .single();
+        if (error)
+            throw error;
+        res.json({ success: true, data, message: 'Passager débarqué' });
     }
     catch (error) {
         next(error);
@@ -323,7 +413,7 @@ router.post('/sync-hash', async (req, res, next) => {
         // Sinon la foreign key constraint échoue
         const { data: passenger, error: passengerError } = await database_1.supabase
             .from('passengers')
-            .select('id')
+            .select('id, airport_code')
             .eq('id', passenger_id)
             .single();
         if (passengerError || !passenger) {
@@ -359,6 +449,10 @@ router.post('/sync-hash', async (req, res, next) => {
             throw boardingError;
         }
         console.log('[Boarding] Success:', boarding);
+        // Notifier le dashboard en temps réel
+        const airportCode = req.body.airport_code || passenger?.airport_code;
+        if (airportCode)
+            (0, realtime_routes_1.notifyStatsUpdate)(airportCode).catch(() => { });
         res.json({
             success: true,
             message: 'Embarquement synchronisé avec succès',

@@ -36,16 +36,21 @@ router.get('/international-baggages', airport_restriction_middleware_1.requireAi
     }
 });
 // GET /api/v1/birs/reports - Liste des rapports BIRS
-// RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur
+// RESTRICTION: Filtre automatiquement par aéroport de l'utilisateur et optionnellement par compagnie
 router.get('/reports', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const airportCode = req.userAirportCode; // Peut être undefined si accès total
+        const airlineCode = req.query.airline_code; // Filtre optionnel par compagnie
         let query = database_1.supabase
             .from('birs_reports')
             .select('*');
         // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
         if (airportCode) {
             query = query.eq('airport_code', airportCode);
+        }
+        // Filtrer par compagnie si spécifié
+        if (airlineCode && airlineCode !== 'ALL') {
+            query = query.eq('airline_code', airlineCode);
         }
         query = query.order('uploaded_at', { ascending: false });
         const { data, error } = await query;
@@ -62,11 +67,12 @@ router.get('/reports', airport_restriction_middleware_1.requireAirportCode, asyn
     }
 });
 // GET /api/v1/birs/reports/:id - Détails d'un rapport BIRS
-// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
+// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur et optionnellement par compagnie
 router.get('/reports/:id', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { id } = req.params;
         const airportCode = req.userAirportCode; // Peut être undefined si accès total
+        const airlineCode = req.query.airline_code; // Filtre optionnel par compagnie
         const hasFullAccess = req.hasFullAccess;
         let query = database_1.supabase
             .from('birs_reports')
@@ -75,6 +81,10 @@ router.get('/reports/:id', airport_restriction_middleware_1.requireAirportCode, 
         // Filtrer par aéroport uniquement si l'utilisateur n'a pas accès total
         if (airportCode && !hasFullAccess) {
             query = query.eq('airport_code', airportCode);
+        }
+        // Filtrer par compagnie si spécifié
+        if (airlineCode && airlineCode !== 'ALL') {
+            query = query.eq('airline_code', airlineCode);
         }
         const { data: report, error: reportError } = await query.single();
         if (reportError) {
@@ -113,11 +123,12 @@ router.get('/reports/:id', airport_restriction_middleware_1.requireAirportCode, 
     }
 });
 // GET /api/v1/birs/statistics/:airport - Statistiques BIRS
-// RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport
+// RESTRICTION: Vérifie que l'utilisateur a accès à cet aéroport et optionnellement par compagnie
 router.get('/statistics/:airport', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { airport } = req.params;
         const userAirport = req.query.airport;
+        const airlineCode = req.query.airline_code; // Filtre optionnel par compagnie
         // Vérifier que l'utilisateur demande les stats de son propre aéroport
         if (userAirport && userAirport !== airport) {
             return res.status(403).json({
@@ -144,11 +155,16 @@ router.get('/statistics/:airport', airport_restriction_middleware_1.requireAirpo
                 statusCounts[b.status]++;
             }
         });
-        // Compter les rapports
-        const { data: reports, error: reportsError } = await database_1.supabase
+        // Compter les rapports (avec filtre compagnie si spécifié)
+        let reportsQuery = database_1.supabase
             .from('birs_reports')
             .select('*')
             .eq('airport_code', airport);
+        // Filtrer par compagnie si spécifié
+        if (airlineCode && airlineCode !== 'ALL') {
+            reportsQuery = reportsQuery.eq('airline_code', airlineCode);
+        }
+        const { data: reports, error: reportsError } = await reportsQuery;
         if (reportsError)
             throw reportsError;
         const oneWeekAgo = new Date();
@@ -272,11 +288,11 @@ router.post('/upload', async (req, res, next) => {
     }
 });
 // POST /api/v1/birs/reconcile/:reportId - Lancer la réconciliation
-// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur
+// RESTRICTION: Vérifie que le rapport appartient à l'aéroport de l'utilisateur et optionnellement par compagnie
 router.post('/reconcile/:reportId', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
     try {
         const { reportId } = req.params;
-        const { airportCode } = req.body;
+        const { airportCode, airline_code } = req.body;
         const userAirport = req.query.airport || airportCode;
         if (!userAirport) {
             return res.status(400).json({
@@ -284,16 +300,20 @@ router.post('/reconcile/:reportId', airport_restriction_middleware_1.requireAirp
                 error: 'Code aéroport requis'
             });
         }
-        // Vérifier que le rapport appartient à l'aéroport de l'utilisateur
-        const { data: report, error: reportError } = await database_1.supabase
+        // Vérifier que le rapport appartient à l'aéroport de l'utilisateur et optionnellement par compagnie
+        let reportQuery = database_1.supabase
             .from('birs_reports')
-            .select('airport_code')
-            .eq('id', reportId)
-            .single();
+            .select('airport_code, airline_code')
+            .eq('id', reportId);
+        // Filtrer par compagnie si spécifié
+        if (airline_code && airline_code !== 'ALL') {
+            reportQuery = reportQuery.eq('airline_code', airline_code);
+        }
+        const { data: report, error: reportError } = await reportQuery.single();
         if (reportError || !report) {
             return res.status(404).json({
                 success: false,
-                error: 'Rapport non trouvé'
+                error: 'Rapport non trouvé ou accès refusé'
             });
         }
         if (report.airport_code !== userAirport) {

@@ -5,7 +5,52 @@ const database_1 = require("../config/database");
 const airport_restriction_middleware_1 = require("../middleware/airport-restriction.middleware");
 const scan_validation_middleware_1 = require("../middleware/scan-validation.middleware");
 const auto_sync_service_1 = require("../services/auto-sync.service");
+const bagjourney_service_1 = require("../services/bagjourney.service");
+const bagjourney_status_util_1 = require("../utils/bagjourney-status.util");
+const realtime_routes_1 = require("./realtime.routes");
 const router = (0, express_1.Router)();
+router.get('/flights-with-checked', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const airport = String(req.userAirportCode || req.query.airport || req.headers['x-airport-code'] || '').toUpperCase();
+        if (!airport) {
+            return res.status(400).json({ success: false, error: 'Code aéroport requis' });
+        }
+        const airlineCode = req.headers['x-airline-code']?.trim()?.toUpperCase();
+        const today = new Date().toISOString().split('T')[0];
+        let query = database_1.supabase
+            .from('baggages')
+            .select('flight_number, passengers(departure, arrival)')
+            .eq('airport_code', airport)
+            .eq('status', 'checked')
+            .gte('created_at', `${today}T00:00:00.000Z`)
+            .lte('created_at', `${today}T23:59:59.999Z`);
+        if (airlineCode && airlineCode !== 'ALL') {
+            query = query.like('flight_number', `${airlineCode}%`);
+        }
+        const { data, error } = await query;
+        if (error)
+            throw error;
+        const byFlight = new Map();
+        for (const b of data || []) {
+            if (!b.flight_number)
+                continue;
+            const p = Array.isArray(b.passengers) ? b.passengers[0] : b.passengers;
+            if (!byFlight.has(b.flight_number)) {
+                byFlight.set(b.flight_number, {
+                    departure: p?.departure || '',
+                    arrival: p?.arrival || '',
+                });
+            }
+        }
+        const flights = Array.from(byFlight.entries())
+            .map(([fn, r]) => ({ flightNumber: fn, departure: r.departure, arrival: r.arrival }))
+            .sort((a, b) => (a.flightNumber || '').localeCompare(b.flightNumber || ''));
+        res.json({ success: true, data: flights });
+    }
+    catch (error) {
+        next(error);
+    }
+});
 /**
  * GET /api/v1/baggage
  * Liste de tous les bagages avec filtres optionnels
@@ -55,6 +100,11 @@ router.get('/', airport_restriction_middleware_1.requireAirportCode, async (req,
         // Filtrer par vol si demandé
         if (flight) {
             baggageQuery = baggageQuery.eq('flight_number', flight);
+        }
+        // Filtrer par compagnie (x-airline-code) pour les agents baggage
+        const airlineCode = req.headers['x-airline-code']?.trim()?.toUpperCase();
+        if (airlineCode && airlineCode !== 'ALL') {
+            baggageQuery = baggageQuery.like('flight_number', `${airlineCode}%`);
         }
         // Filtrer par date de début (created_at >= date_from)
         if (date_from && typeof date_from === 'string') {
@@ -129,9 +179,18 @@ router.get('/:tagNumber', async (req, res, next) => {
             }
             throw error;
         }
+        // Normaliser passengers (Supabase peut retourner objet ou tableau selon la relation)
+        const passenger = Array.isArray(data.passengers) ? data.passengers[0] : data.passengers;
+        const responseData = {
+            ...data,
+            passengers: passenger || null,
+            // Champs explicites pour le flux arrival (éviter confusion departure/arrival)
+            expected_arrival_airport: passenger?.arrival || null,
+            route: passenger ? `${passenger.departure || '?'} → ${passenger.arrival || '?'}` : null,
+        };
         res.json({
             success: true,
-            data
+            data: responseData
         });
     }
     catch (error) {
@@ -382,6 +441,122 @@ router.put('/:id', async (req, res, next) => {
         next(error);
     }
 });
+router.post('/offload', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const tagNumber = (req.body.tag_number || req.query.tag || '').toString().trim();
+        const airport = String(req.userAirportCode || req.query.airport || req.headers['x-airport-code'] || '').toUpperCase();
+        if (!tagNumber) {
+            return res.status(400).json({
+                success: false,
+                error: 'tag_number requis'
+            });
+        }
+        if (!airport) {
+            return res.status(400).json({
+                success: false,
+                error: 'Code aéroport requis'
+            });
+        }
+        const airlineCode = req.headers['x-airline-code']?.trim()?.toUpperCase();
+        const { data: baggage, error: fetchError } = await database_1.supabase
+            .from('baggages')
+            .select('id, tag_number, status, airport_code, flight_number, notes')
+            .eq('airport_code', airport)
+            .eq('tag_number', tagNumber)
+            .single();
+        if (fetchError || !baggage) {
+            return res.status(404).json({
+                success: false,
+                error: `Bagage non trouvé: ${tagNumber}`
+            });
+        }
+        if (airlineCode && airlineCode !== 'ALL' && baggage.flight_number && !baggage.flight_number.toUpperCase().startsWith(airlineCode)) {
+            return res.status(403).json({
+                success: false,
+                error: `Ce bagage (vol ${baggage.flight_number}) n'appartient pas à votre compagnie (${airlineCode})`
+            });
+        }
+        const { data, error } = await database_1.supabase
+            .from('baggages')
+            .update({
+            status: 'rush',
+            notes: baggage.notes ? `${baggage.notes} | Offload: ${new Date().toISOString()}` : `Offload: ${new Date().toISOString()}`
+        })
+            .eq('id', baggage.id)
+            .select()
+            .single();
+        if (error)
+            throw error;
+        res.json({
+            success: true,
+            data,
+            message: 'Bagage débarqué (marqué rush)'
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+router.post('/confirm-load', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const flightNumber = String(req.body.flight_number || '').trim().toUpperCase();
+        const airport = String(req.userAirportCode || req.query.airport || req.headers['x-airport-code'] || '').toUpperCase();
+        if (!flightNumber) {
+            return res.status(400).json({
+                success: false,
+                error: 'flight_number requis'
+            });
+        }
+        if (!airport) {
+            return res.status(400).json({
+                success: false,
+                error: 'Code aéroport requis'
+            });
+        }
+        const airlineCode = req.headers['x-airline-code']?.trim()?.toUpperCase();
+        if (airlineCode && airlineCode !== 'ALL' && !flightNumber.toUpperCase().startsWith(airlineCode)) {
+            return res.status(403).json({
+                success: false,
+                error: `Le vol ${flightNumber} n'appartient pas à votre compagnie (${airlineCode})`
+            });
+        }
+        const flightMatch = flightNumber.match(/^([A-Z0-9]{2})\s*0*([1-9]\d*)$/i);
+        const flightVariants = [...new Set(flightMatch
+                ? [flightNumber, `${flightMatch[1]}${flightMatch[2].padStart(4, '0')}`]
+                : [flightNumber])];
+        const { data: checkedBaggages, error: fetchError } = await database_1.supabase
+            .from('baggages')
+            .select('id, status')
+            .eq('airport_code', airport)
+            .eq('status', 'checked')
+            .in('flight_number', flightVariants);
+        if (fetchError)
+            throw fetchError;
+        const toLoad = (checkedBaggages || []).filter((b) => b.status !== 'rush');
+        const ids = toLoad.map((b) => b.id);
+        if (ids.length === 0) {
+            return res.json({
+                success: true,
+                loaded_count: 0,
+                message: 'Aucun bagage checked à charger pour ce vol (rush exclus)'
+            });
+        }
+        const { error: updateError } = await database_1.supabase
+            .from('baggages')
+            .update({ status: 'loaded', updated_at: new Date().toISOString() })
+            .in('id', ids);
+        if (updateError)
+            throw updateError;
+        res.json({
+            success: true,
+            loaded_count: ids.length,
+            message: `${ids.length} bagage(s) confirmé(s) chargé(s)`
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
 /**
  * POST /api/v1/baggage/scan
  * Scanner un bagage RFID
@@ -526,6 +701,11 @@ router.post('/sync', async (req, res, next) => {
             .select();
         if (error)
             throw error;
+        // Notifier le dashboard en temps réel
+        const airportCode = baggagesWithPassenger[0]?.airport_code || baggages[0]?.airport_code;
+        if (airportCode && (data?.length || 0) > 0) {
+            (0, realtime_routes_1.notifyStatsUpdate)(airportCode).catch((e) => console.warn('[Baggage/Sync] notifyStatsUpdate:', e));
+        }
         res.json({
             success: true,
             count: data?.length || 0,
@@ -645,6 +825,79 @@ router.post('/fix-unlinked', airport_restriction_middleware_1.requireAirportCode
             success: true,
             message: `${fixed} bagages corrigés`,
             fixed
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/v1/baggage/:tagNumber/bagjourney
+ * Récupère les données enrichies d'un bagage avec les informations BagJourney
+ */
+router.get('/:tagNumber/bagjourney', airport_restriction_middleware_1.requireAirportCode, async (req, res, next) => {
+    try {
+        const { tagNumber } = req.params;
+        const { flightDate } = req.query;
+        // Récupérer les données locales du bagage
+        const { data: localBaggage, error: localError } = await database_1.supabase
+            .from('baggages')
+            .select('*, passengers(*)')
+            .eq('tag_number', tagNumber)
+            .single();
+        if (localError || !localBaggage) {
+            return res.status(404).json({
+                success: false,
+                error: 'Baggage not found in local system'
+            });
+        }
+        // Récupérer les données BagJourney
+        const bagJourneyService = (0, bagjourney_service_1.getBagJourneyService)();
+        let bagJourneyData = null;
+        if (bagJourneyService && bagJourneyService.isServiceEnabled()) {
+            try {
+                const response = await bagJourneyService.getBagHistory({
+                    tagNumber,
+                    flightDate: flightDate || localBaggage.flight_number,
+                });
+                if (response.success) {
+                    bagJourneyData = response.data;
+                }
+            }
+            catch (error) {
+                console.warn(`[Baggage] Failed to fetch BagJourney data for tag ${tagNumber}:`, error);
+            }
+        }
+        const resolvedStatus = localBaggage.status
+            || (bagJourneyData?.currentStatus?.code
+                ? (0, bagjourney_status_util_1.mapBagJourneyStatusToBFS)(bagJourneyData.currentStatus.code)
+                : localBaggage.status);
+        const enrichedBaggage = {
+            local: {
+                id: localBaggage.id,
+                tag_number: localBaggage.tag_number,
+                weight: localBaggage.weight,
+                status: localBaggage.status,
+                flight_number: localBaggage.flight_number,
+                airport_code: localBaggage.airport_code,
+                current_location: localBaggage.current_location,
+                checked_at: localBaggage.checked_at,
+                arrived_at: localBaggage.arrived_at,
+                delivered_at: localBaggage.delivered_at,
+                created_at: localBaggage.created_at,
+                passengers: localBaggage.passengers,
+            },
+            bagjourney: bagJourneyData,
+            resolvedStatus,
+            syncStatus: {
+                bagjourneyAvailable: bagJourneyService?.isServiceEnabled() || false,
+                lastSync: bagJourneyData ? new Date().toISOString() : null,
+            }
+        };
+        res.json({
+            success: true,
+            data: enrichedBaggage,
+            timestamp: new Date().toISOString(),
         });
     }
     catch (error) {
