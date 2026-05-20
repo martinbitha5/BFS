@@ -1943,56 +1943,43 @@ class ParserService {
    * Format peut commencer par 0 (ex: 0716055397226 = 7160553972 base, 226 = count)
    */
   private extractBaggageInfoEthiopian(rawData: string): PassengerData['baggageInfo'] | undefined {
-    // FORMAT IATA pour les bagages:
-    // - 10 chiffres de numéro de bagage de base
-    // - 3 chiffres encodés:
-    //   * Si < 100 (ex: "001", "002") → nombre direct de bagages
-    //   * Si ≥ 100 (ex: "800", "226") → format spécial, prendre dernier chiffre OU chercher ailleurs
-    
-    // STRATÉGIE 1: Chercher pattern standard (10 chiffres + 3 chiffres < 100)
+    // FORMAT IATA pour les bagages Ethiopian:
+    // 13 chiffres = base (10) + séquence (3)
+    // Exemple: 9071366379003 → base=9071366379, 3 bagages
+
+    // Extraire le ticket number pour filtrer les faux positifs
+    const ticketNumber = this.extractTicketNumber(rawData);
+
     const allMatches = Array.from(rawData.matchAll(/(\d{10})(\d{3})/g));
-    
+
     for (const match of allMatches) {
       const baseNumber = match[1];
       const countStr = match[2];
       const count = parseInt(countStr, 10);
-      
-      // Si count < 100, c'est probablement le vrai format
-      if (count >= 0 && count < 100) {
-        // Cas spécial: 000 = 0 bagages (pas de bagage consigné)
-        if (count === 0) {
-          return {
-            count: 0,
-            baseNumber,
-            expectedTags: [],
-          };
-        }
-        
-        // Limiter à 20 bagages max (raisonnable pour un passager)
-        if (count > 20) continue;
-        
+
+      // Si la base correspond au numéro de ticket, c'est un faux positif
+      if (ticketNumber && baseNumber === ticketNumber) continue;
+
+      if (count === 0) {
+        return { count: 0, baseNumber, expectedTags: [] };
+      }
+
+      if (count > 0 && count <= 20) {
         const expectedTags: string[] = [];
         const baseNum = parseInt(baseNumber, 10);
-        
+
         for (let i = 0; i < count; i++) {
           expectedTags.push((baseNum + i).toString().padStart(10, '0'));
         }
-        
-        return {
-          count,
-          baseNumber,
-          expectedTags,
-        };
+
+        return { count, baseNumber, expectedTags };
       }
-      
-      // Si count ≥ 100 (ex: "800", "226"), c'est probablement un code spécial
-      // STRATÉGIE 2: Prendre le dernier chiffre uniquement
+
+      // count ≥ 100 (ex: "800", "226") — format spécial, prendre dernier chiffre
       if (count >= 100) {
         const lastDigit = parseInt(countStr[2], 10);
-        
-        // Si dernier chiffre = 0, chercher le nombre ailleurs (chiffre avant "ET")
+
         if (lastDigit === 0) {
-          // Chercher pattern: [chiffre] suivi de "ET" ou espace
           const afterMatch = rawData.substring(match.index! + match[0].length);
           const nextDigitMatch = afterMatch.match(/\s*(\d)\s*[A-Z]{2}/);
           if (nextDigitMatch) {
@@ -2000,45 +1987,26 @@ class ParserService {
             if (actualCount > 0 && actualCount <= 20) {
               const expectedTags: string[] = [];
               const baseNum = parseInt(baseNumber, 10);
-              
               for (let i = 0; i < actualCount; i++) {
                 expectedTags.push((baseNum + i).toString().padStart(10, '0'));
               }
-              
-              return {
-                count: actualCount,
-                baseNumber,
-                expectedTags,
-              };
+              return { count: actualCount, baseNumber, expectedTags };
             }
           }
-          
-          // Si pas trouvé, considérer 0 bagages
-          return {
-            count: 0,
-            baseNumber,
-            expectedTags: [],
-          };
+          return { count: 0, baseNumber, expectedTags: [] };
         }
-        
-        // Sinon, utiliser le dernier chiffre
+
         if (lastDigit > 0 && lastDigit <= 9) {
           const expectedTags: string[] = [];
           const baseNum = parseInt(baseNumber, 10);
-          
           for (let i = 0; i < lastDigit; i++) {
             expectedTags.push((baseNum + i).toString().padStart(10, '0'));
           }
-          
-          return {
-            count: lastDigit,
-            baseNumber,
-            expectedTags,
-          };
+          return { count: lastDigit, baseNumber, expectedTags };
         }
       }
     }
-    
+
     return undefined;
   }
 
@@ -2668,71 +2636,57 @@ class ParserService {
    * Format réel: "4071161863002" où 4071161863 est la base et 002 = 2 bagages
    */
   private extractBaggageInfoAirCongo(rawData: string): PassengerData['baggageInfo'] | undefined {
-    // Chercher un pattern de 12 chiffres consécutifs (10 chiffres base + 2 chiffres count)
-    // Format: "4071161863002" où 4071161863 est la base et 002 = 2 bagages
-    
-    // Chercher directement "4071161863002" dans la chaîne
-    const baggageIndex = rawData.indexOf('4071161863002');
-    if (baggageIndex >= 0) {
-      const baseNumber = '4071161863';
-      const count = 2;
-      const expectedTags: string[] = [];
-      const baseNum = parseInt(baseNumber, 10);
-      
-      for (let i = 0; i < count; i++) {
-        expectedTags.push((baseNum + i).toString());
+    // Extraire le ticket number pour filtrer les faux positifs
+    const ticketNumber = this.extractTicketNumber(rawData);
+
+    // PRIORITÉ 1: 13 chiffres (base 10 + séquence 3) — matchAll pour éviter les faux positifs
+    const all13Matches = Array.from(rawData.matchAll(/(\d{10})(\d{3})/g));
+    for (const match of all13Matches) {
+      const baseNumber = match[1];
+      const sequence = parseInt(match[2], 10);
+
+      if (ticketNumber && baseNumber === ticketNumber) continue;
+
+      if (sequence === 0) {
+        return { count: 0, baseNumber, expectedTags: [] };
       }
-      
-      return {
-        count,
-        baseNumber,
-        expectedTags,
-      };
-    }
-    
-    // Chercher un pattern de 12 chiffres consécutifs
-    const longMatch = rawData.match(/(\d{12})/);
-    if (longMatch) {
-      const fullNumber = longMatch[1];
-      const baseNumber = fullNumber.substring(0, 10);
-      const count = parseInt(fullNumber.substring(10, 12), 10);
-      
-      if (count > 0 && count <= 10) {
+
+      if (sequence > 0 && sequence <= 20) {
         const expectedTags: string[] = [];
         const baseNum = parseInt(baseNumber, 10);
-        
-        for (let i = 0; i < count; i++) {
-          expectedTags.push((baseNum + i).toString());
+        for (let i = 0; i < sequence; i++) {
+          expectedTags.push((baseNum + i).toString().padStart(10, '0'));
         }
-        
-        return {
-          count,
-          baseNumber,
-          expectedTags,
-        };
+        return { count: sequence, baseNumber, expectedTags };
       }
     }
-    
-    // Fallback : chercher un pattern 10 chiffres + 2 chiffres non suivis d'un chiffre
-    const baggageMatch = rawData.match(/(\d{10})(\d{2})(?![0-9])/);
-    if (baggageMatch) {
-      const baseNumber = baggageMatch[1];
-      const count = parseInt(baggageMatch[2], 10);
 
-      if (count > 0 && count <= 10) {
+    // PRIORITÉ 2: 12 chiffres (base 10 + count 2)
+    const all12Matches = Array.from(rawData.matchAll(/(\d{10})(\d{2})(?!\d)/g));
+    for (const match of all12Matches) {
+      const baseNumber = match[1];
+      const count = parseInt(match[2], 10);
+
+      if (ticketNumber && baseNumber === ticketNumber) continue;
+
+      if (count > 0 && count <= 20) {
         const expectedTags: string[] = [];
         const baseNum = parseInt(baseNumber, 10);
-
         for (let i = 0; i < count; i++) {
-          expectedTags.push((baseNum + i).toString());
+          expectedTags.push((baseNum + i).toString().padStart(10, '0'));
         }
-
-        return {
-          count,
-          baseNumber,
-          expectedTags,
-        };
+        return { count, baseNumber, expectedTags };
       }
+    }
+
+    // PRIORITÉ 3: 10 chiffres seuls (base uniquement, 1 bagage)
+    const all10Matches = Array.from(rawData.matchAll(/(\d{10})(?!\d)/g));
+    for (const match of all10Matches) {
+      const baseNumber = match[1];
+
+      if (ticketNumber && baseNumber === ticketNumber) continue;
+
+      return { count: 1, baseNumber, expectedTags: [baseNumber] };
     }
 
     return undefined;
@@ -2743,36 +2697,35 @@ class ParserService {
    * Cherche les patterns courants de bagages dans les données brutes
    */
   private extractBaggageInfoGeneric(rawData: string): PassengerData['baggageInfo'] | undefined {
+    const ticketNumber = this.extractTicketNumber(rawData);
+
     // Pattern 1: Chercher "XPC" où X est le nombre de bagages (ex: "1PC", "2PC", "3PC")
     const pcMatch = rawData.match(/(\d{1,2})PC/i);
     if (pcMatch) {
       const count = parseInt(pcMatch[1], 10);
       if (count > 0 && count <= 20) {
-        // Essayer de trouver une base numérique dans les données
-        const base10Match = rawData.match(/(\d{10})/);
-        const baseNumber = base10Match ? base10Match[1] : undefined;
-        
+        const all10Matches = Array.from(rawData.matchAll(/(\d{10})/g));
+        let baseNumber: string | undefined;
+        for (const m of all10Matches) {
+          if (ticketNumber && m[1] === ticketNumber) continue;
+          baseNumber = m[1];
+          break;
+        }
+
         if (baseNumber) {
           const expectedTags: string[] = [];
           const baseNum = parseInt(baseNumber, 10);
           for (let i = 0; i < count; i++) {
-            expectedTags.push((baseNum + i).toString());
+            expectedTags.push((baseNum + i).toString().padStart(10, '0'));
           }
-          
-          return {
-            count,
-            baseNumber,
-            expectedTags,
-          };
+          return { count, baseNumber, expectedTags };
         } else {
-          // Sans base, retourner juste le count
           return { count };
         }
       }
     }
 
     // Pattern 2: Chercher un pattern [chiffres]A[chiffres] où le premier nombre = bagages
-    // Exemple: "2A706" = 2 bagages avec référence 706
     const altMatch = rawData.match(/\s+(\d)A\d{3,4}\d+/);
     if (altMatch) {
       const count = parseInt(altMatch[1], 10);
@@ -2782,16 +2735,14 @@ class ParserService {
     }
 
     // Pattern 3: Format [10 chiffres] sans autres contextes
-    const base10Match = rawData.match(/(\d{10})(?!\d)/);
-    if (base10Match) {
-      // Chercher après un pattern de numéro de vol (CODE + numéros)
-      const beforeBase = rawData.substring(0, rawData.indexOf(base10Match[1]));
+    const all10Fallback = Array.from(rawData.matchAll(/(\d{10})(?!\d)/g));
+    for (const m of all10Fallback) {
+      const base = m[1];
+      if (ticketNumber && base === ticketNumber) continue;
+
+      const beforeBase = rawData.substring(0, rawData.indexOf(base));
       if (beforeBase.match(/[A-Z]{2}\s+\d{3,4}/)) {
-        return {
-          count: 1,
-          baseNumber: base10Match[1],
-          expectedTags: [base10Match[1]],
-        };
+        return { count: 1, baseNumber: base, expectedTags: [base] };
       }
     }
 
