@@ -46,7 +46,7 @@ class DatabaseService {
     const tables = [
       `CREATE TABLE IF NOT EXISTS passengers (
         id TEXT PRIMARY KEY,
-        pnr TEXT UNIQUE NOT NULL,
+        pnr TEXT NOT NULL,
         full_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
         first_name TEXT NOT NULL,
@@ -341,10 +341,10 @@ class DatabaseService {
       const passengersInfo = await this.db.getAllAsync<any>(
         "PRAGMA table_info(passengers)"
       );
-      
+
       const passengerExistingColumnNames = passengersInfo.map((col: any) => col.name);
       const passengerExpectedColumns = ['baggage_count', 'baggage_base_number'];
-      
+
       for (const col of passengerExpectedColumns) {
         if (!passengerExistingColumnNames.includes(col)) {
           let columnDef = `${col} TEXT`;
@@ -354,6 +354,54 @@ class DatabaseService {
           } catch (e) {
             // Column might already exist
           }
+        }
+      }
+
+      // Migration: Remove UNIQUE constraint on pnr to support group bookings (billets collectifs).
+      // Multiple passengers can share the same PNR (booking reference) with different names/seats.
+      const passengersTableDef = await this.db.getAllAsync<any>(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='passengers'"
+      );
+      const tableSql: string = passengersTableDef[0]?.sql || '';
+      if (tableSql.includes('pnr TEXT UNIQUE')) {
+        try {
+          await this.db.runAsync('PRAGMA foreign_keys = OFF');
+          await this.db.runAsync(`CREATE TABLE IF NOT EXISTS passengers_new (
+            id TEXT PRIMARY KEY,
+            pnr TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            flight_number TEXT NOT NULL,
+            flight_time TEXT,
+            airline TEXT,
+            airline_code TEXT,
+            departure TEXT NOT NULL,
+            arrival TEXT NOT NULL,
+            route TEXT NOT NULL,
+            company_code TEXT,
+            ticket_number TEXT,
+            seat_number TEXT,
+            cabin_class TEXT,
+            baggage_count INTEGER DEFAULT 0,
+            baggage_base_number TEXT,
+            raw_data TEXT,
+            format TEXT,
+            checked_in_at TEXT NOT NULL,
+            checked_in_by TEXT NOT NULL,
+            synced INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )`);
+          await this.db.runAsync(`INSERT INTO passengers_new SELECT * FROM passengers`);
+          await this.db.runAsync(`DROP TABLE passengers`);
+          await this.db.runAsync(`ALTER TABLE passengers_new RENAME TO passengers`);
+          await this.db.runAsync(`CREATE INDEX IF NOT EXISTS idx_passengers_pnr ON passengers(pnr)`);
+          await this.db.runAsync('PRAGMA foreign_keys = ON');
+          console.log('[DB] Migration: removed UNIQUE constraint on pnr (group bookings support)');
+        } catch (migErr: any) {
+          console.error('[DB] Failed to remove UNIQUE from pnr:', migErr?.message || migErr);
+          await this.db.runAsync('PRAGMA foreign_keys = ON').catch(() => {});
         }
       }
 
@@ -464,6 +512,28 @@ class DatabaseService {
     }
 
     return null;
+  }
+
+  /**
+   * Cherche un passager par PNR + numéro de siège (pour billets collectifs).
+   * Plusieurs passagers peuvent partager le même PNR (groupe) mais ont des sièges différents.
+   * Retourne null si seatNumber non fourni ou non trouvé.
+   */
+  async getPassengerByPnrAndSeat(pnr: string, seatNumber?: string | null): Promise<Passenger | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    if (seatNumber) {
+      const byPnrAndSeat = await this.db.getFirstAsync<any>(
+        'SELECT * FROM passengers WHERE pnr = ? AND seat_number = ?',
+        [pnr, seatNumber]
+      );
+      if (byPnrAndSeat) {
+        return { ...byPnrAndSeat, synced: Boolean(byPnrAndSeat.synced) };
+      }
+    }
+
+    // Fallback sur PNR seul (cas passager individuel)
+    return this.getPassengerByPnr(pnr);
   }
 
   /**

@@ -164,10 +164,11 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    if (this.supabase) {
-      await this.supabase.auth.signOut();
-    }
+    // Clear local storage first — prevents race condition if user logs in immediately after
     await AsyncStorage.multiRemove([STORAGE_KEYS.SESSION, STORAGE_KEYS.USER]);
+    if (this.supabase) {
+      this.supabase.auth.signOut().catch(() => {});
+    }
   }
 
   async getCurrentSession(): Promise<UserSession | null> {

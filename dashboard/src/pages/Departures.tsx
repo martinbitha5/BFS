@@ -165,9 +165,12 @@ export default function Departures() {
     return date >= range.start && date < range.end;
   };
 
-  // Filter: Only flights DEPARTING from user's airport
+  // Filter: flights departing from user's airport OR transit passengers checked in at this airport
   const departureFlights = useMemo(() => {
-    return passengers.filter(p => p.departure === user?.airport_code);
+    return passengers.filter(p =>
+      p.departure === user?.airport_code ||
+      p.airportCode === user?.airport_code
+    );
   }, [passengers, user?.airport_code]);
 
   const periodFilteredPassengers = useMemo(() => {

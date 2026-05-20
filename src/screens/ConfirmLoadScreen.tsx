@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
@@ -14,9 +14,9 @@ import { Toast } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootStack';
 import { apiService, authServiceInstance, flightService } from '../services';
-import { cachedFetch, invalidateCache } from '../utils/cachedFetch';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '../theme';
 import { AvailableFlight } from '../types/flight.types';
+import { cachedFetch, invalidateCache } from '../utils/cachedFetch';
 import { playErrorSound, playSuccessSound } from '../utils/sound.util';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ConfirmLoad'>;
@@ -106,6 +106,8 @@ export default function ConfirmLoadScreen({ navigation }: Props) {
       });
 
       const data = await response.json();
+      console.log(`[CONFIRM LOAD] Vol: ${selectedFlight.flightNumber}, chargés: ${data.loaded_count}, total attendu: ${selectedFlight.baggageCount || '?'}`);
+      console.log(`[CONFIRM LOAD] Details:`, data.details || 'pas de détails');
 
       if (response.ok && data.success) {
         apiService.invalidateGetCache();

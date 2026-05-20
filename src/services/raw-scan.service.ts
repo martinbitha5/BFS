@@ -316,7 +316,7 @@ class RawScanService {
         if (!this.db) throw new Error('RawScanService not initialized');
 
         const result = await this.db.getFirstAsync<any>(
-            `SELECT 
+            `SELECT
         COUNT(*) as total,
         SUM(CASE WHEN scan_type = 'boarding_pass' THEN 1 ELSE 0 END) as boardingPass,
         SUM(CASE WHEN scan_type = 'baggage_tag' THEN 1 ELSE 0 END) as baggageTag,
@@ -324,7 +324,7 @@ class RawScanService {
         SUM(CASE WHEN status_baggage = 1 THEN 1 ELSE 0 END) as baggageCompleted,
         SUM(CASE WHEN status_boarding = 1 THEN 1 ELSE 0 END) as boardingCompleted,
         SUM(CASE WHEN status_arrival = 1 THEN 1 ELSE 0 END) as arrivalCompleted
-      FROM raw_scans WHERE airport_code = ?`,
+      FROM raw_scans WHERE airport_code = ? AND date(first_scanned_at) = date('now')`,
             [airportCode]
         );
 

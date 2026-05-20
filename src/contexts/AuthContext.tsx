@@ -42,11 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    // Mise à jour immédiate de l'UI (écran Login) - pas d'attente réseau
+    // Wait for storage to be cleared before updating state (prevents login race condition)
+    await authService.logout();
     setUser(null);
     setIsAuthenticated(false);
-    // Nettoyage en arrière-plan (Supabase signOut peut être lent)
-    authService.logout().catch((e) => console.warn('[Auth] Logout cleanup:', e));
   };
 
   const register = async (email: string, password: string, fullName: string, airportCode: string, role: string, airlineCode?: string) => {

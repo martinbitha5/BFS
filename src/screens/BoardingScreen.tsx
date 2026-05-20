@@ -145,7 +145,10 @@ export default function BoardingScreen({ navigation }: Props) {
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
 
-    if (scanned || processing) return;
+    if (scanned || processing) {
+      isProcessingRef.current = false;
+      return;
+    }
 
 
 
@@ -275,11 +278,16 @@ export default function BoardingScreen({ navigation }: Props) {
 
 
 
-      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
-      // 🔄 OPTIMISATION OFFLINE: On enlève validateFlightForToday()
+      // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond (transit inclus)
       // Le boarding pass scanné + check-in effectué = preuve de validité (offline-first)
 
-      if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
+      const routeStr = (parsedData?.route || '').toUpperCase();
+      const rawUpper = data.toUpperCase();
+      const airportInRoute =
+        routeStr.includes(user.airportCode) ||
+        rawUpper.includes(user.airportCode);
+
+      if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode && !airportInRoute) {
 
         await playErrorSound();
 

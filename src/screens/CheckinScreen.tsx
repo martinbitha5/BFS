@@ -157,10 +157,12 @@ export default function CheckinScreen({ navigation }: Props) {
 
     // Cooldown: ignorer si moins de 2 secondes depuis le dernier scan
     if (now - lastScanTimeRef.current < SCAN_COOLDOWN) {
+      isProcessingRef.current = false;
       return;
     }
 
     if (scanned || processing || !showScanner || lastPassenger) {
+      isProcessingRef.current = false;
       return;
     }
 
@@ -249,9 +251,21 @@ export default function CheckinScreen({ navigation }: Props) {
       }
 
       // ✅ ÉTAPE 3: Vérifier que l'aéroport correspond
-      // 🔄 OPTIMISATION OFFLINE: On enlève validateFlightForToday()
-      // Le boarding pass scanné = preuve de validité du vol (offline-first)
-      if (departure && arrival && departure !== user.airportCode && arrival !== user.airportCode) {
+      // Cas normal : départ ou arrivée = aéroport de l'agent.
+      // Cas transit : le vol passe par l'aéroport de l'agent (ex. FIH→GMA→FBM, agent à GMA).
+      // On accepte si le code aéroport apparaît dans la route ou dans les données brutes.
+      const routeStr = (parsedData?.route || '').toUpperCase();
+      const rawUpper = data.toUpperCase();
+      const airportInRoute =
+        routeStr.includes(user.airportCode) ||
+        rawUpper.includes(user.airportCode);
+
+      if (
+        departure && arrival &&
+        departure !== user.airportCode &&
+        arrival !== user.airportCode &&
+        !airportInRoute
+      ) {
         await playErrorSound();
         setToastMessage(`❌ Ce vol ne concerne pas votre aéroport (${user.airportCode})\nRoute: ${departure} → ${arrival}`);
         setToastType('error');
@@ -288,13 +302,21 @@ export default function CheckinScreen({ navigation }: Props) {
       });
 
       // ✅ ÉTAPE 5: Créer/mettre à jour le passager en base SQLite avec les données parsées
-      // ✅ OPTIMISATION: Import statique
       if (parsedData) {
-        // Chercher si le passager existe déjà par PNR
-        let existingPassenger = await databaseServiceInstance.getPassengerByPnr(parsedData.pnr);
-        
-        if (!existingPassenger) {
-          // Créer le passager avec les données du boarding pass
+        // Pour les billets collectifs, plusieurs passagers partagent le même PNR.
+        // On distingue par PNR + siège. Si la combinaison n'existe pas encore, on crée.
+        const existingPassenger = await databaseServiceInstance.getPassengerByPnrAndSeat(
+          parsedData.pnr,
+          parsedData.seatNumber
+        );
+
+        const isSamePerson =
+          existingPassenger &&
+          existingPassenger.fullName.toUpperCase().replace(/\s+/g, '') ===
+            parsedData.fullName.toUpperCase().replace(/\s+/g, '');
+
+        if (!isSamePerson) {
+          // Nouveau passager ou même PNR avec nom différent (billet collectif)
           await databaseServiceInstance.createPassenger({
             pnr: parsedData.pnr,
             fullName: parsedData.fullName,
@@ -319,10 +341,8 @@ export default function CheckinScreen({ navigation }: Props) {
             airportCode: user.airportCode,
             synced: false,
           });
-          // Sync en arrière-plan via sync_queue (batch ~2s) - pas d'attente
-        } else {
-          // Mettre à jour le passager existant avec les données du boarding pass
         }
+        // Si même personne (même PNR + même siège + même nom) : scan déjà traité, on continue
       }
 
       // Enregistrer l'action d'audit

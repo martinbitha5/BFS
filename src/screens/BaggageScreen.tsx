@@ -203,6 +203,7 @@ export default function BaggageScreen({ navigation }: Props) {
   const handleRfidScanned = async ({ data }: { data: string }) => {
     // Note: isProcessingRef.current est déjà vérifié et mis à true dans handlePdaScanComplete
     if (scanned || processing) {
+      isProcessingRef.current = false;
       return;
     }
 
@@ -373,27 +374,36 @@ export default function BaggageScreen({ navigation }: Props) {
                 const departure = result.data.departure || user.airportCode;
                 const arrival = result.data.arrival || '';
                 
-                // Creer le passager localement pour les futurs scans et pour lier le bagage
-                const passengerId = await databaseServiceInstance.createPassenger({
-                  pnr: result.data.pnr,
-                  fullName: fullName,
-                  firstName: firstName,
-                  lastName: lastName,
-                  flightNumber: result.data.flight_number,
-                  airline: result.data.airline || '',
-                  airlineCode: result.data.airline_code || '',
-                  departure: departure,
-                  arrival: arrival,
-                  route: result.data.route || `${departure}-${arrival}`,
-                  baggageCount: result.data.baggage_count || 1,
-                  baggageBaseNumber: result.data.baggage_base_number,
-                  airportCode: user.airportCode,
-                  checkedInAt: result.data.checked_in_at || new Date().toISOString(),
-                  checkedInBy: result.data.checked_in_by || user.id,
-                  synced: true,
-                });
-                
-                passenger = await databaseServiceInstance.getPassengerById(passengerId);
+                // Réutiliser le passager local s'il existe (créé au check-in ou billet collectif).
+                // Cela évite la violation de contrainte UNIQUE sur pnr et assure la bonne réconciliation.
+                const existingByPnr = await databaseServiceInstance.getPassengerByPnrAndSeat(
+                  result.data.pnr,
+                  result.data.seat_number
+                );
+                if (existingByPnr) {
+                  passenger = existingByPnr;
+                } else {
+                  const passengerId = await databaseServiceInstance.createPassenger({
+                    pnr: result.data.pnr,
+                    fullName,
+                    firstName,
+                    lastName,
+                    flightNumber: result.data.flight_number,
+                    airline: result.data.airline || '',
+                    airlineCode: result.data.airline_code || '',
+                    departure,
+                    arrival,
+                    route: result.data.route || `${departure}-${arrival}`,
+                    baggageCount: result.data.baggage_count || 1,
+                    baggageBaseNumber: result.data.baggage_base_number,
+                    seatNumber: result.data.seat_number,
+                    airportCode: user.airportCode,
+                    checkedInAt: result.data.checked_in_at || new Date().toISOString(),
+                    checkedInBy: result.data.checked_in_by || user.id,
+                    synced: true,
+                  });
+                  passenger = await databaseServiceInstance.getPassengerById(passengerId);
+                }
               }
             }
           } else if (response.status === 403) {

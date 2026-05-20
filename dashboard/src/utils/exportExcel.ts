@@ -78,7 +78,7 @@ export const exportToExcel = async (
       b.status === 'arrived' || b.arrived_at || b.status === 'rush'
     ).length,
     offloadedBaggages: filteredBaggages.filter((b: any) => !!b.offloaded_at).length,
-    unrecognizedBaggages: filteredBaggages.filter((b: any) => !b.passenger_id && !b.passengers?.full_name).length,
+    unrecognizedBaggages: filteredBaggages.filter((b: any) => !b.passenger_id || !b.passengers?.full_name).length,
     inTransitBaggages: filteredBaggages.filter((b: any) => 
       b.status === 'checked' || (b.status === 'loaded' && !b.arrived_at)
     ).length,
@@ -386,7 +386,12 @@ export const exportToExcel = async (
   });
 
   // ===== FEUILLE 4: BAGAGES NON RECONNUS (conditionnelle) =====
-  const unrecognizedList = filteredBaggages.filter((b: any) => !b.passenger_id && !b.passengers?.full_name);
+  console.log('[EXPORT DEBUG] filteredBaggages:', filteredBaggages.map(b => ({
+    tag: b.tag_number,
+    passenger_id: b.passenger_id,
+    passengers_full_name: b.passengers?.full_name,
+  })));
+  const unrecognizedList = filteredBaggages.filter((b: any) => !b.passenger_id || !b.passengers?.full_name);
   if (unrecognizedList.length > 0) {
     const unrecSheet = workbook.addWorksheet('Bagages Non Reconnus', {
       properties: { tabColor: { argb: 'FFEF4444' } }
